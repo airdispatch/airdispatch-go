@@ -6,19 +6,55 @@ package airdispatch;
 // WORKING VERSION IN MAY.
 
 message Mail {
-	required uint64 from = 1; // The Address of the Sending User
+	required string from_address = 1; // The Address of the Sending User
 	required string encryption = 2; // The Encryption Algorithim of the Message
+	required bytes data = 3; // The Encrypted Data
+}
+
+message MailData {
+	repeated Mail.DataType payload = 1;
 
 	message DataType {
 		required string type_name = 1; // The Type of the Data being Sent
 		required bytes payload = 2; // The Data
 		optional string encryption = 3; // The Optional Additional/Seperate Encryption of this Data Segment
 	}
+}
 
-	repeated DataType type = 3; // The Multiple Segements of Data that May Be Added
+message SignedMessage {
+	required bytes payload = 1;
+	required bytes public_key = 2;
+	
+	required bytes signature = 3;
+	
+	optional string message_type = 4;
+	optional string signature_function = 5;
 }
 
 message Alert {
-	required uint64 from = 1;
+	required string from_address = 1;
 	required string location = 2;
+	optional string message_id = 3;
+}
+
+message RetrieveData {
+	optional string message_id = 1;
+	optional string to_address = 2;
+	optional string filter_options = 3;
+}
+
+message AddressRegistration {
+	required string address = 1;
+	required string location = 3;
+	optional string username = 4;
+}
+
+message AddressRequest {
+	required uint64 address = 1;
+	optional boolean need_key = 2;
+}
+
+message AddressResponse {
+	required string server_location = 1;
+	optional string public_key = 2;
 }
