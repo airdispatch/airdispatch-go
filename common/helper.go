@@ -15,6 +15,14 @@ func AIRDISPATCH_MESSAGE_PREFIX() []byte {
 	return []byte("AD")
 }
 
+func ReadAsync(conn net.Conn, theChan chan []byte) {
+	data, err := ReadAirdispatchMessage(conn) 
+	if err != nil {
+		fmt.Println("READ ERROR")
+	}
+	theChan <- data
+}
+
 func ReadAirdispatchMessage(conn net.Conn) ([]byte, error) {
 	// This Buffer will Store the Data Temporarily
 	buf := &bytes.Buffer{}
@@ -88,4 +96,13 @@ func CreateSignedMessage(key *ecdsa.PrivateKey, data []byte, mesType string) (*a
 		MessageType: &mesType,
 	}
 	return newSignedMessage, err
+}
+
+func CreatePrefixedMessage(data []byte) []byte {
+	var prefix = AIRDISPATCH_MESSAGE_PREFIX() 
+	var length = int16(len(data))
+	lengthBuf := &bytes.Buffer{}
+	binary.Write(lengthBuf, binary.BigEndian, length)
+	fullBuffer := bytes.Join([][]byte{prefix, lengthBuf.Bytes(), data}, nil)
+	return fullBuffer
 }

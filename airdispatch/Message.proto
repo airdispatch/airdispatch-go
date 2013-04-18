@@ -60,11 +60,11 @@ message AddressRegistration {
 }
 
 message AddressRequest {
-	required uint64 address = 1;
+	required string address = 1;
 	optional bool need_key = 2;
 }
 
 message AddressResponse {
 	required string server_location = 1;
-	optional string public_key = 2;
+	optional bytes public_key = 2;
 }

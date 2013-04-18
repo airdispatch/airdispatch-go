@@ -45,16 +45,13 @@ func main() {
 }
 
 func handleClient(conn net.Conn) {
-	// Close the Connection upon finishing
-	defer conn.Close()
-	
 	totalBytes, err := common.ReadAirdispatchMessage(conn)
 	if err != nil {
 		fmt.Println(err)
 		fmt.Println("Error reading in the message.")
 		return
 	}
-	
+
 	downloadedMessage := &airdispatch.SignedMessage{}
 	err = proto.Unmarshal(totalBytes[0:], downloadedMessage)
 	if err != nil {
@@ -94,8 +91,15 @@ func handleRegistration(theAddress string, reg *airdispatch.AddressRegistration)
 		username: "",
 	}
 	storedAddresses[theAddress] = data
-	fmt.Println(storedAddresses)
 }
 
 func handleQuery(theAddress string, req *airdispatch.AddressRequest, conn net.Conn) {
+	info := storedAddresses[*req.Address]
+	fmt.Println(info)
+	response := &airdispatch.AddressResponse {
+		ServerLocation: &info.location,
+		PublicKey: info.public_key,
+	}
+	data, _ := proto.Marshal(response)
+	conn.Write(common.CreatePrefixedMessage(data))
 }
