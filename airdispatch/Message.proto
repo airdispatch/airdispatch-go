@@ -5,6 +5,10 @@ package airdispatch;
 // WE ARE STILL WORKING ON THE PROTOCOL AND HOPE TO RELEASE A
 // WORKING VERSION IN MAY.
 
+// ALL MESSAGES BEGIN WITH THE BYTES 'AD' IN ASCII TO SPECIFY 'AIRDISPATCH'
+// ALL MESSAGES ARE PREFIXED WITH 2 BYTES THAT SPECIFY THE MESSAGE LENGTH
+// IN BIG-ENDIAN FORMAT.
+
 message Mail {
 	required string from_address = 1; // The Address of the Sending User
 	required string encryption = 2; // The Encryption Algorithim of the Message
@@ -32,9 +36,8 @@ message SignedMessage {
 }
 
 message Signature {
-	required bytes hash = 1;
-	required bytes r = 2;
-	required bytes s = 3;
+	required bytes r = 1;
+	required bytes s = 2;
 }
 
 message Alert {

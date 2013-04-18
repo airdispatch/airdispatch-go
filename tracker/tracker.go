@@ -1,6 +1,7 @@
 package main
 
 import (
+	"io"
 	"net"
 	"fmt"
 	"bytes"
@@ -10,7 +11,17 @@ import (
 	"airdispat.ch/common"
 )
 
+var storedAddresses map[string]RegisteredAddress
+
+type RegisteredAddress struct {
+	public_key []byte
+	location string
+	username string
+}
+
 func main() {
+
+	storedAddresses = make(map[string]RegisteredAddress)
 
 	service := ":2048"
 	tcpAddr, _ := net.ResolveTCPAddr("tcp4", service)
@@ -41,24 +52,29 @@ func handleClient(conn net.Conn) {
 
 	buf := &bytes.Buffer{}
 	started := false	
+	lengthBuffer := make([]byte, 2)
 	var length int16
 
 	// Make Sure to Get the Full Message
 	// First Two Bytes Contain the Length
+	fmt.Println("--- STARTING READ ---")
 
 	for {
-		data := make([]byte, 256)
-		_, err := conn.Read(data)
-		if err != nil {
-			fmt.Println(err)
-			fmt.Println("Unable to read from client!")
-		}
-
 		if !started {
-			binary.Read(bytes.NewBuffer(data[0:2]), binary.BigEndian, &length)
+			io.ReadFull(conn, lengthBuffer)
+			binary.Read(bytes.NewBuffer(lengthBuffer[0:]), binary.BigEndian, &length)
 			started = true
 			fmt.Println(length)
-		}	
+		}
+
+		data := make([]byte, 256)
+		n, err := io.ReadFull(conn, data)
+		fmt.Println("Read:", data)
+		if err != nil && n > len(data) {
+			fmt.Println(err)
+			fmt.Println("Unable to read from client!")
+			return
+		}
 
 		buf.Write(data)
 
@@ -69,17 +85,47 @@ func handleClient(conn net.Conn) {
 
 	// Finished Downloading Message. Now, design and figure out what type it is.
 	totalBytes := buf.Bytes()
-	fmt.Println(totalBytes[2:length + 2])
+	fmt.Println(totalBytes[0:length])
 	
 	downloadedMessage := &airdispatch.SignedMessage{}
-	err := proto.Unmarshal(totalBytes[2:length + 2], downloadedMessage)
+	err := proto.Unmarshal(totalBytes[0:length], downloadedMessage)
 	if err != nil {
 		fmt.Println(err)
 		fmt.Println("The message is malformed!")
+		return
 	}
-	fmt.Println(downloadedMessage)
+	if !common.VerifySignedMessage(downloadedMessage) {
+		fmt.Println("Message is not signed properly. Discarding")
+		return
+	}
+	
+	messageType := downloadedMessage.MessageType
+	theAddress := common.StringAddress(common.BytesToKey(downloadedMessage.SigningKey))
+	switch *messageType {
+		case "reg":
+			fmt.Println("Received Registration")
+			assigned := &airdispatch.AddressRegistration{}
+			err := proto.Unmarshal(downloadedMessage.Payload, assigned)
+			if (err != nil) { fmt.Println("Bad Payload."); return; }
+			handleRegistration(theAddress, assigned) 
+		case "que":
+			fmt.Println("Received Query")
+			assigned := &airdispatch.AddressRequest{}
+			err := proto.Unmarshal(downloadedMessage.Payload, assigned)
+			if (err != nil) { fmt.Println("Bad Payload."); return; }
+			handleQuery(theAddress, assigned, conn) 
+	}
 }
 
-func verifySigned(mes *airdispatch.SignedMessage) (bool) {
-	return true
+func handleRegistration(theAddress string, reg *airdispatch.AddressRegistration) {
+	data := RegisteredAddress {
+		public_key: reg.PublicKey,
+		location: *reg.Location,
+		username: "",
+	}
+	storedAddresses[theAddress] = data
+	fmt.Println(storedAddresses)
+}
+
+func handleQuery(theAddress string, req *airdispatch.AddressRequest, conn net.Conn) {
 }
