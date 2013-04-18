@@ -41,15 +41,6 @@ func Verify(key *ecdsa.PublicKey, payload []byte, r, s *big.Int) bool {
 	return ecdsa.Verify(key, payload, r, s)
 }
 
-func GenerateSignature(key *ecdsa.PrivateKey, payload []byte) (*airdispatch.Signature, error) {
-	r, s, err := Sign(key, payload)
-	newSignature := &airdispatch.Signature {
-		R: r.Bytes(),
-		S: s.Bytes(),
-	}
-	return newSignature, err
-}
-
 func VerifySignature(hash []byte, sig *airdispatch.Signature, key *ecdsa.PublicKey) bool {
 	var r, s = new(big.Int), new(big.Int)
 	r.SetBytes(sig.R)

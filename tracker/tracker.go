@@ -1,11 +1,8 @@
 package main
 
 import (
-	"io"
 	"net"
 	"fmt"
-	"bytes"
-	"encoding/binary"
 	"code.google.com/p/goprotobuf/proto"
 	"airdispat.ch/airdispatch"
 	"airdispat.ch/common"
@@ -48,52 +45,24 @@ func main() {
 }
 
 func handleClient(conn net.Conn) {
+	// Close the Connection upon finishing
 	defer conn.Close()
-
-	buf := &bytes.Buffer{}
-	started := false	
-	lengthBuffer := make([]byte, 2)
-	var length int16
-
-	// Make Sure to Get the Full Message
-	// First Two Bytes Contain the Length
-	fmt.Println("--- STARTING READ ---")
-
-	for {
-		if !started {
-			io.ReadFull(conn, lengthBuffer)
-			binary.Read(bytes.NewBuffer(lengthBuffer[0:]), binary.BigEndian, &length)
-			started = true
-			fmt.Println(length)
-		}
-
-		data := make([]byte, 256)
-		n, err := io.ReadFull(conn, data)
-		fmt.Println("Read:", data)
-		if err != nil && n > len(data) {
-			fmt.Println(err)
-			fmt.Println("Unable to read from client!")
-			return
-		}
-
-		buf.Write(data)
-
-		if int16(buf.Len()) >= length {
-			break
-		}
+	
+	totalBytes, err := common.ReadAirdispatchMessage(conn)
+	if err != nil {
+		fmt.Println(err)
+		fmt.Println("Error reading in the message.")
+		return
 	}
-
-	// Finished Downloading Message. Now, design and figure out what type it is.
-	totalBytes := buf.Bytes()
-	fmt.Println(totalBytes[0:length])
 	
 	downloadedMessage := &airdispatch.SignedMessage{}
-	err := proto.Unmarshal(totalBytes[0:length], downloadedMessage)
+	err = proto.Unmarshal(totalBytes[0:], downloadedMessage)
 	if err != nil {
 		fmt.Println(err)
 		fmt.Println("The message is malformed!")
 		return
 	}
+
 	if !common.VerifySignedMessage(downloadedMessage) {
 		fmt.Println("Message is not signed properly. Discarding")
 		return
@@ -101,6 +70,7 @@ func handleClient(conn net.Conn) {
 	
 	messageType := downloadedMessage.MessageType
 	theAddress := common.StringAddress(common.BytesToKey(downloadedMessage.SigningKey))
+
 	switch *messageType {
 		case "reg":
 			fmt.Println("Received Registration")
