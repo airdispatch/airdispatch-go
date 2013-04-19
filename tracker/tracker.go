@@ -94,8 +94,8 @@ func handleRegistration(theAddress string, reg *airdispatch.AddressRegistration)
 }
 
 func handleQuery(theAddress string, req *airdispatch.AddressRequest, conn net.Conn) {
+	fmt.Println("Quering for", *req.Address)
 	info := storedAddresses[*req.Address]
-	fmt.Println(info)
 	response := &airdispatch.AddressResponse {
 		ServerLocation: &info.location,
 		PublicKey: info.public_key,

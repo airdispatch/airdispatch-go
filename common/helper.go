@@ -49,8 +49,8 @@ func ReadAirdispatchMessage(conn net.Conn) ([]byte, error) {
 			started = true
 		}
 
-		// We will read in data in chunks of 256 bytes
-		data := make([]byte, 256)
+		// We will read in data in chunks of the length of bytes
+		data := make([]byte, length)
 		n, err := io.ReadFull(conn, data)
 
 		// TODO: Change this to actually report a read error if it occured
