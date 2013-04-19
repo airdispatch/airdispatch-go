@@ -9,12 +9,14 @@ import (
 	"encoding/binary"
 	"fmt"
 	"errors"
+	"reflect"
 )
 
 const (
 	REGISTRATION_MESSAGE = "REG"
 	QUERY_MESSAGE = "QUE"
 	ALERT_MESSAGE = "ALE"
+	RETRIEVAL_MESSAGE = "RET"
 )
 
 func MESSAGE_PREFIX() []byte {
@@ -111,4 +113,18 @@ func CreatePrefixedMessage(data []byte) []byte {
 	binary.Write(lengthBuf, binary.BigEndian, length)
 	fullBuffer := bytes.Join([][]byte{prefix, lengthBuf.Bytes(), data}, nil)
 	return fullBuffer
+}
+
+func SliceContains(array interface{}, elem interface{}) bool {
+	v := reflect.ValueOf(array)
+	for i := 0; i < v.Len(); i++ {
+		if v.Index(i).Interface() == elem {
+			return true
+		}
+	}
+	return false
+}
+
+func CreateErrorMessage(error string) []byte {
+	return CreatePrefixedMessage([]byte("ERR:" + error))
 }

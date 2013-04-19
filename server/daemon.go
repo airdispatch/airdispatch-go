@@ -11,18 +11,27 @@ import (
 
 var port = flag.String("port", "2048", "select the port on which to run the mail server")
 
-var mailboxes map[string] []Mail
+var mailboxes map[string] Mailbox
+
+type Mailbox map[string] Mail
 
 type Mail struct {
 	from string
 	location string
-	message_id string
+}
+
+var storedMessages map[string] MailData
+
+type MailData struct {
+	approved []string
+	data []byte
 }
 
 func main() {
 	flag.Parse()
 
-	mailboxes = make(map[string][]Mail)
+	mailboxes = make(map[string]Mailbox)
+	storedMessages = make(map[string]MailData)
 
 	service := ":" + *port
 	tcpAddr, _ := net.ResolveTCPAddr("tcp4", service)
@@ -79,6 +88,12 @@ func handleClient(conn net.Conn) {
 			err := proto.Unmarshal(downloadedMessage.Payload, assigned)
 			if (err != nil) { fmt.Println("Bad Payload."); return; }
 			handleAlert(assigned, theAddress)
+		case common.RETRIEVAL_MESSAGE:
+			fmt.Println("Received Retrival Request")
+			assigned := &airdispatch.RetrieveData{}
+			err := proto.Unmarshal(downloadedMessage.Payload, assigned)
+			if (err != nil) { fmt.Println("Bad Payload."); return; }
+			handleRetrival(assigned, theAddress, conn)
 	}
 }
 
@@ -86,13 +101,25 @@ func handleAlert(alert *airdispatch.Alert, fromAddr string) {
 	toAddr := *alert.ToAddress
 	theMessage := Mail{
 		location: *alert.Location,
-		message_id: *alert.MessageId,
 		from: fromAddr,
 	}
 	_, ok := mailboxes[toAddr]
 	if !ok {
-		mailboxes[toAddr] = make([]Mail, 0)
+		mailboxes[toAddr] = make(Mailbox)
 	}
-	mailboxes[toAddr] = append(mailboxes[toAddr], theMessage)
+	mailboxes[toAddr][*alert.MessageId] = theMessage
 	fmt.Println(mailboxes)
+}
+
+func handleRetrival(retrieval *airdispatch.RetrieveData, toAddr string, conn net.Conn) {
+	message, ok := storedMessages[*retrieval.MessageId]
+	if !ok {
+		conn.Write(common.CreateErrorMessage("no message for that id"))
+		return
+	}
+	if !common.SliceContains(message.approved, toAddr) {
+		conn.Write(common.CreateErrorMessage("not an approved sender"))
+		return
+	}
+	conn.Write(common.CreatePrefixedMessage(message.data))
 }

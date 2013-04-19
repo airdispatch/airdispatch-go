@@ -111,4 +111,10 @@ func sendAlert(conn net.Conn, addr string) {
 		Location: &location,
 		MessageId: &hash,
 	}
+
+	alertData, _ := proto.Marshal(newAlert)
+	newSignedMessage, _ := common.CreateSignedMessage(key, alertData, common.ALERT_MESSAGE)
+	signedData, _ := proto.Marshal(newSignedMessage)
+	totalBytes := common.CreatePrefixedMessage(signedData)
+	conn.Write(totalBytes)
 }
