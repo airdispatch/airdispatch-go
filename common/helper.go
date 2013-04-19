@@ -11,7 +11,13 @@ import (
 	"errors"
 )
 
-func AIRDISPATCH_MESSAGE_PREFIX() []byte {
+const (
+	REGISTRATION_MESSAGE = "REG"
+	QUERY_MESSAGE = "QUE"
+	ALERT_MESSAGE = "ALE"
+)
+
+func MESSAGE_PREFIX() []byte {
 	return []byte("AD")
 }
 
@@ -39,7 +45,7 @@ func ReadAirdispatchMessage(conn net.Conn) ([]byte, error) {
 			io.ReadFull(conn, prefixBuffer)
 
 			// The first two bytes should contain the standard message prefix.
-			if !bytes.Equal(prefixBuffer[0:2], AIRDISPATCH_MESSAGE_PREFIX()) {
+			if !bytes.Equal(prefixBuffer[0:2], MESSAGE_PREFIX()) {
 				fmt.Println("Not an Airdispat.ch Message")
 				return nil, errors.New("message is not for airdispatch...")
 			}
@@ -99,7 +105,7 @@ func CreateSignedMessage(key *ecdsa.PrivateKey, data []byte, mesType string) (*a
 }
 
 func CreatePrefixedMessage(data []byte) []byte {
-	var prefix = AIRDISPATCH_MESSAGE_PREFIX() 
+	var prefix = MESSAGE_PREFIX() 
 	var length = int16(len(data))
 	lengthBuf := &bytes.Buffer{}
 	binary.Write(lengthBuf, binary.BigEndian, length)

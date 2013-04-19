@@ -47,7 +47,7 @@ func sendRegistration(conn net.Conn) {
 	key, _ := common.CreateKey()
 	createdAddress := common.StringAddress(&key.PublicKey)
 	fmt.Println("Created the Address:", createdAddress)
-	mesType := "reg"
+	mesType := common.REGISTRATION_MESSAGE
 	byteKey := common.KeyToBytes(&key.PublicKey)
 	location := "google.com"
 	
@@ -73,7 +73,7 @@ func sendQuery(conn net.Conn, addr string) {
 		Address: &addr,
 	}
 
-	mesType := "que"
+	mesType := common.QUERY_MESSAGE
 	queryData, _ := proto.Marshal(newQuery)
 	newSignedMessage, _ := common.CreateSignedMessage(key, queryData, mesType)
 	signedData, _ := proto.Marshal(newSignedMessage)

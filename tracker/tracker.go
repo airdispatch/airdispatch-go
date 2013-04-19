@@ -69,13 +69,13 @@ func handleClient(conn net.Conn) {
 	theAddress := common.StringAddress(common.BytesToKey(downloadedMessage.SigningKey))
 
 	switch *messageType {
-		case "reg":
+		case common.REGISTRATION_MESSAGE:
 			fmt.Println("Received Registration")
 			assigned := &airdispatch.AddressRegistration{}
 			err := proto.Unmarshal(downloadedMessage.Payload, assigned)
 			if (err != nil) { fmt.Println("Bad Payload."); return; }
 			handleRegistration(theAddress, assigned) 
-		case "que":
+		case common.QUERY_MESSAGE:
 			fmt.Println("Received Query")
 			assigned := &airdispatch.AddressRequest{}
 			err := proto.Unmarshal(downloadedMessage.Payload, assigned)
