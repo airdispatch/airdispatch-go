@@ -6,7 +6,10 @@ import (
 	"code.google.com/p/goprotobuf/proto"
 	"airdispat.ch/airdispatch"
 	"airdispat.ch/common"
+	"flag"
 )
+
+var port = flag.String("port", "2048", "select the port on which to run the tracking server")
 
 var storedAddresses map[string]RegisteredAddress
 
@@ -17,10 +20,11 @@ type RegisteredAddress struct {
 }
 
 func main() {
+	flag.Parse()
 
 	storedAddresses = make(map[string]RegisteredAddress)
 
-	service := ":2048"
+	service := ":" + *port
 	tcpAddr, _ := net.ResolveTCPAddr("tcp4", service)
 
 	listener, err := net.ListenTCP("tcp", tcpAddr)

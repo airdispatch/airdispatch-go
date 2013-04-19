@@ -41,9 +41,9 @@ message Signature {
 }
 
 message Alert {
-	required string from_address = 1;
-	required string location = 2;
-	optional string message_id = 4;
+	optional string to_address = 1;
+	optional string location = 2;
+	optional string message_id = 3;
 }
 
 message RetrieveData {

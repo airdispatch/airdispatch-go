@@ -7,17 +7,20 @@ import (
 	"airdispat.ch/airdispatch"
 	"airdispat.ch/common"
 	"flag"
+	"encoding/hex"
 )
 
 var mode = flag.String("mode", "", "select the mode of the tracker connection, 'query' or 'register'")
 var lookup = flag.String("address", "", "specify the address you would like to look up")
+var remote = flag.String("tracker", "localhost:2048", "specify the server and port on which to connect")
 
 const REGISTRATION = "registration"
 const QUERY = "query"
+const ALERT = "alert"
 
 func main() {
 	flag.Parse()
-	address, _ := net.ResolveTCPAddr("tcp", "localhost:2048")
+	address, _ := net.ResolveTCPAddr("tcp", *remote)
 
 	conn, err := net.DialTCP("tcp", nil, address)
 	if err != nil {
@@ -37,6 +40,13 @@ func main() {
 			}
 			fmt.Println("Sending a Query for " + *lookup)
 			sendQuery(conn, *lookup)
+		case *mode == ALERT:
+			if *lookup == "" {
+				fmt.Println("You must supply an address for an alert.")
+				return
+			}
+			fmt.Println("Sending a Mail Alert for " + *lookup)
+			sendAlert(conn, *lookup)
 		case true:
 			fmt.Println("You must specify a mode to run this in. -mode registration or -mode query")
 	}
@@ -87,3 +97,18 @@ func sendQuery(conn net.Conn, addr string) {
 	
 	fmt.Println("Received Location for Address:", *newQueryResponse.ServerLocation)
 } 
+
+
+func sendAlert(conn net.Conn, addr string) {
+	defer conn.Close()
+
+	key, _ := common.CreateKey()
+	hash := hex.EncodeToString(common.HashSHA(nil, []byte("hello")))
+	location := "google.com"
+
+	newAlert := &airdispatch.Alert {
+		ToAddress: &addr,
+		Location: &location,
+		MessageId: &hash,
+	}
+}

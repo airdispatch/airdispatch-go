@@ -166,9 +166,9 @@ func (m *Signature) GetS() []byte {
 }
 
 type Alert struct {
-	FromAddress      *string `protobuf:"bytes,1,req,name=from_address" json:"from_address,omitempty"`
-	Location         *string `protobuf:"bytes,2,req,name=location" json:"location,omitempty"`
-	MessageId        *string `protobuf:"bytes,4,opt,name=message_id" json:"message_id,omitempty"`
+	ToAddress        *string `protobuf:"bytes,1,opt,name=to_address" json:"to_address,omitempty"`
+	Location         *string `protobuf:"bytes,2,opt,name=location" json:"location,omitempty"`
+	MessageId        *string `protobuf:"bytes,3,opt,name=message_id" json:"message_id,omitempty"`
 	XXX_unrecognized []byte  `json:"-"`
 }
 
@@ -176,9 +176,9 @@ func (m *Alert) Reset()         { *m = Alert{} }
 func (m *Alert) String() string { return proto.CompactTextString(m) }
 func (*Alert) ProtoMessage()    {}
 
-func (m *Alert) GetFromAddress() string {
-	if m != nil && m.FromAddress != nil {
-		return *m.FromAddress
+func (m *Alert) GetToAddress() string {
+	if m != nil && m.ToAddress != nil {
+		return *m.ToAddress
 	}
 	return ""
 }
