@@ -9,6 +9,11 @@ package airdispatch;
 // ALL MESSAGES ARE PREFIXED WITH 2 BYTES THAT SPECIFY THE MESSAGE LENGTH
 // IN BIG-ENDIAN FORMAT.
 
+message SendMailRequest {
+	repeated string to_address = 1;
+	required Mail stored_message = 2;
+}
+
 message Mail {
 	required string from_address = 1; // The Address of the Sending User
 	required string encryption = 2; // The Encryption Algorithim of the Message

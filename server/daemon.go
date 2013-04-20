@@ -4,34 +4,41 @@ import (
 	"fmt"
 	"net"
 	"flag"
+	"os"
 	"airdispat.ch/common"
 	"airdispat.ch/airdispatch"
 	"code.google.com/p/goprotobuf/proto"
+	"crypto/ecdsa"
 )
 
 var port = flag.String("port", "2048", "select the port on which to run the mail server")
 
 var mailboxes map[string] Mailbox
-
 type Mailbox map[string] Mail
-
 type Mail struct {
 	from string
 	location string
 }
 
 var storedMessages map[string] MailData
-
 type MailData struct {
 	approved []string
 	data []byte
 }
+
+var connectedTrackers []string
+var serverLocation string
+var serverKey *ecdsa.PrivateKey
 
 func main() {
 	flag.Parse()
 
 	mailboxes = make(map[string]Mailbox)
 	storedMessages = make(map[string]MailData)
+	connectedTrackers = make([]string, 0)
+	serverKey, _ = common.CreateKey()
+
+	serverLocation, _ = os.Hostname()
 
 	service := ":" + *port
 	tcpAddr, _ := net.ResolveTCPAddr("tcp4", service)
@@ -94,6 +101,12 @@ func handleClient(conn net.Conn) {
 			err := proto.Unmarshal(downloadedMessage.Payload, assigned)
 			if (err != nil) { fmt.Println("Bad Payload."); return; }
 			handleRetrival(assigned, theAddress, conn)
+		case common.SEND_REQUEST:
+			fmt.Println("Received Request to Send Message")
+			assigned := &airdispatch.SendMailRequest{}
+			err := proto.Unmarshal(downloadedMessage.Payload, assigned)
+			if (err != nil) { fmt.Println("Bad Payload."); return; }
+			handleSendRequest(assigned, theAddress)
 	}
 }
 
@@ -122,4 +135,42 @@ func handleRetrival(retrieval *airdispatch.RetrieveData, toAddr string, conn net
 		return
 	}
 	conn.Write(common.CreatePrefixedMessage(message.data))
+}
+
+func handleSendRequest(request *airdispatch.SendMailRequest, fromAddr string) {
+	var toAddress []string = request.ToAddress
+	hash := ""
+
+	for _, v := range(toAddress) {
+		loc := LookupLocation(v)
+		SendAlert(loc, hash, v)
+	}
+}
+
+func LookupLocation(toAddr string) string {
+	return ""
+}
+
+func SendAlert(location string, message_id string, toAddr string) {
+	address, _ := net.ResolveTCPAddr("tcp", location)
+
+	conn, err := net.DialTCP("tcp", nil, address)
+	if err != nil {
+		fmt.Println(err)
+		fmt.Println("Unable to connect to the receiving server.")
+		return
+	}
+
+	newAlert := &airdispatch.Alert {
+		ToAddress: &toAddr,
+		Location: &serverLocation,
+		MessageId: &message_id,
+	}
+	alertData, _ := proto.Marshal(newAlert)
+	newSignedMessage, _ := common.CreateSignedMessage(serverKey, alertData, common.ALERT_MESSAGE)
+	totalData, _ := proto.Marshal(newSignedMessage)
+	bytesToSend := common.CreatePrefixedMessage(totalData)
+
+	conn.Write(bytesToSend)
+	conn.Close()
 }

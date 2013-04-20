@@ -13,6 +13,30 @@ var _ = proto.Marshal
 var _ = &json.SyntaxError{}
 var _ = math.Inf
 
+type SendMailRequest struct {
+	ToAddress        []string `protobuf:"bytes,1,rep,name=to_address" json:"to_address,omitempty"`
+	StoredMessage    *Mail    `protobuf:"bytes,2,req,name=stored_message" json:"stored_message,omitempty"`
+	XXX_unrecognized []byte   `json:"-"`
+}
+
+func (m *SendMailRequest) Reset()         { *m = SendMailRequest{} }
+func (m *SendMailRequest) String() string { return proto.CompactTextString(m) }
+func (*SendMailRequest) ProtoMessage()    {}
+
+func (m *SendMailRequest) GetToAddress() []string {
+	if m != nil {
+		return m.ToAddress
+	}
+	return nil
+}
+
+func (m *SendMailRequest) GetStoredMessage() *Mail {
+	if m != nil {
+		return m.StoredMessage
+	}
+	return nil
+}
+
 type Mail struct {
 	FromAddress      *string `protobuf:"bytes,1,req,name=from_address" json:"from_address,omitempty"`
 	Encryption       *string `protobuf:"bytes,2,req,name=encryption" json:"encryption,omitempty"`
