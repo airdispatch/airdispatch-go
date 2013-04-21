@@ -31,14 +31,15 @@ body.login .login_box img { width: 75%;	}
 /* --- BEGIN INBOX --- */
 
 body.inbox .header {
-	background-color: #e0e0e0;
-	border-bottom: solid 1px #666;
+	background-color: #a4aec6;
+	background-image: url('../img/background.png');
+	border-bottom: solid 1px #e4f1f7;
 	height: 150px;
 	padding-top: 5px;
 }
 
-body.inbox #mailHistory {
-	height: 100px;
+body.inbox .graph {
+	height: 25px;
 	width: 100%;
 }
 
@@ -48,7 +49,7 @@ body.inbox p.small {
 }
 
 body.inbox .sidebar {
-	border-right: solid 1px #666;
+	border-right: solid 1px #e4f1f7;
 }
 body.inbox .sidebar .row_header {
 	color: #666;
@@ -60,7 +61,8 @@ body.inbox .sidebar a {
 	text-decoration: none;
 	color: #444;
 }
-body.inbox .sidebar li:hover { background-color: #D8DFF0; }
+body.inbox .sidebar li { padding-left: 5px; }
+body.inbox .sidebar li:hover { background-color: #e4f1f7; }
 
 body.inbox .body {
 	position: absolute;

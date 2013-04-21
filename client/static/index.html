@@ -30,9 +30,11 @@
 							<p class='small'>89ae7197e7ac3fd4c9c362b1652a24d5fb439ec6</p>
 							<p><a href='#'>Share Address</a></p>
 						</div>
-						<div class='span4 offset3'>
+						<div class='span2 offset5'>
 							<h5>Mail History</h5>
-							<div id='mailHistory'></div>
+							<div id='mailHistory' class='graph'></div>
+							<h5>Response Time</h5>
+							<div id='responseTime' class='graph'></div>
 						</div>
 					</div>
 				</div>
@@ -44,15 +46,21 @@
 						<!-- Sidebar Content !-->
 						<h6 class='row_header'>INBOX</h6>
 						<ol>
-							<li><a href='#'><i class='icon-book'></i> Important Mail</a></li>
-							<li><a href='#'><i class='icon-book'></i> All Today</a></li>
-							<li><a href='#'><i class='icon-book'></i> All Mail</a></li>
+							<li><a href='#'><i class='icon-exclamation-sign'></i> Important Mail</a></li>
+							<li><a href='#'><i class='icon-inbox'></i> All Today</a></li>
+							<li><a href='#'><i class='icon-envelope'></i> All Mail</a></li>
+						</ol>
+						<h6 class='row_header'>OBJECTS</h6>
+						<ol>
+							<li><a href='#'><i class='icon-calendar'></i> Events</a></li>
+							<li><a href='#'><i class='icon-book'></i> Attatchments</a></li>
+							<li><a href='#'><i class='icon-camera'></i> Photos</a></li>
 						</ol>
 						<h6 class='row_header'>GROUPS</h6>
 						<ol>
-							<li><a href='#'><i class='icon-book'></i> Airdispat.ch Team</a></li>
-							<li><a href='#'><i class='icon-book'></i> High School Friends</a></li>
-							<li><a href='#'><i class='icon-book'></i> Other</a></li>
+							<li><a href='#'><i class='icon-user'></i> Airdispat.ch Team</a></li>
+							<li><a href='#'><i class='icon-user'></i> High School Friends</a></li>
+							<li><a href='#'><i class='icon-user'></i> Other</a></li>
 						</ol>
 					</div>
 					<div class='span10'>
@@ -62,7 +70,10 @@
 								<button class='btn btn-danger'>Compose Mail</button>
 							</div>
 							<div class='span3 offset6'>
-								<input class="input-medium search-query" type='text' placeholder='Search...'/>
+								<div class='input-prepend'>
+								<span class='add-on'><i class='icon-search'></i></span>
+								<input class="input-medium " type='text' placeholder='Search...'/>
+								</div>
 							</div>
 						</div>
 					</div>
