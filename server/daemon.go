@@ -5,6 +5,7 @@ import (
 	"net"
 	"flag"
 	"os"
+	"strings"
 	"airdispat.ch/common"
 	"airdispat.ch/airdispatch"
 	"code.google.com/p/goprotobuf/proto"
@@ -12,6 +13,7 @@ import (
 )
 
 var port = flag.String("port", "2048", "select the port on which to run the mail server")
+var trackers = flag.String("trackers", "", "prepopulate the list of trackers that this server will query by using a comma seperated list of values")
 
 var mailboxes map[string] Mailbox
 type Mailbox map[string] Mail
@@ -35,7 +37,8 @@ func main() {
 
 	mailboxes = make(map[string]Mailbox)
 	storedMessages = make(map[string]MailData)
-	connectedTrackers = make([]string, 0)
+	connectedTrackers = strings.Split(*trackers, ",")
+	if (*trackers == "") { connectedTrackers = make([]string, 0) }
 	serverKey, _ = common.CreateKey()
 
 	serverLocation, _ = os.Hostname()
@@ -148,8 +151,45 @@ func handleSendRequest(request *airdispatch.SendMailRequest, fromAddr string) {
 }
 
 func LookupLocation(toAddr string) string {
+	for _, v := range(connectedTrackers) {
+		address, _ := net.ResolveTCPAddr("tcp", v)
+
+		conn, err := net.DialTCP("tcp", nil, address)
+		if err != nil {
+			fmt.Println(err)
+			fmt.Println("Unable to connect to the tracking server.")
+			continue
+		}
+
+		finalLocation, err := SendQuery(conn, toAddr)
+		if err == nil {
+			return finalLocation
+		}
+	}
 	return ""
 }
+
+func SendQuery(conn net.Conn, addr string) (string, error) {
+	defer conn.Close()
+
+	newQuery := &airdispatch.AddressRequest {
+		Address: &addr,
+	}
+
+	mesType := common.QUERY_MESSAGE
+	queryData, _ := proto.Marshal(newQuery)
+	newSignedMessage, _ := common.CreateSignedMessage(serverKey, queryData, mesType)
+	signedData, _ := proto.Marshal(newSignedMessage)
+	totalBytes := common.CreatePrefixedMessage(signedData)
+
+	conn.Write(totalBytes)
+	data, _ := common.ReadAirdispatchMessage(conn)
+	
+	newQueryResponse := &airdispatch.AddressResponse{}
+	proto.Unmarshal(data, newQueryResponse)
+	
+	return *newQueryResponse.ServerLocation, nil
+} 
 
 func SendAlert(location string, message_id string, toAddr string) {
 	address, _ := net.ResolveTCPAddr("tcp", location)
