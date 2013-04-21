@@ -1,0 +1,72 @@
+body.login .login_page { display:block; }
+body.login .inbox_page { display:none; }
+
+body.inbox .login_page { display:none; }
+body.inbox .inbox_page { display:block; }
+
+body.login {
+	background-color: black;
+	background-image: url('http://i.istockimg.com/file_thumbview_approve/6552594/2/stock-photo-6552594-red-stage-curtain.jpg');
+	background-size: 100%;
+	background-repeat: no-repeat;
+}
+
+
+body.login .login_box {
+	position: absolute;
+	width: 600px;
+	height: 400px;
+	background-color: #E0E0E0;
+	top: 50%;
+	left: 50%;
+	margin-top: -200px;
+	margin-left: -300px;
+	text-align: center;
+	border-radius: 5px;
+	box-shadow: 0px 0px 72px rgba(186, 197, 255, 1);
+}
+
+body.login .login_box img { width: 75%;	}
+
+/* --- BEGIN INBOX --- */
+
+body.inbox .header {
+	background-color: #e0e0e0;
+	border-bottom: solid 1px #666;
+	height: 150px;
+	padding-top: 5px;
+}
+
+body.inbox #mailHistory {
+	height: 100px;
+	width: 100%;
+}
+
+body.inbox p.small {
+	font-size: 8px;
+	line-height: 110%;
+}
+
+body.inbox .sidebar {
+	border-right: solid 1px #666;
+}
+body.inbox .sidebar .row_header {
+	color: #666;
+	margin-left: 5px;
+	margin-bottom: 0;
+}
+body.inbox .sidebar ol { margin-left: 5px; list-style: none; }
+body.inbox .sidebar a {
+	text-decoration: none;
+	color: #444;
+}
+body.inbox .sidebar li:hover { background-color: #D8DFF0; }
+
+body.inbox .body {
+	position: absolute;
+	top: 155px;
+	bottom: 0px;
+	left: 0px;
+	right: 0px;
+}
+body.inbox .container-fluid, body.inbox .row-fluid, body.inbox .row-fluid .span2, body.inbox .row-fluid .span10 { height: 100%; }
