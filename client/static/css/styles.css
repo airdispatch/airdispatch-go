@@ -33,6 +33,7 @@ body.login .login_box img { width: 75%;	}
 body.inbox .header {
 	background-color: #a4aec6;
 	background-image: url('../img/background.png');
+	background-size: 100%;
 	border-bottom: solid 1px #e4f1f7;
 	height: 150px;
 	padding-top: 5px;
@@ -50,6 +51,8 @@ body.inbox p.small {
 
 body.inbox .sidebar {
 	border-right: solid 1px #e4f1f7;
+	width: 139px;
+	position: relative;
 }
 body.inbox .sidebar .row_header {
 	color: #666;
@@ -63,6 +66,12 @@ body.inbox .sidebar a {
 }
 body.inbox .sidebar li { padding-left: 5px; }
 body.inbox .sidebar li:hover { background-color: #e4f1f7; }
+body.inbox .sidebar img {
+	width: 25%;
+	position: absolute;
+	bottom: 0;
+	left: 0;
+}
 
 body.inbox .body {
 	position: absolute;
@@ -71,4 +80,33 @@ body.inbox .body {
 	left: 0px;
 	right: 0px;
 }
-body.inbox .container-fluid, body.inbox .row-fluid, body.inbox .row-fluid .span2, body.inbox .row-fluid .span10 { height: 100%; }
+body.inbox .full { height: 100%; }
+body.inbox .contents {
+	position: relative;
+	border-right: solid 1px #e4f1f7;
+	width: 779px;
+}
+
+body.inbox .actions {
+	border-bottom: solid 1px #e4f1f7;
+}
+body.inbox .actions .input-prepend { margin-bottom: 5px; }
+
+body.inbox .messageList {
+	overflow: scroll;
+	position: absolute;
+	top: 41px;
+	left: -40px;
+	bottom: 0;
+}
+body.inbox .messageList hr { margin: 0; border-bottom: none; }
+
+body.inbox .mailMessage { padding: 5px 0; }
+body.inbox .mailMessage:hover { background-color: #e4f1f7; }
+body.inbox .messagePadding { padding-left: 5px; }
+body.inbox .mailMessage .span1 { width: 55px; }
+body.inbox .mailMessage h5 { margin: 0; }
+body.inbox .mailMessage p {
+	font-size: 12px;
+	margin: 0;
+}
