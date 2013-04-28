@@ -1,7 +1,9 @@
-/**
- * Created with IntelliJ IDEA.
- * User: brentbaumgartner
- * Date: 27/04/2013
- * Time: 22:08
- * To change this template use File | Settings | File Templates.
- */
+angular.module('DispatchApp.controllers', ['ngResource']).
+    service('mailService', function ($resource) {
+        var Server = $resource('https://path.to.server/:action',
+            {action: 'search.json', q:'Brent', callback: 'JSON_CALLBACK'},
+            {get: {method: 'JSONP'}});
+        this.getMail = function(user_id) {
+            Server.get({q:user_id});
+        }
+    });

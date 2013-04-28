@@ -2,26 +2,29 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="53250052-2a42-4a18-aed5-ebb7c0028073" name="Default" comment="">
+      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/client/static/js/filters.js" />
+      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/client/static/js/services.js" />
       <change type="DELETED" beforePath="$PROJECT_DIR$/client/static/img/curtains.png" afterPath="" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/client/static/img/background.png" afterPath="$PROJECT_DIR$/client/static/img/background.png" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/client/static/img/fonts/general_foundicons.eot" afterPath="$PROJECT_DIR$/client/static/img/fonts/general_foundicons.eot" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/client/static/img/fonts/general_foundicons.ttf" afterPath="$PROJECT_DIR$/client/static/img/fonts/general_foundicons.ttf" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/client/static/img/fonts/general_foundicons.woff" afterPath="$PROJECT_DIR$/client/static/img/fonts/general_foundicons.woff" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/client/static/js/angular/angular.js" afterPath="$PROJECT_DIR$/client/static/js/angular/angular.js" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/client/static/js/application.js" afterPath="$PROJECT_DIR$/client/static/js/application.js" />
+      <change type="DELETED" beforePath="$PROJECT_DIR$/client/static/js/application.js" afterPath="" />
+      <change type="DELETED" beforePath="$PROJECT_DIR$/client/static/js/grafico.js" afterPath="" />
+      <change type="DELETED" beforePath="$PROJECT_DIR$/client/static/js/prototype.js" afterPath="" />
+      <change type="DELETED" beforePath="$PROJECT_DIR$/client/static/js/raphael.js" afterPath="" />
+      <change type="MOVED" beforePath="$PROJECT_DIR$/client/static/js/angular/angular.js" afterPath="$PROJECT_DIR$/client/static/js/angular.js" />
+      <change type="MOVED" beforePath="$PROJECT_DIR$/client/static/js/angular/app.js" afterPath="$PROJECT_DIR$/client/static/js/app.js" />
+      <change type="MOVED" beforePath="$PROJECT_DIR$/client/static/js/angular/controllers.js" afterPath="$PROJECT_DIR$/client/static/js/controllers.js" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/client/static/index.html" afterPath="$PROJECT_DIR$/client/static/index.html" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/client/static/css/social_foundicons.css" afterPath="$PROJECT_DIR$/client/static/css/social_foundicons.css" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/client/static/css/styles.css" afterPath="$PROJECT_DIR$/client/static/css/styles.css" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
     </list>
     <ignored path="air-dispatch.iws" />
     <ignored path=".idea/workspace.xml" />
     <file path="$PROJECT_DIR$/../../Personal Website/jordan/interviews/index.html" changelist="53250052-2a42-4a18-aed5-ebb7c0028073" time="1366910578404" ignored="false" />
     <file path="/Dummy.txt" changelist="53250052-2a42-4a18-aed5-ebb7c0028073" time="1367110382817" ignored="false" />
-    <file path="/index.html" changelist="53250052-2a42-4a18-aed5-ebb7c0028073" time="1367108529101" ignored="false" />
+    <file path="/index.html" changelist="53250052-2a42-4a18-aed5-ebb7c0028073" time="1367112523018" ignored="false" />
     <file path="/app.js" changelist="53250052-2a42-4a18-aed5-ebb7c0028073" time="1366911909544" ignored="false" />
     <file path="/styles.css" changelist="53250052-2a42-4a18-aed5-ebb7c0028073" time="1367108946766" ignored="false" />
-    <file path="/controllers.js" changelist="53250052-2a42-4a18-aed5-ebb7c0028073" time="1367018500076" ignored="false" />
+    <file path="/controllers.js" changelist="53250052-2a42-4a18-aed5-ebb7c0028073" time="1367117927515" ignored="false" />
+    <file path="/filters.js" changelist="53250052-2a42-4a18-aed5-ebb7c0028073" time="1367111380370" ignored="false" />
+    <file path="/services.js" changelist="53250052-2a42-4a18-aed5-ebb7c0028073" time="1367117950708" ignored="false" />
     <option name="TRACKING_ENABLED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -82,10 +85,55 @@
   </component>
   <component name="FileEditorManager">
     <leaf>
-      <file leaf-file-name="static.iml" pinned="false" current="true" current-in-tab="true">
+      <file leaf-file-name="static.iml" pinned="false" current="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/client/static/static.iml">
           <provider selected="true" editor-type-id="text-editor">
-            <state line="10" column="0" selection-start="337" selection-end="337" vertical-scroll-proportion="0.2388535">
+            <state line="10" column="3" selection-start="337" selection-end="337" vertical-scroll-proportion="0.0">
+              <folding />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="index.html" pinned="false" current="true" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/client/static/index.html">
+          <provider selected="true" editor-type-id="text-editor">
+            <state line="50" column="102" selection-start="1970" selection-end="2017" vertical-scroll-proportion="0.24834438">
+              <folding />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="filters.js" pinned="false" current="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/client/static/js/filters.js">
+          <provider selected="true" editor-type-id="text-editor">
+            <state line="2" column="8" selection-start="92" selection-end="92" vertical-scroll-proportion="0.0">
+              <folding />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="controllers.js" pinned="false" current="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/client/static/js/controllers.js">
+          <provider selected="true" editor-type-id="text-editor">
+            <state line="6" column="28" selection-start="599" selection-end="599" vertical-scroll-proportion="0.0">
+              <folding />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="services.js" pinned="false" current="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/client/static/js/services.js">
+          <provider selected="true" editor-type-id="text-editor">
+            <state line="6" column="36" selection-start="367" selection-end="367" vertical-scroll-proportion="0.0">
+              <folding />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="app.js" pinned="false" current="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/client/static/js/app.js">
+          <provider selected="true" editor-type-id="text-editor">
+            <state line="0" column="59" selection-start="59" selection-end="59" vertical-scroll-proportion="0.0">
               <folding />
             </state>
           </provider>
@@ -114,7 +162,10 @@
         <option value="$PROJECT_DIR$/client/static/js/angular/app.js" />
         <option value="$PROJECT_DIR$/client/static/js/angular/controllers.js" />
         <option value="$PROJECT_DIR$/client/static/css/styles.css" />
+        <option value="$PROJECT_DIR$/client/static/js/filters.js" />
         <option value="$PROJECT_DIR$/client/static/index.html" />
+        <option value="$PROJECT_DIR$/client/static/js/controllers.js" />
+        <option value="$PROJECT_DIR$/client/static/js/services.js" />
       </list>
     </option>
   </component>
@@ -168,6 +219,34 @@
               <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
             </PATH_ELEMENT>
           </PATH>
+          <PATH>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="air-dispatch" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="static" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="js" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+          </PATH>
+          <PATH>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="air-dispatch" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="static" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="img" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+          </PATH>
         </subPane>
       </pane>
       <pane id="PackagesPane" />
@@ -205,6 +284,7 @@
       <recent name="$PROJECT_DIR$/client/static/js" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/client/static/js" />
       <recent name="$PROJECT_DIR$/client/static/css" />
       <recent name="$PROJECT_DIR$/client/static/img" />
       <recent name="$PROJECT_DIR$/client/static/js/angular" />
@@ -326,7 +406,7 @@
   </component>
   <component name="ToolWindowManager">
     <frame x="0" y="22" width="1280" height="774" extended-state="6" />
-    <editor active="false" />
+    <editor active="true" />
     <layout>
       <window_info id="Changes" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="JetGradle" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
@@ -346,7 +426,7 @@
       <window_info id="Maven Projects" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="Commander" active="false" anchor="right" auto_hide="false" internal_type="SLIDING" type="SLIDING" visible="false" weight="0.4" sideWeight="0.5" order="0" side_tool="false" content_ui="tabs" />
       <window_info id="Application Servers" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
-      <window_info id="Project" active="true" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.1458671" sideWeight="0.83639145" order="0" side_tool="false" content_ui="combo" />
+      <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.1458671" sideWeight="0.83639145" order="0" side_tool="false" content_ui="combo" />
       <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
       <window_info id="Hierarchy" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25" sideWeight="0.5" order="2" side_tool="false" content_ui="combo" />
       <window_info id="Cvs" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25" sideWeight="0.5" order="4" side_tool="false" content_ui="tabs" />
@@ -420,9 +500,51 @@
     <option name="FILTER_TARGETS" value="false" />
   </component>
   <component name="editorHistoryManager">
+    <entry file="file://$PROJECT_DIR$/client/static/index-old.html">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="0" column="0" selection-start="0" selection-end="0" vertical-scroll-proportion="0.0">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/client/static/js/app.js">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="0" column="59" selection-start="59" selection-end="59" vertical-scroll-proportion="0.0">
+          <folding />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/client/static/static.iml">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="10" column="0" selection-start="337" selection-end="337" vertical-scroll-proportion="0.2388535">
+        <state line="10" column="3" selection-start="337" selection-end="337" vertical-scroll-proportion="0.0">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/client/static/js/filters.js">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="2" column="8" selection-start="92" selection-end="92" vertical-scroll-proportion="0.0">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/client/static/js/controllers.js">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="6" column="28" selection-start="599" selection-end="599" vertical-scroll-proportion="0.0">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/client/static/js/services.js">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="6" column="36" selection-start="367" selection-end="367" vertical-scroll-proportion="0.0">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/client/static/index.html">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="50" column="102" selection-start="1970" selection-end="2017" vertical-scroll-proportion="0.24834438">
           <folding />
         </state>
       </provider>

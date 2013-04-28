@@ -1,7 +1,8 @@
-/**
- * Created with IntelliJ IDEA.
- * User: brentbaumgartner
- * Date: 27/04/2013
- * Time: 21:09
- * To change this template use File | Settings | File Templates.
- */
+angular.module('DispatchApp.controllers', []).
+    filter('ListFilter', function ($scope) {
+
+    });
+
+
+//sparkBar = new Grafico.SparkBar($('mailHistory'), [30, 15, 50, 20, 50, 12, 45]);
+//var sparkBar = new Grafico.SparkLine($('responseTime'), [341,50,123,54,14,69,5]);
