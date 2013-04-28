@@ -5,7 +5,7 @@ Airdispat.ch is a new solution for email using the innovative Airdispatch Protoc
 
 More detailed information and documentation is available in the Wiki
 
-Downloading and Running this repository:
+### Downloading and Running this repository:
   1. `git clone` this repository
   2. Rename the created folder to `airdispat.ch`
   3. Drop that folder in your `$GOPATH`
@@ -14,7 +14,7 @@ Downloading and Running this repository:
   6. Run the Program that you want
 
 
-Dependencies (Install using `go get`):
+### Dependencies (Install using `go get`):
 
     code.google.com/p/goprotobuf/proto
     code.google.com/p/go.crypto/ripemd160
