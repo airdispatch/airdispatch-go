@@ -1,9 +1,78 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title></title>
+    <title>airdispat.ch</title>
+    <link rel='stylesheet' type='text/css' href='css/styles.css'>
+    <link href="css/foundation.min.css" rel="stylesheet" media="screen">
+    <link rel="stylesheet" type="text/css" href="css/general_foundicons.css"/>
 </head>
-<body>
+<body ng-app="DispatchApp">
+<div ng-controller="DispatchCtrl">
+    <div class='header'>
+        <div class='row'>
+            <div class='columns large-2'>
+                <img src='http://gravatar.com/avatar/e9abd41f117ce7e267885a9a3bc98f0c?s=350' class='circular'/>
+            </div>
+            <div class='columns large-5'>
+                <h2>Hunter Leath</h2>
+            </div>
+            <div class="columns large-5">
+                <div class='address right'>
+                    <p class='small'>89ae7197e7ac3fd4c9c362b1652a24d5fb439ec6</span>
 
+                    <p class='small'><a href='#'>Share Address</a> &middot; <a href='#'>Manage Address</a></span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class='body'>
+        <div class='row'>
+            <div class='columns large-2 sidebar'>
+                <!-- Sidebar Content !-->
+                <!-- Possible Sections: Inbox, Objects, Groups -->
+                <a class='button secondary small'>Compose</a>
+            </div>
+            <div class='columns large-10 sidebar'>
+                <input class="input-medium " type='text' placeholder='Search...'/>
+            </div>
+        </div>
+        <div class='row'>
+            <div class='columns large-2 contents'>
+                    <h6 class='row_header'>IMPORTANCE</h6>
+
+                    <h6 class='row_header'>TYPE</h6>
+
+                    <h6 class='row_header'>GROUP</h6>
+            </div>
+            <div class='columns large-10'>
+                <!-- Use Angular-UI Sortable!-->
+                <ul>
+                    <div class="panel message-list">
+                        <li ng-repeat="item in items" class="row item-wrapper">
+                            <span class="columns large-1">
+                                <a class="item-importance item-wrapper">
+                                    {{item.importance}}
+                                </a>
+                            </span>
+                            <span class="columns large-8">
+                                <a class="item-title item-wrapper">
+                                    {{item.title}}
+                                </a>
+                            </span>
+                            <span class="columns large-3">
+                                <a class="item-owner-name item-wrapper">
+                                    {{item.owner.name}}
+                                </a>
+                            </span>
+                        </li>
+                    </div>
+                </ul>
+            </div>
+        </div>
+    </div>
+    <script type="text/javascript" src="js/angular/angular.js"></script>
+    <script type="text/javascript" src="js/angular/app.js"></script>
+    <script type="text/javascript" src="js/angular/controllers.js"></script>
+    <script src='js/prototype.js'></script>
 </body>
 </html>
