@@ -9,18 +9,20 @@
 	color: #EFEFEF;
 
 	border-bottom: solid 1px #e4f1f7;
-	height: 75px;
-	padding-top: 5px;
+	height: 65px;
 }
 
 #logo
 {
-	padding-top: 5px;
+	background-color: #282623;
+	padding-top: 10px;
+
+	font-size: 26px;
 }
 
 	#logo>img
 	{
-		width: 50px;
+		width: 40px;
 	}
 
  .graph {
@@ -98,31 +100,40 @@
 
 #user-tab
 {
+	background-color: #282623;
+
 	/*float: right;*/
 	cursor: pointer;
+
+	padding-top: 10px;
+	padding-bottom: 12px;
 }
 
-	#user-tab:hover{ background-color: #EFEFEF;}
+	#user-tab:hover{ background-color: #373430;}
 
 #username
 {
 	display: inline-block;
 	color: #EFEFEF;
 
-	margin-top: 30px;
+	margin: auto;
 	padding-right: 15px;
+
+	vertical-align: middle;
+
+	font-size: 26px;
+	font-weight: normal;
 }
 
 
 .circular {
-    width: 60px;
-    height: 60px;
+    width: 40px;
+    height: 40px;
     -webkit-border-radius: 5px;
     -moz-border-radius: 5px;
     border-radius: 5px;
 
     /*margin-bottom: 20px;*/
-    margin-top: -30px;
 
     /*margin: 15px auto;*/
 }
