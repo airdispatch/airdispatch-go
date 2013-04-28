@@ -110,7 +110,7 @@
 	cursor: pointer;
 
 	padding-top: 10px;
-	padding-bottom: 12px;
+	/*padding-bottom: 12px;*/
 
 	position: absolute;
 	width: 300px;
@@ -141,6 +141,15 @@
 	{
 		background-color: #282623;
 	}
+
+		#user-tab>ul>li>a>i 
+		{
+			float: left;
+			vertical-align: middle;
+
+			font-size: 14px;
+			padding-left: 20px;
+		}
 
 
 
