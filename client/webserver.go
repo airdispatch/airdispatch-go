@@ -23,20 +23,35 @@ func defineRoutes() {
 	web.Get("/", appResponse)
 
 	// Authentication
-	web.Get("/login", blankResponse)
-	web.Post("/login", blankResponse)
-	web.Get("/logout", blankResponse)
+	web.Post("/login", loginResponse)
+	web.Get("/logout", logoutResponse)
 
 	// Mail API
-	web.Get("/message", blankResponse)
-	web.Post("/message", blankResponse)
+	web.Get("/message", messageListResponse)
+	web.Post("/message", messageSendResponse)
 }
 
 func blankResponse() string {
-	return WORKING_DIRECTORY + "AD_BLANK_RESPONSE"
+	return WORKING_DIRECTORY
 }
 
 func writeHeaders(ctx *web.Context) {
+}
+
+func messageListResponse(ctx *web.Context) {
+	writeFileToContext("static/sample.json", ctx)
+}
+
+func messageSendResponse(ctx *web.Context) {
+	ctx.WriteString("OK")
+}
+
+func loginResponse(ctx *web.Context) {
+	ctx.WriteString("OK")
+}
+
+func logoutResponse(ctx *web.Context) {
+	ctx.WriteString("OK")
 }
 
 func appResponse(ctx *web.Context) {

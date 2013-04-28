@@ -1,0 +1,14 @@
+[
+	{
+		from_address: "0d81ec840b43b5368829af2d92dca37d220eabd813a134d7",
+		from_name: "Hunter Leath",
+		stored_data: [
+			{name: "airdispatch/text/plain",
+			 	data: "Hello there little user..."},
+			{name: "airdispatch/date/sent",
+				data: "2007-04-05T14:30"},
+			{name: "airdispatch/subject",
+				data: "RE: Cat Pictures"}
+		]
+	}
+]
