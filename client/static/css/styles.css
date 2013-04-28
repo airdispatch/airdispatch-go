@@ -18,6 +18,10 @@
 	padding-top: 10px;
 
 	font-size: 26px;
+
+	margin: auto;
+	position: absolute;
+	vertical-align: middle;
 }
 
 	#logo>img
@@ -107,9 +111,38 @@
 
 	padding-top: 10px;
 	padding-bottom: 12px;
+
+	position: absolute;
+	width: 300px;
+	z-index: 99;
 }
 
 	#user-tab:hover{ background-color: #373430;}
+
+	#user-tab>ul
+	{
+		display: none; 
+		text-align: right; 
+		padding-right: 0px; 
+		padding-top: 6px;
+	}
+	
+		#user-tab:hover > ul{display: block;}
+
+	#user-tab>ul>li>a
+	{
+		background-color: #373430;
+		color: #EFEFEF;
+
+		padding: 6px 30px 6px 8px;
+	}
+
+	#user-tab>ul>li>a:hover
+	{
+		background-color: #282623;
+	}
+
+
 
 #username
 {
