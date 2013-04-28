@@ -1,25 +1,12 @@
 Event.observe(window, 'load', function() {
 
-	/*
-	var streamGraph = new Grafico.StackGraph($('mailHistory'),
-		{
-			normalMail: [20, 40, 10, 5, 4, 30, 40],
-			newsletters: [5, 10, 15, 20, 6, 6, 2]
-		},
-		{
-			background_color: '#e0e0e0',
-			draw_axis: false,
-			grid: false,
-			draw_hovers: true,
-			datalabels: {
-				normalMail: "Normal Email",
-				newsletters: "Newsletters"
-			},
-		}
-	);
-	*/
-
 	var sparkBar = new Grafico.SparkBar($('mailHistory'), [30, 15, 50, 20, 50, 12, 45]);
 	var sparkBar = new Grafico.SparkLine($('responseTime'), [341,50,123,54,14,69,5]);
+
+	Event.observe("login_button", "click", function() {
+		$$('.login')[0].addClassName('inbox')
+		$$('.login')[0].removeClassName('login')
+		return false;
+	});
 
 });

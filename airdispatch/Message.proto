@@ -53,7 +53,6 @@ message Alert {
 
 message RetrieveData {
 	optional string message_id = 1;
-	optional string to_address = 2;
 	optional string filter_options = 3;
 }
 
@@ -72,4 +71,5 @@ message AddressRequest {
 message AddressResponse {
 	required string server_location = 1;
 	optional bytes public_key = 2;
+	required string address = 3;
 }
