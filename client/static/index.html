@@ -8,14 +8,18 @@
 </head>
 <body ng-app="DispatchApp">
 <div ng-controller="DispatchCtrl">
+    
     <div class='header'>
         <div class='row'>
-            <div class='columns large-2'>
+            <div class='columns large-4 left' id='logo'>
+                <img src='img/plane.png' />
+                airdispat.ch
+            </div>
+            <div class='columns large-4 large-offset-4 right' id='user-tab'>
+                <h4 id="username">Hunter Leath</h4>
                 <img src='http://gravatar.com/avatar/e9abd41f117ce7e267885a9a3bc98f0c?s=350' class='circular'/>
             </div>
-            <div class='columns large-5'>
-                <h2>Hunter Leath</h2>
-            </div>
+            <!--
             <div class="columns large-5">
                 <div class='address right'>
                     <p class='small'>89ae7197e7ac3fd4c9c362b1652a24d5fb439ec6</span>
@@ -23,6 +27,7 @@
                     <p class='small'><a href='#'>Share Address</a> &middot; <a href='#'>Manage Address</a></span>
                 </div>
             </div>
+            -->
         </div>
     </div>
     <div class='body'>
@@ -54,7 +59,12 @@
                                     {{item.importance}}
                                 </a>
                             </span>
-                            <span class="columns large-8">
+                            <span class="columns large-1">
+                                <a class="item-type-icon item-wrapper">
+                                    <i class="foundicon-mail"></i>
+                                </a>
+                            </span>
+                            <span class="columns large-5">
                                 <a class="item-title item-wrapper">
                                     {{item.title}}
                                 </a>

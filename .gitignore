@@ -1,2 +1,5 @@
 *.swp
 *.pb.go
+.DS_Store
+*.iml
+.idea/
