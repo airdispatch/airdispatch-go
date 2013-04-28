@@ -1,36 +1,7 @@
-body.login .login_page { display:block; }
-body.login .inbox_page { display:none; }
-
-body.inbox .login_page { display:none; }
-body.inbox .inbox_page { display:block; }
-
-body.login {
-	background-color: black;
-	background-image: url('../img/curtains.png');
-	background-size: 100%;
-	background-repeat: no-repeat;
-}
-
-
-body.login .login_box {
-	position: absolute;
-	width: 600px;
-	height: 400px;
-	background-color: #E0E0E0;
-	top: 50%;
-	left: 50%;
-	margin-top: -200px;
-	margin-left: -300px;
-	text-align: center;
-	border-radius: 5px;
-	box-shadow: 0px 0px 72px rgba(186, 197, 255, 1);
-}
-
-body.login .login_box img { width: 75%;	}
 
 /* --- BEGIN INBOX --- */
 
-body.inbox .header {
+.header {
 	background-color: #a4aec6;
 	background-image: url('../img/background.png');
 	background-size: 100%;
@@ -39,80 +10,133 @@ body.inbox .header {
 	padding-top: 5px;
 }
 
-body.inbox .graph {
+ .graph {
 	height: 25px;
 	width: 100%;
 }
 
-body.inbox p.small {
+ p.small {
 	font-size: 8px;
 	line-height: 110%;
 }
 
-body.inbox .sidebar {
+ .sidebar {
 	border-right: solid 1px #e4f1f7;
-	width: 139px;
-	position: relative;
 }
-body.inbox .sidebar .row_header {
+ .sidebar .row_header {
 	color: #666;
 	margin-left: 5px;
 	margin-bottom: 0;
 }
-body.inbox .sidebar ol { margin-left: 5px; list-style: none; }
-body.inbox .sidebar a {
+ .sidebar ol { margin-left: 5px; list-style: none; }
+ .sidebar a {
 	text-decoration: none;
-	color: #444;
+	color: #666;
 }
-body.inbox .sidebar li { padding-left: 5px; }
-body.inbox .sidebar li:hover { background-color: #e4f1f7; }
-body.inbox .sidebar img {
+ .sidebar li { padding-left: 5px; }
+ .sidebar li:hover { background-color: #e4f1f7; }
+ .sidebar img {
 	width: 25%;
 	position: absolute;
 	bottom: 0;
 	left: 0;
 }
 
-body.inbox .body {
+ .body {
 	position: absolute;
 	top: 155px;
 	bottom: 0px;
 	left: 0px;
 	right: 0px;
 }
-body.inbox .full { height: 100%; }
-body.inbox .contents {
+ .full { height: 100%; }
+ .contents {
 	position: relative;
 	border-right: solid 1px #e4f1f7;
 	width: 779px;
 }
 
-body.inbox .actions {
+ .actions {
 	border-bottom: solid 1px #e4f1f7;
 }
-body.inbox .actions .input-prepend { margin-bottom: 5px; }
+ .actions .input-prepend { margin-bottom: 5px; }
 
-body.inbox .messageList {
+ .messageList {
 	overflow: scroll;
 	position: absolute;
 	top: 41px;
 	left: -40px;
 	bottom: 0;
-	border-right: solid 1px #e4f1f7;
 }
-body.inbox .messageList hr { margin: 0; border-bottom: none; }
+ .messageList hr { margin: 0; border-bottom: none; }
 
-body.inbox .mailMessage { padding: 5px 0; }
-body.inbox .mailMessage:hover { background-color: #e4f1f7; }
-body.inbox .messagePadding { padding-left: 5px; }
-body.inbox .mailMessage .span1 { width: 55px; }
-body.inbox .mailMessage h5 { margin: 0; }
-body.inbox .mailMessage p {
+ .mailMessage { padding: 5px 0; }
+ .mailMessage:hover { background-color: #e4f1f7; }
+ .messagePadding { padding-left: 5px; }
+ .mailMessage .span1 { width: 55px; }
+ .mailMessage h5 { margin: 0; }
+ .mailMessage p {
 	font-size: 12px;
 	margin: 0;
 }
 
-body.inbox .message-detail .message { display: block; }
-body.inbox .message-detail .home-view { display: none; }
-body.inbox .show-home .message { display: none; }
-body.inbox .show-home .home-view { display: block; }
+
+/* Make images circular and center them */
+
+.circular {
+    width: 110px;
+    height: 110px;
+    -webkit-border-radius: 55px;
+    -moz-border-radius: 55px;
+    border-radius: 55px;
+
+    background: url(http://www.gravatar.com/avatar/cbd668c10f6384662519c3a4875661a8?s=150) no-repeat;
+
+    margin-bottom: 20px;
+    margin-top: 10px;
+    margin: 15px auto;
+}
+
+
+/*---- Message List CSS ----*/
+
+.panel.message-list {
+    padding: 15px;
+}
+
+ul {
+    list-style: none;
+    margin: 0 10px;
+    padding: 0;
+}
+
+li.item-wrapper {
+    border-bottom: 1px solid #ccc;
+    padding: 0 10px;
+    margin: 0;
+}
+
+li: last-child {
+    border: none;
+}
+
+li a {
+    text-decoration: none;
+    color: #000;
+    display: block;
+    -webkit-transition:  background-color 0.3s ease;
+    -moz-transition: background-color 0.3s ease;
+    -o-transition: background-color 0.3s ease;
+    -ms-transition: background-color 0.3s ease;
+    transition: background-color 0.3s ease;
+}
+
+li a:hover {
+    color: #111;
+}
+
+li:hover {
+    background: #f6f6f6;
+}
+
+
