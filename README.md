@@ -18,3 +18,4 @@ More detailed information and documentation is available in the Wiki
 
     code.google.com/p/goprotobuf/proto
     code.google.com/p/go.crypto/ripemd160
+    github.com/hoisie/web
