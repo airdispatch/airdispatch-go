@@ -15,9 +15,14 @@
                 <img src='img/plane.png' />
                 airdispat.ch
             </div>
-            <div class='columns large-4 large-offset-4 right' id='user-tab'>
-                <h4 id="username">{{current}}</h4>
+            <div class='columns large-3 large-offset-6 right' id='user-tab'>
+                <h4 id="username">Hunter Leath</h4>
                 <img src='http://gravatar.com/avatar/e9abd41f117ce7e267885a9a3bc98f0c?s=350' class='circular'/>
+                <ul>
+                    <li><a>account</a></li>
+                    <li><a>settings</a></li>
+                    <li><a>sign out</a></li>
+                </ul>
             </div>
             <!--
             <div class="columns large-5">
@@ -53,7 +58,7 @@
                 <!-- Use Angular-UI Sortable!-->
                 <ul>
                     <div class="panel message-list">
-                        <li ng-repeat="item in items | orderBy: 'importance':true | filter: filterType" class="row item-wrapper">
+                        <li ng-repeat="item in items" class="row item-wrapper">
                             <span class="columns large-1">
                                 <a class="item-importance item-wrapper">
                                     {{item.importance}}
@@ -80,9 +85,9 @@
             </div>
         </div>
     </div>
-    <script type="text/javascript" src="js/angular.js"></script>
-    <script type="text/javascript" src="js/app.js"></script>
-    <script type="text/javascript" src="js/controllers.js"></script>
+    <script type="text/javascript" src="js/angular/angular.js"></script>
+    <script type="text/javascript" src="js/angular/app.js"></script>
+    <script type="text/javascript" src="js/angular/controllers.js"></script>
     <script src='js/prototype.js'></script>
 </body>
 </html>
