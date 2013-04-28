@@ -10,6 +10,7 @@ import (
 	"airdispat.ch/airdispatch"
 	"code.google.com/p/goprotobuf/proto"
 	"crypto/ecdsa"
+	"encoding/hex"
 )
 
 var port = flag.String("port", "2048", "select the port on which to run the mail server")
@@ -142,12 +143,23 @@ func handleRetrival(retrieval *airdispatch.RetrieveData, toAddr string, conn net
 
 func handleSendRequest(request *airdispatch.SendMailRequest, fromAddr string) {
 	var toAddress []string = request.ToAddress
-	hash := ""
+	var theMail = request.StoredMessage
+	mailData, _ := proto.Marshal(theMail)
+	hash := hex.EncodeToString(common.HashSHA(mailData, nil))
 
 	for _, v := range(toAddress) {
 		loc := LookupLocation(v)
 		SendAlert(loc, hash, v)
 	}
+
+	storeData := MailData {
+		approved: toAddress,
+		data: mailData,
+	}
+
+	storedMessages[hash] = storeData
+
+	fmt.Println("Stored Messages: ", storedMessages)
 }
 
 func LookupLocation(toAddr string) string {
