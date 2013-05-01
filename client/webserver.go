@@ -12,7 +12,9 @@ var WORKING_DIRECTORY string
 func main() {
 	defineConstants()
 	defineRoutes()
-	web.Run("0.0.0.0:" + os.Getenv("PORT"))
+	s := web.NewServer()
+	s.Config.StaticDir = WORKING_DIRECTORY + "/static"
+	s.Run("0.0.0.0:" + os.Getenv("PORT"))
 }
 
 func defineConstants() {
