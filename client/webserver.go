@@ -1,3 +1,4 @@
+// +build heroku
 package main
 
 import (
@@ -10,25 +11,31 @@ var WORKING_DIRECTORY string
 
 func main() {
 	defineConstants()
-	defineRoutes()
-	web.Run("0.0.0.0:9999")
+	s := web.NewServer()
+	defineRoutes(s)
+	s.Config.StaticDir = WORKING_DIRECTORY + "/static"
+	s.Run("0.0.0.0:" + os.Getenv("PORT"))
 }
 
 func defineConstants() {
-	WORKING_DIRECTORY, _ = os.Getwd()
+	temp_dir := os.Getenv("WORK_DIR")
+	if temp_dir == "" {
+		temp_dir, _ = os.Getwd()
+	}
+	WORKING_DIRECTORY = temp_dir
 }
 
-func defineRoutes() {
+func defineRoutes(s *web.Server) {
 	// Homepage
-	web.Get("/", appResponse)
+	s.Get("/", appResponse)
 
 	// Authentication
-	web.Post("/login", loginResponse)
-	web.Get("/logout", logoutResponse)
+	s.Post("/login", loginResponse)
+	s.Get("/logout", logoutResponse)
 
 	// Mail API
-	web.Get("/message", messageListResponse)
-	web.Post("/message", messageSendResponse)
+	s.Get("/message", messageListResponse)
+	s.Post("/message", messageSendResponse)
 }
 
 func blankResponse() string {
