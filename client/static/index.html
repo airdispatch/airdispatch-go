@@ -11,13 +11,15 @@
     
     <div class='header'>
         <div class='row'>
-            <div class='columns large-4 left' id='logo'>
-                <img src='img/plane.png' />
-                airdispat.ch
+            <div class='columns large-4 left'>
+                <a href='index.html' id='logo'>
+                    <img src='img/plane.png' />
+                    airdispat.ch
+                </a>
             </div>
             <div class='columns large-2 large-offset-6 right' id='user-tab'>
                 <h4 id="username">Hunter Leath</h4>
-                <img src='http://gravatar.com/avatar/e9abd41f117ce7e267885a9a3bc98f0c?s=350' class='circular'/>
+                <img src='http://gravatar.com/avatar/e9abd41f117ce7e267885a9a3bc98f0c?s=350' class='icon_dropdown'/>
                 <ul>
                     <li><a><i class='foundicon-settings'></i>account</a></li>
                     <li><a><i class='foundicon-tools'></i>settings</a></li>
@@ -58,14 +60,10 @@
                 <!-- Use Angular-UI Sortable!-->
                 <ul>
                     <div class="panel message-list">
-                        <li ng-repeat="item in items" class="row item-wrapper">
-                            <span class="columns large-1">
+                        <li ng-repeat="item in items | orderBy:importance" class="row item-wrapper">
+                            <span class="columns large-2">
                                 <a class="item-importance item-wrapper">
                                     {{item.importance}}
-                                </a>
-                            </span>
-                            <span class="columns large-1">
-                                <a class="item-type-icon item-wrapper">
                                     <i class="foundicon-mail"></i>
                                 </a>
                             </span>
@@ -75,8 +73,11 @@
                                 </a>
                             </span>
                             <span class="columns large-3">
-                                <a class="item-owner-name item-wrapper">
-                                    {{item.owner.name}}
+                                <a class="item-owner item-wrapper">
+                                    <img src='http://gravatar.com/avatar/{{item.owner.gravatar}}' />
+                                    <address>
+                                        {{item.owner.name}}
+                                    </address>
                                 </a>
                             </span>
                         </li>
