@@ -16,7 +16,11 @@ func main() {
 }
 
 func defineConstants() {
-	WORKING_DIRECTORY, _ = os.Getwd()
+	temp_dir = os.Getenv("WORK_DIR")
+	if temp_dir == "" {
+		temp_dir, _ = os.Getwd()
+	}
+	WORKING_DIRECTORY = temp_dir
 }
 
 func defineRoutes() {
