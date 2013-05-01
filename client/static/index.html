@@ -5,6 +5,7 @@
     <link rel='stylesheet' type='text/css' href='css/styles.css'>
     <link href="css/foundation.min.css" rel="stylesheet" media="screen">
     <link rel="stylesheet" type="text/css" href="css/general_foundicons.css"/>
+    <link rel="stylesheet" type="text/css" href="css/social_foundicons.css"/>
     <link rel="stylesheet" type="text/css" href="css/normalize.css" />
 </head>
 <body ng-app="DispatchApp">
@@ -22,9 +23,9 @@
                 <h4 id="username">Hunter Leath</h4>
                 <img src='http://gravatar.com/avatar/e9abd41f117ce7e267885a9a3bc98f0c?s=350' class='icon_dropdown'/>
                 <ul>
-                    <li><a><i class='foundicon-settings'></i>account</a></li>
-                    <li><a><i class='foundicon-tools'></i>settings</a></li>
-                    <li><a><i class='foundicon-error'></i>sign out</a></li>
+                    <li><a><i class='general foundicon-settings'></i>account</a></li>
+                    <li><a><i class='general foundicon-tools'></i>settings</a></li>
+                    <li><a><i class='general foundicon-error'></i>sign out</a></li>
                 </ul>
             </div>
             <!--
@@ -65,7 +66,7 @@
                             <span class="columns large-2">
                                 <a class="item-importance item-wrapper">
                                     {{item.importance}}
-                                    <i class="foundicon-mail"></i>
+                                    <i class="{{getIcon(item.type)}}"></i>
                                 </a>
                             </span>
                             <span class="columns large-5">
@@ -73,11 +74,11 @@
                                     {{item.title}}
                                 </a>
                             </span>
-                            <span class="columns large-3">
+                            <span class="columns large-3 right">
                                 <a class="item-owner item-wrapper">
                                     <img src='http://gravatar.com/avatar/{{item.owner.gravatar}}' />
                                     <address>
-                                        {{item.owner.name}}
+                                        {{item.owner.name.split(" ")[0]}}
                                     </address>
                                 </a>
                             </span>

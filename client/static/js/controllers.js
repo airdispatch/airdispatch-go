@@ -29,7 +29,7 @@ angular.module('DispatchApp.controllers', []).
         var processMailData = function(data) {
             $scope.items = [];
             data.forEach(function(datum) {
-                item = {
+                var item = {
                     title: datum.title,
                     timeSent: new Date(data.timestamp),
                     owner: datum.gravatar,
@@ -37,8 +37,17 @@ angular.module('DispatchApp.controllers', []).
                     attachments: datum.attachments,
                     data: datum.data
                 };
-                items.push(item);
+                $scope.items.push(item);
             })
+        }
+
+        $scope.getIcon = function(type) {
+            var dict = {
+                "read": "general foundicon-mail",
+                "reply": "social foundicon-chat",
+                "action": "general foundicon-tools"
+            }
+            return dict[type];
         }
 });
 
