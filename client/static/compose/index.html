@@ -4,8 +4,8 @@
     <title>airdispat.ch</title>
     <link rel='stylesheet' type='text/css' href='../css/styles.css'>
     <link href="../css/foundation.min.css" rel="stylesheet" media="screen">
-    <link rel="stylesheet" type="text/css" href="../css/general_foundicons.css"/>
     <link rel="stylesheet" type="text/css" href="../css/social_foundicons.css"/>
+    <link rel="stylesheet" type="text/css" href="../css/general_foundicons.css"/>
     <link rel="stylesheet" type="text/css" href="../css/normalize.css">
     <link rel="stylesheet" type="text/css" href="../css/angular-ui.min.css"/>
     <link rel="stylesheet" type="text/css" href="../css/compose_style.css"/>
@@ -15,17 +15,19 @@
 
     <div class='header'>
         <div class='row'>
-            <div class='columns large-4 left' id='logo'>
-                <img src='../img/plane.png'/>
-                airdispat.ch
+            <div class='columns large-4 left'>
+                <a href='../index.html' id='logo'>
+                    <img src='../img/plane.png' />
+                    airdispat.ch
+                </a>
             </div>
             <div class='columns large-2 large-offset-6 right' id='user-tab'>
                 <h4 id="username">Hunter Leath</h4>
-                <img src='http://gravatar.com/avatar/e9abd41f117ce7e267885a9a3bc98f0c?s=350' class='circular'/>
+                <img src='http://gravatar.com/avatar/e9abd41f117ce7e267885a9a3bc98f0c?s=350' class='icon_dropdown'/>
                 <ul>
-                    <li><a><i class='foundicon-settings'></i>account</a></li>
-                    <li><a><i class='foundicon-tools'></i>settings</a></li>
-                    <li><a><i class='foundicon-error'></i>sign out</a></li>
+                    <li><a><i class='general foundicon-settings'></i>account</a></li>
+                    <li><a><i class='general foundicon-tools'></i>settings</a></li>
+                    <li><a><i class='general foundicon-error'></i>sign out</a></li>
                 </ul>
             </div>
             <!--
@@ -59,26 +61,20 @@
                                   placeholder="Message body"></textarea>
                     </div>
                     <div class="row">
-                        <label for="type-reply" class="columns large-4">
-                            <input name="reply" type="radio" id="type-reply" style="display:none;" CHECKED>
-                            <span class="custom radio checked"><i class="foundicon-quote"></i></span>
-                        </label>
-                        <label for="type-read" class="columns large-4">
-                            <input name="read" type="radio" id="type-read" style="display:none;">
-                            <span class="custom radio"><i class="foundicon-monitor"></i></span>
-                            Read this
-                        </label>
-                        <label for="type-action" class="columns large-4">
-                            <input name="action" type="radio" id="type-action" style="display:none;">
-                            <span class="custom radio"><i class="foundicon-tools"></i></span>
-                            Act on this
-                        </label>
+                        <a id="type-reply" class="columns large4">
+                            <i class="social foundicon-chat"></i>
+                        </a>
+                        <a id="type-read" class="columns large4">
+                            <i class="general foundicon-address-book"></i>
+                        </a>
+                            <a id="type-action" class="columns large4">
+                                <i class="general foundicon-tools"></i>
+                            </a>
                     </div>
                 </div>
             </form>
         </div>
     </div>
-</div>
     <script type="text/javascript" src="../js/angular.js"></script>
     <script type="text/javascript" src="../js/app.js"></script>
     <script type="text/javascript" src="../js/controllers.js"></script>
