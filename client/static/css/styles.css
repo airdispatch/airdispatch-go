@@ -8,25 +8,37 @@
 
 	color: #EFEFEF;
 
+	margin-left: 0px;
 	border-bottom: solid 1px #e4f1f7;
 	height: 65px;
 }
 
 #logo
 {
+	display: inline;
+
 	background-color: #282623;
-	padding-top: 10px;
+	color: #EFEFEF;
 
 	font-size: 26px;
+	cursor: pointer;
 
 	margin: auto;
+	padding-top: 10px;
+
 	position: absolute;
 	vertical-align: middle;
 }
 
 	#logo>img
 	{
+		display: inline-block;
 		width: 40px;
+	}
+
+	#logo:hover
+	{
+		color: #CFCFCF;
 	}
 
  .graph {
@@ -166,7 +178,7 @@
 }
 
 
-.circular {
+.icon_dropdown {
     width: 40px;
     height: 40px;
     -webkit-border-radius: 5px;
@@ -177,6 +189,8 @@
 
     /*margin: 15px auto;*/
 }
+
+
 
 
 /*---- Message List CSS ----*/
@@ -193,21 +207,77 @@ ul {
 
 li.item-wrapper {
     border-bottom: 1px solid #ccc;
-    padding: 2px 6px 2px 6px;
+    padding: 6px 6px 6px 6px;
 
     cursor: pointer;
 }
 
 a.item-importance
 {
+	display: inline;
 	text-align: center;
-}
 
-a.item-type-icon>i
-{
-	font-size: 14px;
+	font-size: 22px;
+	color: #474643;
+
 	vertical-align: middle;
 }
+
+	a.item-importance:hover{color: #474643;}
+
+a.item-importance>i
+{
+	font-size: 40px;
+	color: #4A5BA2;
+
+	position: absolute;
+	margin-top: -14px;
+	margin-left: 20px;
+}
+
+a.item-title
+{
+	font-size: 20px;
+	color: #474643;
+
+	padding-top: 2px;
+	padding-left: 5px;
+}
+
+a.item-owner
+{
+	display: inline-block;
+}
+
+	a.item-owner>img
+	{
+		width: 40px;
+	    height: 40px;
+	    -webkit-border-radius: 2px;
+	    -moz-border-radius: 2px;
+	    border-radius: 2px;
+	}
+
+	a.item-owner>address
+	{
+		display: inline-block;
+		vertical-align: middle;
+
+		font-style: normal;
+		font-size: 16px;
+
+		padding-left: 16px;
+	}
+
+		a.item-owner>address>i 
+		{
+			display: block;
+			text-align: center;
+
+			font-size: 8px;
+			font-style: normal;
+		}
+
 
 li: last-child {
     border: none;

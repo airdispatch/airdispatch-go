@@ -1,6 +1,8 @@
 airdispatch
 ============
 
+[![Build Status](https://drone.io/github.com/huntaub/airdispatch-protocol/status.png)](https://drone.io/github.com/huntaub/airdispatch-protocol/latest)
+
 Airdispat.ch is a new solution for email using the innovative Airdispatch Protocol.
 
 More detailed information and documentation is available in the Wiki
