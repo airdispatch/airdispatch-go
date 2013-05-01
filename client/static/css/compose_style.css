@@ -5,3 +5,10 @@ textarea {
 textarea#message-title {
     font-size: 18px;
 }
+
+form.custom .custom.radio {
+    border-radius: 0;
+    height: 20px;
+    width: 20px;
+
+}

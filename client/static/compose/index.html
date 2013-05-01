@@ -5,6 +5,10 @@
     <link rel='stylesheet' type='text/css' href='../css/styles.css'>
     <link href="../css/foundation.min.css" rel="stylesheet" media="screen">
     <link rel="stylesheet" type="text/css" href="../css/general_foundicons.css"/>
+    <link rel="stylesheet" type="text/css" href="../css/social_foundicons.css"/>
+    <link rel="stylesheet" type="text/css" href="../css/normalize.css">
+    <link rel="stylesheet" type="text/css" href="../css/angular-ui.min.css"/>
+    <link rel="stylesheet" type="text/css" href="../css/compose_style.css"/>
 </head>
 <body ng-app="DispatchApp">
 <div ng-controller="DispatchCtrl">
@@ -37,16 +41,7 @@
     </div>
     <div class='body'>
         <div class='row'>
-            <div class='columns large-2 sidebar'>
-                <!-- Sidebar Content !-->
-                <!-- Possible Sections: Inbox, Objects, Groups -->
-                <a class='button secondary small'>Compose</a>
-            </div>
-            <div class='columns large-10 sidebar'>
-                <input class="input-medium " type='text' placeholder='Search...'/>
-            </div>
-        </div>
-        <div class='row'>
+            <form class="custom">
             <div class='columns large-2 contents'>
                 <h6 class='row_header'>IMPORTANCE</h6>
 
@@ -56,12 +51,30 @@
             </div>
             <div class='columns large-10'>
                 <div class="row">
-                    <textarea id="message-title" placeholder="Message title"></textarea>
+                    <textarea id="message-title" class="columns large-12" rows="1" placeholder="Message title"></textarea>
                 </div>
                 <div class="row">
-                    <textarea id="message-body" placeholder="Message body"></textarea>
+                    <textarea id="message-body" rows="6" class="columns large-12" placeholder="Message body"></textarea>
+                </div>
+                <div class="row">
+                    <label for="type-reply" class="columns large-4">
+                        <input name="reply" type="radio" id="type-reply" style="display:none;" CHECKED>
+                        <span class="custom radio checked"><i class="foundicon-quote"></i></span>
+                    </label>
+                    <label for="type-read" class="columns large-4">
+                        <input name="read" type="radio" id="type-read" style="display:none;">
+                        <span class="custom radio"><i class="foundicon-monitor"></i></span>
+                        Read this
+                    </label>
+                    <label for="type-action" class="columns large-4">
+                        <input name="action" type="radio" id="type-action" style="display:none;">
+                        <span class="custom radio"><i class="foundicon-tools"></i></span>
+                        Act on this
+                    </label>
+
                 </div>
             </div>
+            </form>
         </div>
     </div>
     <script type="text/javascript" src="../js/angular.js"></script>
