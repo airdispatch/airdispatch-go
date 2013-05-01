@@ -16,7 +16,7 @@ func main() {
 }
 
 func defineConstants() {
-	temp_dir = os.Getenv("WORK_DIR")
+	temp_dir := os.Getenv("WORK_DIR")
 	if temp_dir == "" {
 		temp_dir, _ = os.Getwd()
 	}
