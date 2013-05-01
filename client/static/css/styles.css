@@ -83,7 +83,6 @@
  .full { height: 100%; }
  .contents {
 	position: relative;
-	border-right: solid 1px #e4f1f7;
 	width: 779px;
 }
 

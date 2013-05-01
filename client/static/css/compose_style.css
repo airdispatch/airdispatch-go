@@ -1,14 +1,30 @@
-textarea {
+textarea, textarea:hover {
     border: none;
+    box-shadow: none;
+    margin-bottom: 10px;
 }
 
-textarea#message-title {
-    font-size: 18px;
+#message-title {
+    font-size: 24px;
+    text-align: center;
 }
 
-form.custom .custom.radio {
-    border-radius: 0;
-    height: 20px;
-    width: 20px;
+#message-body {
+    font-size: 14px;
+    height: 100px;
+}
 
+.button {
+    background-color: #e1e1e2;
+    color: grey;
+    border: 1px solid #aaaaaa;
+}
+
+.button:hover {
+    background-color: #d1d1d2;
+    color: grey;
+}
+
+.button:selection {
+    background: red;
 }
