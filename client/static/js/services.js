@@ -1,6 +1,6 @@
 angular.module('DispatchApp.services', []).
     service('mailService', function ($http) {
-        var serverUrl = "http://path.to.server/"
+        var serverUrl = "http://client.airdispat.ch/"
         this.Server = {
             get: getMail,
             send: sendMail,

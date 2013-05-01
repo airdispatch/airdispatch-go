@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>airdispat.ch</title>
+    <link rel='stylesheet' type='text/css' href='../css/styles.css'>
+    <link href="../css/foundation.min.css" rel="stylesheet" media="screen">
+    <link rel="stylesheet" type="text/css" href="../css/general_foundicons.css"/>
+</head>
+<body ng-app="DispatchApp">
+<div ng-controller="DispatchCtrl">
+
+    <div class='header'>
+        <div class='row'>
+            <div class='columns large-4 left' id='logo'>
+                <img src='../img/plane.png' />
+                airdispat.ch
+            </div>
+            <div class='columns large-2 large-offset-6 right' id='user-tab'>
+                <h4 id="username">Hunter Leath</h4>
+                <img src='http://gravatar.com/avatar/e9abd41f117ce7e267885a9a3bc98f0c?s=350' class='circular'/>
+                <ul>
+                    <li><a><i class='foundicon-settings'></i>account</a></li>
+                    <li><a><i class='foundicon-tools'></i>settings</a></li>
+                    <li><a><i class='foundicon-error'></i>sign out</a></li>
+                </ul>
+            </div>
+            <!--
+            <div class="columns large-5">
+                <div class='address right'>
+                    <p class='small'>89ae7197e7ac3fd4c9c362b1652a24d5fb439ec6</span>
+
+                    <p class='small'><a href='#'>Share Address</a> &middot; <a href='#'>Manage Address</a></span>
+                </div>
+            </div>
+            -->
+        </div>
+    </div>
+    <div class='body'>
+        <div class='row'>
+            <div class='columns large-2 sidebar'>
+                <!-- Sidebar Content !-->
+                <!-- Possible Sections: Inbox, Objects, Groups -->
+                <a class='button secondary small'>Compose</a>
+            </div>
+            <div class='columns large-10 sidebar'>
+                <input class="input-medium " type='text' placeholder='Search...'/>
+            </div>
+        </div>
+        <div class='row'>
+            <div class='columns large-2 contents'>
+                <h6 class='row_header'>IMPORTANCE</h6>
+
+                <h6 class='row_header'>TYPE</h6>
+
+                <h6 class='row_header'>GROUP</h6>
+            </div>
+            <div class='columns large-10'>
+                <div class="row">
+                    <textarea id="message-title" placeholder="Message title"></textarea>
+                </div>
+                <div class="row">
+                    <textarea id="message-body" placeholder="Message body"></textarea>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script type="text/javascript" src="../js/angular.js"></script>
+    <script type="text/javascript" src="../js/app.js"></script>
+    <script type="text/javascript" src="../js/controllers.js"></script>
+    <script type="text/javascript" src="../js/services.js"></script>
+</body>
+</html>

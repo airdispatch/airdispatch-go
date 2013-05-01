@@ -1,0 +1,7 @@
+textarea {
+    border: none;
+}
+
+textarea#message-title {
+    font-size: 18px;
+}
