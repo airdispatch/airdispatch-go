@@ -1,14 +1,20 @@
 [
 	{
-		from_address: "0d81ec840b43b5368829af2d92dca37d220eabd813a134d7",
-		from_name: "Hunter Leath",
-		stored_data: [
-			{name: "airdispatch/text/plain",
-			 	data: "Hello there little user..."},
-			{name: "airdispatch/date/sent",
-				data: "2007-04-05T14:30"},
-			{name: "airdispatch/subject",
-				data: "RE: Cat Pictures"}
+		"title": "RE: Cute Cat Pictures",
+		"owner": {
+			"name": "Hunter Leath",
+			"address": "0d81ec840b43b5368829af2d92dca37d220eabd813a134d7",
+			"gravatar": "e9abd41f117ce7e267885a9a3bc98f0c",
+		},
+		"type": "short",
+		"priority": 6,
+		"data": [
+			{"name": "airdispatch/text/plain",
+			"data": "hello"}
+		],
+		"attachments": [
+			{"type": "airdispatch/phot",
+			"data": "http://flickr.com"}
 		]
 	}
 ]
