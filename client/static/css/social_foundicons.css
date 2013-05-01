@@ -1,8 +1,8 @@
 /* font-face */
 @font-face {
   font-family: "SocialFoundicons";
-  src: url("../../../../../../Downloads/foundation_icons_all/foundation_icons_social/fonts/social_foundicons.eot");
-  src: url("../../../../../../Downloads/foundation_icons_all/foundation_icons_social/fonts/social_foundicons.eot?#iefix") format("embedded-opentype"), url("../../../../../../Downloads/foundation_icons_all/foundation_icons_social/fonts/social_foundicons.woff") format("woff"), url("../../../../../../Downloads/foundation_icons_all/foundation_icons_social/fonts/social_foundicons.ttf") format("truetype"), url("../../../../../../Downloads/foundation_icons_all/foundation_icons_social/fonts/social_foundicons.svg#SocialFoundicons") format("svg");
+  src: url("../img/fonts/social_foundicons.eot");
+  src: url("../img/fonts/social_foundicons.eot?#iefix") format("embedded-opentype"), url("../img/fonts/social_foundicons.woff") format("woff"), url("../img/fonts/social_foundicons.ttf") format("truetype"), url("../img/fonts/social_foundicons.svg#SocialFoundicons") format("svg");
   font-weight: normal;
   font-style: normal;
 }
