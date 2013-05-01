@@ -1,14 +1,14 @@
-angular.module('DispatchApp.controllers', ['ngResource']).
+angular.module('DispatchApp.services', []).
     service('mailService', function ($http) {
         var serverUrl = "http://path.to.server/"
         this.Server = {
             get: getMail,
             send: sendMail,
-            login: startSession
+            login: doLogin
         };
 
         var getMail = function(callback) {
-            $http.get("message/")
+            $http.get(serverUrl+"message/")
                 .success(function(response) {
                     callback(response);
                 })

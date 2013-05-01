@@ -1,1 +1,1 @@
-angular.module('DispatchApp', ['DispatchApp.controllers']);
+angular.module('DispatchApp', ['DispatchApp.controllers', 'DispatchApp.services']);
