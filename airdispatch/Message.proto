@@ -9,11 +9,60 @@ package airdispatch;
 // ALL MESSAGES ARE PREFIXED WITH 2 BYTES THAT SPECIFY THE MESSAGE LENGTH
 // IN BIG-ENDIAN FORMAT.
 
+// ----------------
+// Tracker Messages
+// ----------------
+
+// REG - Used to register an address's location with the tracker.
+message AddressRegistration {
+	required string address = 1;
+	required bytes public_key = 2;
+	required string location = 3;
+	optional string username = 4;
+}
+
+// QUE - Used to query the mailserver for the location of the address.
+message AddressRequest {
+	required string address = 1;
+	optional bool need_key = 2;
+}
+
+// RES - Sent from the Tracker contains the location of the address.
+message AddressResponse {
+	required string server_location = 1;
+	optional bytes public_key = 2;
+	required string address = 3;
+}
+
+// --------------------
+// Mail Server Messages
+// --------------------
+
+// SEN - Used to request that a MailServer forward mail on one's behalf.
 message SendMailRequest {
 	repeated string to_address = 1;
 	required Mail stored_message = 2;
 }
 
+// ALE - Used to alert a neighboring mailserver that you are holding mail for one of its users.
+message Alert {
+	optional string to_address = 1;
+	optional string location = 2;
+	optional string message_id = 3;
+}
+
+// RET - Used to download messages from a mailserver.
+message RetrieveData {
+	optional string message_id = 1;
+	optional string since_date = 2;
+	optional string filter_options = 3;
+}
+
+// ----------------
+// Mail Data Format
+// ----------------
+
+// MAI - Used to store an encrypted message
 message Mail {
 	required string from_address = 1; // The Address of the Sending User
 	required string encryption = 2; // The Encryption Algorithim of the Message
@@ -30,6 +79,10 @@ message MailData {
 	}
 }
 
+// ---------------------
+// Protocol Helper Types
+// ---------------------
+
 message SignedMessage {
 	required bytes payload = 1;
 	optional bytes signing_key = 2;
@@ -43,33 +96,4 @@ message SignedMessage {
 message Signature {
 	required bytes r = 1;
 	required bytes s = 2;
-}
-
-message Alert {
-	optional string to_address = 1;
-	optional string location = 2;
-	optional string message_id = 3;
-}
-
-message RetrieveData {
-	optional string message_id = 1;
-	optional string filter_options = 3;
-}
-
-message AddressRegistration {
-	required string address = 1;
-	required bytes public_key = 2;
-	required string location = 3;
-	optional string username = 4;
-}
-
-message AddressRequest {
-	required string address = 1;
-	optional bool need_key = 2;
-}
-
-message AddressResponse {
-	required string server_location = 1;
-	optional bytes public_key = 2;
-	required string address = 3;
 }
