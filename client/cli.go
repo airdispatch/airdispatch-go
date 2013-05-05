@@ -10,7 +10,11 @@ import (
 	"airdispat.ch/common"
 	"flag"
 	"crypto/ecdsa"
+	"crypto/elliptic"
 	"encoding/hex"
+	"encoding/gob"
+	"math/big"
+	"os"
 )
 
 // -----------------------
@@ -26,11 +30,8 @@ var acting_address *string = flag.String("address", "", "specify the address you
 var remote_mailserver *string = flag.String("remote", "localhost:2048", "specify the remote mailserver on which to connect")
 var tracking_server *string = flag.String("tracker", "localhost:2048", "specify the tracking server on which to query")
 var mail_location *string = flag.String("location", "", "specify a location for messages for a specific address to be delivered to")
+var key_location *string = flag.String("key", "", "specify a file to save or load the keys")
 
-
-// Key Variables
-var myAddress string
-var key *ecdsa.PrivateKey
 
 // Mode Constants
 const REGISTRATION = "registration"
@@ -40,56 +41,91 @@ const SEND = "send"
 const CHECK = "check"
 const KEYGEN = "keygen"
 
+// Keygen Variables
+type EncodedKey struct {
+	D, X, Y *big.Int
+}
+
+type CLIKey struct {
+	Address string
+	key *ecdsa.PrivateKey
+	SaveKey EncodedKey 
+}
+
+var credentials CLIKey
+
 func main() {
 	// Parse the Command Line Flags
 	flag.Parse()
+	
+	// Register the Elliptic Curve Parameters as Acceptable to Read/Write to File
+	gob.Register(elliptic.CurveParams{})
 
 	// If we expect to be interactive, prompt the user for the configuration variables.
 	if *interactivity {
 		fmt.Print("Mode: ")
 		fmt.Scanln(mode)
-		fmt.Print("Tracking Server: ")
-		fmt.Scanln(tracking_server)
+		
+		// Nothing else needed if its a KEYGEN Query
+		if *mode != KEYGEN {
+			fmt.Print("Tracking Server: ")
+			fmt.Scanln(tracking_server)
 
-		// Specify the Remote Mailserver if you are Sending an Alert
-		if *mode != REGISTRATION && *mode != QUERY {
-			fmt.Print("Remote Mailserver: ")
-			fmt.Scanln(remote_mailserver)
+			// Specify the Remote Mailserver if you are Sending an Alert
+			if *mode != REGISTRATION && *mode != QUERY {
+				fmt.Print("Remote Mailserver: ")
+				fmt.Scanln(remote_mailserver)
+			}
+
+			// Specify the Location to Send Messages to if you are Sending a registration
+			if *mode == REGISTRATION {
+				fmt.Print("Location to Send Messages to: ")
+				fmt.Scanln(mail_location)
+			}
+
+			fmt.Print("Send or Query Address: ")
+			fmt.Scanln(acting_address)
+
+			fmt.Print("File to Load Keys From: ")
+		} else {
+			fmt.Print("File to Save Keys to: ")
 		}
-
-		// Specify the Location to Send Messages to if you are Sending a registration
-		if *mode == REGISTRATION {
-			fmt.Print("Location to Send Messages to: ")
-			fmt.Scanln(mail_location)
-		}
-
-		fmt.Print("Send or Query Address: ")
-		fmt.Scanln(acting_address)
+		fmt.Scanln(key_location)
 	}
 	
 	// Determine what to do based on the mode of the Client
 	switch {
+		// REGISTRATION Message
 		case *mode == REGISTRATION:
 			fmt.Println("Sending a Registration Request")
+			loadKeys(*key_location)
 			sendRegistration(*tracking_server, *mail_location)
+
+		// QUERY MESSAGE	
 		case *mode == QUERY:
-			if *acting_address == "" {
-				fmt.Println("You must supply an address to lookup from the tracker.")
-				return
-			}
 			fmt.Println("Sending a Query for " + *acting_address)
+			loadKeys(*key_location)
 			sendQuery(*tracking_server, *acting_address)
+
+		// ALERT MESSAGE
 		case *mode == ALERT:
-			if *acting_address == "" {
-				fmt.Println("You must supply an address to send the alert to.")
-				return
-			}
 			fmt.Println("Sending a Mail Alert for " + *acting_address)
+			loadKeys(*key_location)
 			sendAlert(*tracking_server, *acting_address, *remote_mailserver)
+
+		// SEND MESSAGE
 		case *mode == SEND:
+			loadKeys(*key_location)
 			sendMail(*acting_address, *remote_mailserver)
+
+		// GENERATE KEYS
+		case *mode == KEYGEN:
+			saveKeys(*key_location)
+
+		// Otherwise, throw an error.
 		default:
-			fmt.Println("You must specify a mode to run this in. -mode registration or -mode query or specify -i for interactive mode")
+			fmt.Println("You must specify a mode to run the program in, or specify interactive mode.")
+			fmt.Println("Currently supported modes: ", REGISTRATION, QUERY, ALERT, SEND, KEYGEN)
 	}
 }
 
@@ -106,11 +142,60 @@ func connectToServer(remote string) net.Conn {
 	return conn
 }
 
-func keygen() {
-	key, _ = common.CreateKey()
+func createKey() {
+	key, _ := common.CreateKey()
 	createdAddress := common.StringAddress(&key.PublicKey)
-	myAddress = createdAddress
+
+	saveKey := EncodedKey{key.D, key.PublicKey.X, key.PublicKey.Y}
+	credentials = CLIKey{createdAddress, key, saveKey}
 	fmt.Println("Created the Address:", createdAddress)
+}
+
+func loadKeys(filename string) {
+	// Open the File for Loading
+	file, err := os.Open(filename)
+	if err != nil {
+		fmt.Println("Unable to Open File")
+		fmt.Println(err)
+		return
+	}
+
+	// Create the decoder
+	dec := gob.NewDecoder(file)
+	// Load from the File
+	err = dec.Decode(&credentials)
+	if err != nil {
+		fmt.Println("Unable to get the credentials from the file.")
+		fmt.Println(err)
+	}
+
+	// Reconstruct the Key
+	newPublicKey := ecdsa.PublicKey{elliptic.P256(), credentials.SaveKey.X, credentials.SaveKey.Y}
+	newPrivateKey := ecdsa.PrivateKey{newPublicKey, credentials.SaveKey.D}
+	credentials.key = &newPrivateKey
+}
+
+func saveKeys(filename string) {
+	// First, create the keys that we will use
+	createKey()
+
+	// Create the File to Store the Keys in
+	file, err := os.Create(filename)
+	if err != nil {
+		fmt.Println("Unable to Create File")
+		fmt.Println(err)
+		return
+	}
+
+	// Create the Encoder
+	enc := gob.NewEncoder(file)
+
+	// Write to File
+	err = enc.Encode(credentials)
+	if err != nil {
+		fmt.Println("Unable to Write Credentials")
+		fmt.Println(err)
+	}
 }
 
 func sendRegistration(tracker string, location string) {
@@ -118,23 +203,19 @@ func sendRegistration(tracker string, location string) {
 	tracker_conn := connectToServer(tracker)
 	defer tracker_conn.Close()
 
-	// Generate a signing keypair
-	keygen()
-
-	// Specify the Message Type and get the Byte Key
 	mesType := common.REGISTRATION_MESSAGE
-	byteKey := common.KeyToBytes(&key.PublicKey)
+	byteKey := common.KeyToBytes(&credentials.key.PublicKey)
 	
 	// Create the Registration Message
 	newRegistration := &airdispatch.AddressRegistration{
-		Address: &myAddress,
+		Address: &credentials.Address,
 		PublicKey: byteKey,
 		Location: &location, 
 	}
 
 	// Create the Signed Message
 	regData, _ := proto.Marshal(newRegistration)
-	toSend := common.CreateAirdispatchMessage(regData, key, mesType)
+	toSend := common.CreateAirdispatchMessage(regData, credentials.key, mesType)
 
 	// Send the Message
 	tracker_conn.Write(toSend)
@@ -145,18 +226,14 @@ func sendQuery(tracker string, address string) string {
 	tracker_conn := connectToServer(tracker)
 	defer tracker_conn.Close()
 
-	// Generate a Signing Keypair
-	keygen()
-
-	// Create the new Query Message
 	newQuery := &airdispatch.AddressRequest {
-		Address: &myAddress,
+		Address: &credentials.Address,
 	}
 
 	// Setup the new Message
 	mesType := common.QUERY_MESSAGE
 	queryData, _ := proto.Marshal(newQuery)
-	totalBytes := common.CreateAirdispatchMessage(queryData, key, mesType)
+	totalBytes := common.CreateAirdispatchMessage(queryData, credentials.key, mesType)
 
 	// Send the Message
 	tracker_conn.Write(totalBytes)
@@ -174,9 +251,7 @@ func sendQuery(tracker string, address string) string {
 }
 
 func sendMail(address string, mailserver string) {
-	// Generate a signing keypair
-	keygen()
-
+	// Connect to the Remote Mailserver
 	mail_conn := connectToServer(mailserver)
 	defer mail_conn.Close()
 
@@ -187,7 +262,7 @@ func sendMail(address string, mailserver string) {
 	var enc = "none"
 
 	// Make Shell for Mail to Send
-	mail := &airdispatch.Mail { FromAddress: &myAddress, Encryption: &enc }
+	mail := &airdispatch.Mail { FromAddress: &credentials.Address, Encryption: &enc }
 	mailData := &airdispatch.MailData{}
 
 	// Create an Array of Mail Data Types for us to append to
@@ -235,16 +310,13 @@ func sendMail(address string, mailserver string) {
 	// Convert the Structure into Bytes
 	sendBytes, _ := proto.Marshal(sendRequest)
 	mesType := common.SEND_REQUEST
-	toSend := common.CreateAirdispatchMessage(sendBytes, key, mesType)
+	toSend := common.CreateAirdispatchMessage(sendBytes, credentials.key, mesType)
 
 	// Send the Message
 	mail_conn.Write(toSend)
 } 
 
 func sendAlert(tracker string, address string, mailserver string) {
-	// Generate a Signing Keypair
-	keygen()
-
 	// Find the recipientServer for the address, and connect to it
 	recipientServer := sendQuery(tracker, address)
 	recipient_conn := connectToServer(recipientServer)
@@ -268,7 +340,7 @@ func sendAlert(tracker string, address string, mailserver string) {
 
 	// Create the Message
 	alertData, _ := proto.Marshal(newAlert)
-	toSend := common.CreateAirdispatchMessage(alertData, key, common.ALERT_MESSAGE)
+	toSend := common.CreateAirdispatchMessage(alertData, credentials.key, common.ALERT_MESSAGE)
 
 	// Send the Alert
 	recipient_conn.Write(toSend)
