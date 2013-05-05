@@ -49,6 +49,8 @@ message Alert {
 	optional string to_address = 1;
 	optional string location = 2;
 	optional string message_id = 3;
+	optional bool update_alert = 4;
+	optional string update_message_id = 5;
 }
 
 // RET - Used to download messages from a mailserver.
