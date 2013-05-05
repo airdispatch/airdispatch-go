@@ -81,10 +81,11 @@ func main() {
 			if *mode == REGISTRATION {
 				fmt.Print("Location to Send Messages to: ")
 				fmt.Scanln(mail_location)
+			} else {
+				// Otherwise, specify the address that you are querying or sending to.
+				fmt.Print("Send or Query Address: ")
+				fmt.Scanln(acting_address)
 			}
-
-			fmt.Print("Send or Query Address: ")
-			fmt.Scanln(acting_address)
 
 			fmt.Print("File to Load Keys From: ")
 		} else {
@@ -170,7 +171,7 @@ func loadKeys(filename string) {
 	}
 
 	// Reconstruct the Key
-	newPublicKey := ecdsa.PublicKey{elliptic.P256(), credentials.SaveKey.X, credentials.SaveKey.Y}
+	newPublicKey := ecdsa.PublicKey{common.EllipticCurve, credentials.SaveKey.X, credentials.SaveKey.Y}
 	newPrivateKey := ecdsa.PrivateKey{newPublicKey, credentials.SaveKey.D}
 	credentials.key = &newPrivateKey
 }

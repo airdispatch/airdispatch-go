@@ -15,7 +15,7 @@ import (
 	"airdispat.ch/airdispatch"
 )
 
-var curve elliptic.Curve = elliptic.P256()
+var EllipticCurve elliptic.Curve = elliptic.P256()
 var random io.Reader = rand.Reader
 
 func main() {
@@ -28,7 +28,7 @@ func main() {
 }
 
 func CreateKey() (key *ecdsa.PrivateKey, err error) {
-	key, err = ecdsa.GenerateKey(curve, random)
+	key, err = ecdsa.GenerateKey(EllipticCurve, random)
 	return
 }
 
@@ -72,7 +72,7 @@ func BytesToKey(data []byte) *ecdsa.PublicKey {
 	key := &ecdsa.PublicKey{
 		X: x,
 		Y: y,
-		Curve: curve,
+		Curve: EllipticCurve,
 	}
 	return key
 }
