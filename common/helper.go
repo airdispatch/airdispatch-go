@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"errors"
 	"reflect"
+	"code.google.com/p/goprotobuf/proto"
 )
 
 const (
@@ -114,6 +115,13 @@ func CreatePrefixedMessage(data []byte) []byte {
 	binary.Write(lengthBuf, binary.BigEndian, length)
 	fullBuffer := bytes.Join([][]byte{prefix, lengthBuf.Bytes(), data}, nil)
 	return fullBuffer
+}
+
+func CreateAirdispatchMessage(data []byte, key *ecdsa.PrivateKey, mesType string) []byte {
+	newSignedMessage, _ := CreateSignedMessage(key, data, mesType)
+	signedData, _ := proto.Marshal(newSignedMessage)
+	toSend := CreatePrefixedMessage(signedData)
+	return toSend
 }
 
 func SliceContains(array interface{}, elem interface{}) bool {
