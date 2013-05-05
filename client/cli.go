@@ -10,6 +10,7 @@ import (
 	"airdispat.ch/common"
 	"flag"
 	"crypto/ecdsa"
+	"encoding/hex"
 )
 
 // -----------------------
@@ -56,6 +57,12 @@ func main() {
 			fmt.Scanln(remote_mailserver)
 		}
 
+		// Specify the Location to Send Messages to if you are Sending a registration
+		if *mode == REGISTRATION {
+			fmt.Print("Location to Send Messages to: ")
+			fmt.Scanln(mail_location)
+		}
+
 		fmt.Print("Send or Query Address: ")
 		fmt.Scanln(acting_address)
 	}
@@ -64,7 +71,7 @@ func main() {
 	switch {
 		case *mode == REGISTRATION:
 			fmt.Println("Sending a Registration Request")
-			sendRegistration(*tracking_server)
+			sendRegistration(*tracking_server, *mail_location)
 		case *mode == QUERY:
 			if *acting_address == "" {
 				fmt.Println("You must supply an address to lookup from the tracker.")
@@ -72,7 +79,6 @@ func main() {
 			}
 			fmt.Println("Sending a Query for " + *acting_address)
 			sendQuery(*tracking_server, *acting_address)
-/*
 		case *mode == ALERT:
 			if *acting_address == "" {
 				fmt.Println("You must supply an address to send the alert to.")
@@ -80,9 +86,8 @@ func main() {
 			}
 			fmt.Println("Sending a Mail Alert for " + *acting_address)
 			sendAlert(*tracking_server, *acting_address, *remote_mailserver)
-*/
 		case *mode == SEND:
-			sendMail(*tracking_server, *acting_address, *remote_mailserver)
+			sendMail(*acting_address, *remote_mailserver)
 		default:
 			fmt.Println("You must specify a mode to run this in. -mode registration or -mode query or specify -i for interactive mode")
 	}
@@ -108,28 +113,23 @@ func keygen() {
 	fmt.Println("Created the Address:", createdAddress)
 }
 
-func sendRegistration(tracker string) {
+func sendRegistration(tracker string, location string) {
 	// Connect to the Tracking Server
 	tracker_conn := connectToServer(tracker)
 	defer tracker_conn.Close()
 
+	// Generate a signing keypair
 	keygen()
 
 	// Specify the Message Type and get the Byte Key
 	mesType := common.REGISTRATION_MESSAGE
 	byteKey := common.KeyToBytes(&key.PublicKey)
-
-	// Get the location of Messages if we are in interactive mode
-	if *interactivity {
-		fmt.Print("Location to Send Messages To: ")
-		fmt.Scanln(mail_location)
-	}
 	
 	// Create the Registration Message
 	newRegistration := &airdispatch.AddressRegistration{
 		Address: &myAddress,
 		PublicKey: byteKey,
-		Location: mail_location, 
+		Location: &location, 
 	}
 
 	// Create the Signed Message
@@ -145,6 +145,7 @@ func sendQuery(tracker string, address string) string {
 	tracker_conn := connectToServer(tracker)
 	defer tracker_conn.Close()
 
+	// Generate a Signing Keypair
 	keygen()
 
 	// Create the new Query Message
@@ -172,12 +173,8 @@ func sendQuery(tracker string, address string) string {
 	return *newQueryResponse.ServerLocation
 }
 
-func sendMail(tracker string, address string, mailserver string) {
-	if *interactivity {
-		fmt.Print("Remote Server Location: ")
-		fmt.Scanln(&mailserver)
-	}
-
+func sendMail(address string, mailserver string) {
+	// Generate a signing keypair
 	keygen()
 
 	mail_conn := connectToServer(mailserver)
@@ -244,25 +241,35 @@ func sendMail(tracker string, address string, mailserver string) {
 	mail_conn.Write(toSend)
 } 
 
+func sendAlert(tracker string, address string, mailserver string) {
+	// Generate a Signing Keypair
+	keygen()
 
-/*
-func sendAlert(conn net.Conn, addr string) {
-	defer conn.Close()
+	// Find the recipientServer for the address, and connect to it
+	recipientServer := sendQuery(tracker, address)
+	recipient_conn := connectToServer(recipientServer)
 
-	key, _ := common.CreateKey()
-	hash := hex.EncodeToString(common.HashSHA(nil, []byte("hello")))
-	location := "google.com"
+	// Allow the User to Specify a Specific Hash
+	toHash := "hello"
+	if *interactivity {
+		fmt.Println("Specifiy a message to generate an ID for: ")
+		fmt.Scanln(&toHash)
+	}
 
+	// Create the Message Id
+	hash := hex.EncodeToString(common.HashSHA(nil, []byte(toHash)))
+
+	// Fill Out the alert Structure
 	newAlert := &airdispatch.Alert {
-		ToAddress: &addr,
-		Location: &location,
+		ToAddress: &address,
+		Location: &mailserver,
 		MessageId: &hash,
 	}
 
+	// Create the Message
 	alertData, _ := proto.Marshal(newAlert)
-	newSignedMessage, _ := common.CreateSignedMessage(key, alertData, common.ALERT_MESSAGE)
-	signedData, _ := proto.Marshal(newSignedMessage)
-	totalBytes := common.CreatePrefixedMessage(signedData)
-	conn.Write(totalBytes)
+	toSend := common.CreateAirdispatchMessage(alertData, key, common.ALERT_MESSAGE)
+
+	// Send the Alert
+	recipient_conn.Write(toSend)
 }
-*/
