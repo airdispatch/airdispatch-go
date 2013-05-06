@@ -57,12 +57,16 @@ message Alert {
 message RetrieveData {
 	optional string message_id = 1;
 	optional string since_date = 2;
-	optional string filter_options = 3;
 }
 
 // ----------------
 // Mail Data Format
 // ----------------
+
+// ARR - Used to Signify that Multiple Messages are Expected
+message ArrayedData {
+	required int32 number_of_messages = 1;
+}
 
 // MAI - Used to store an encrypted message
 message Mail {

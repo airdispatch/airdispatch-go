@@ -10,7 +10,6 @@ import (
 	"airdispat.ch/common"
 	"flag"
 	"crypto/ecdsa"
-	"crypto/elliptic"
 	"encoding/hex"
 	"encoding/gob"
 	"math/big"
@@ -58,9 +57,6 @@ func main() {
 	// Parse the Command Line Flags
 	flag.Parse()
 
-	// Register the Elliptic Curve Parameters as Acceptable to Read/Write to File
-	gob.Register(elliptic.CurveParams{})
-
 	// If we expect to be interactive, prompt the user for the configuration variables.
 	if *interactivity {
 		fmt.Print("Mode: ")
@@ -81,7 +77,7 @@ func main() {
 			if *mode == REGISTRATION {
 				fmt.Print("Location to Send Messages to: ")
 				fmt.Scanln(mail_location)
-			} else {
+			} else if *mode != CHECK {
 				// Otherwise, specify the address that you are querying or sending to.
 				fmt.Print("Send or Query Address: ")
 				fmt.Scanln(acting_address)
@@ -118,6 +114,10 @@ func main() {
 		case *mode == SEND:
 			loadKeys(*key_location)
 			sendMail(*acting_address, *remote_mailserver)
+
+		case *mode == CHECK:
+			loadKeys(*key_location)
+			checkMail(*remote_mailserver)
 
 		// GENERATE KEYS
 		case *mode == KEYGEN:
@@ -174,6 +174,8 @@ func loadKeys(filename string) {
 	newPublicKey := ecdsa.PublicKey{common.EllipticCurve, credentials.SaveKey.X, credentials.SaveKey.Y}
 	newPrivateKey := ecdsa.PrivateKey{newPublicKey, credentials.SaveKey.D}
 	credentials.key = &newPrivateKey
+
+	fmt.Println("Your address is: ", credentials.Address)
 }
 
 func saveKeys(filename string) {
@@ -228,7 +230,7 @@ func sendQuery(tracker string, address string) string {
 	defer tracker_conn.Close()
 
 	newQuery := &airdispatch.AddressRequest {
-		Address: &credentials.Address,
+		Address: &address,
 	}
 
 	// Setup the new Message
@@ -240,7 +242,11 @@ func sendQuery(tracker string, address string) string {
 	tracker_conn.Write(totalBytes)
 
 	// Get the Response
-	data, _ := common.ReadAirdispatchMessage(tracker_conn)
+	data, err := common.ReadAirdispatchMessage(tracker_conn)
+	if err != nil {
+		fmt.Println("Unable to get address.")
+		return ""
+	}
 
 	// Format the Response
 	newQueryResponse := &airdispatch.AddressResponse{}
@@ -345,4 +351,7 @@ func sendAlert(tracker string, address string, mailserver string) {
 
 	// Send the Alert
 	recipient_conn.Write(toSend)
+}
+
+func checkMail(mailserver string) {
 }

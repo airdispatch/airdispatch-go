@@ -111,11 +111,17 @@ func handleClient(conn net.Conn) {
 }
 
 func handleRegistration(theAddress string, reg *airdispatch.AddressRegistration) {
+	// Check to see if a Username was provided
+	username := ""
+	if reg.Username != nil {
+		username = *reg.Username
+	}
+
 	// Load the RegisteredAddress with the sent information
-	data := RegisteredAddress {
+	data := RegisteredAddress{
 		public_key: reg.PublicKey,
 		location: *reg.Location,
-		username: *reg.Username,
+		username: username,
 	}
 
 	// Store the RegisterdAddress in the Database
@@ -123,7 +129,7 @@ func handleRegistration(theAddress string, reg *airdispatch.AddressRegistration)
 }
 
 func handleQuery(theAddress string, req *airdispatch.AddressRequest, conn net.Conn) {
-	fmt.Println("Quering for", *req.Address)
+	fmt.Println("Querying for", *req.Address)
 
 	// Lookup the Address in the Database
 	info, ok := storedAddresses[*req.Address]
@@ -137,6 +143,7 @@ func handleQuery(theAddress string, req *airdispatch.AddressRequest, conn net.Co
 	// Create a Formatted Message
 	response := &airdispatch.AddressResponse {
 		ServerLocation: &info.location,
+		Address: &theAddress,
 		PublicKey: info.public_key,
 	}
 	data, _ := proto.Marshal(response)

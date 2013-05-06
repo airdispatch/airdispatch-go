@@ -83,6 +83,15 @@ func ReadAirdispatchMessage(conn net.Conn) ([]byte, error) {
 
 	// All of the data is stored in the buffer
 	totalBytes := buf.Bytes()
+
+	if string(totalBytes)[:4] == "ERR:" {
+		// This is not a regular message, but an error message. Ruh roh.
+		fmt.Println("Error Message Returned")
+		fmt.Println(string(totalBytes))
+		newErr := errors.New(string(totalBytes))
+		return nil, newErr
+	}
+
 	// The data may contain extra 0s, we trim it to the lenght of the message here
 	return totalBytes[0:length], nil
 }
