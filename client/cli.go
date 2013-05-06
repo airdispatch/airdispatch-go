@@ -49,7 +49,7 @@ type EncodedKey struct {
 type CLIKey struct {
 	Address string
 	key *ecdsa.PrivateKey
-	SaveKey EncodedKey 
+	SaveKey EncodedKey
 }
 
 var credentials CLIKey
@@ -57,7 +57,7 @@ var credentials CLIKey
 func main() {
 	// Parse the Command Line Flags
 	flag.Parse()
-	
+
 	// Register the Elliptic Curve Parameters as Acceptable to Read/Write to File
 	gob.Register(elliptic.CurveParams{})
 
@@ -65,7 +65,7 @@ func main() {
 	if *interactivity {
 		fmt.Print("Mode: ")
 		fmt.Scanln(mode)
-		
+
 		// Nothing else needed if its a KEYGEN Query
 		if *mode != KEYGEN {
 			fmt.Print("Tracking Server: ")
@@ -93,7 +93,7 @@ func main() {
 		}
 		fmt.Scanln(key_location)
 	}
-	
+
 	// Determine what to do based on the mode of the Client
 	switch {
 		// REGISTRATION Message
@@ -206,12 +206,12 @@ func sendRegistration(tracker string, location string) {
 
 	mesType := common.REGISTRATION_MESSAGE
 	byteKey := common.KeyToBytes(&credentials.key.PublicKey)
-	
+
 	// Create the Registration Message
 	newRegistration := &airdispatch.AddressRegistration{
 		Address: &credentials.Address,
 		PublicKey: byteKey,
-		Location: &location, 
+		Location: &location,
 	}
 
 	// Create the Signed Message
@@ -241,11 +241,11 @@ func sendQuery(tracker string, address string) string {
 
 	// Get the Response
 	data, _ := common.ReadAirdispatchMessage(tracker_conn)
-	
+
 	// Format the Response
 	newQueryResponse := &airdispatch.AddressResponse{}
 	proto.Unmarshal(data, newQueryResponse)
-	
+
 	// Alert the User to the Found Address
 	fmt.Println("Received Location for Address: ", *newQueryResponse.ServerLocation)
 	return *newQueryResponse.ServerLocation
@@ -267,7 +267,7 @@ func sendMail(address string, mailserver string) {
 	mailData := &airdispatch.MailData{}
 
 	// Create an Array of Mail Data Types for us to append to
-	allTypes := make([]*airdispatch.MailData_DataType, 0) 
+	allTypes := make([]*airdispatch.MailData_DataType, 0)
 
 	// TODO: Find a way to do this non-interactively (if at all possible)
 	// Loop Forever
@@ -307,7 +307,7 @@ func sendMail(address string, mailserver string) {
 		ToAddress: []string{address},
 		StoredMessage: mail,
 	}
-	
+
 	// Convert the Structure into Bytes
 	sendBytes, _ := proto.Marshal(sendRequest)
 	mesType := common.SEND_REQUEST
@@ -315,7 +315,7 @@ func sendMail(address string, mailserver string) {
 
 	// Send the Message
 	mail_conn.Write(toSend)
-} 
+}
 
 func sendAlert(tracker string, address string, mailserver string) {
 	// Find the recipientServer for the address, and connect to it
