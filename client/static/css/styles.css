@@ -232,12 +232,12 @@ a.item-importance
 
 	a.item-importance>i
 	{
-		font-size: 40px;
+		font-size: 32px;
 		color: #4A5BA2;
 
 		position: absolute;
-		margin-top: -12px;
-		margin-left: 20px;
+		margin-top: -6px;
+		margin-left: 26px;
 
 		-webkit-transition: color 0.3s ease;
     	-moz-transition: color 0.3s ease;
