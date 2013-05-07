@@ -19,11 +19,16 @@ const (
 	ALERT_MESSAGE = "ALE"
 	RETRIEVAL_MESSAGE = "RET"
 	SEND_REQUEST = "SEN"
+	ARRAY_MESSAGE = "ARR"
 )
 
 func MESSAGE_PREFIX() []byte {
 	return []byte("AD")
 }
+
+func RETRIEVAL_TYPE_NORMAL() []byte { return []byte{0, 0} }
+func RETRIEVAL_TYPE_PUBLIC() []byte { return []byte{0, 1} }
+func RETRIEVAL_TYPE_MINE() []byte { return []byte{0, 2} }
 
 func ReadAsync(conn net.Conn, theChan chan []byte) {
 	data, err := ReadAirdispatchMessage(conn) 
@@ -138,6 +143,14 @@ func CreateAirdispatchMessage(data []byte, key *ecdsa.PrivateKey, mesType string
 	signedData, _ := proto.Marshal(newSignedMessage)
 	toSend := CreatePrefixedMessage(signedData)
 	return toSend
+}
+
+func CreateArrayedMessage(itemLength uint32, key *ecdsa.PrivateKey) []byte {
+	newArray := &airdispatch.ArrayedData{
+		NumberOfMessages: &itemLength,
+	}
+	dataArray, _ := proto.Marshal(newArray)
+	return CreateAirdispatchMessage(dataArray, key, ARRAY_MESSAGE)
 }
 
 func SliceContains(array interface{}, elem interface{}) bool {

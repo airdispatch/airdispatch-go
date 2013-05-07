@@ -119,7 +119,7 @@ func (m *AddressResponse) GetPublicKey() []byte {
 
 type SendMailRequest struct {
 	ToAddress        []string `protobuf:"bytes,1,rep,name=to_address" json:"to_address,omitempty"`
-	StoredMessage    *Mail    `protobuf:"bytes,2,req,name=stored_message" json:"stored_message,omitempty"`
+	StoredMessage    []byte   `protobuf:"bytes,2,req,name=stored_message" json:"stored_message,omitempty"`
 	XXX_unrecognized []byte   `json:"-"`
 }
 
@@ -134,7 +134,7 @@ func (m *SendMailRequest) GetToAddress() []string {
 	return nil
 }
 
-func (m *SendMailRequest) GetStoredMessage() *Mail {
+func (m *SendMailRequest) GetStoredMessage() []byte {
 	if m != nil {
 		return m.StoredMessage
 	}
@@ -191,7 +191,9 @@ func (m *Alert) GetUpdateMessageId() string {
 
 type RetrieveData struct {
 	MessageId        *string `protobuf:"bytes,1,opt,name=message_id" json:"message_id,omitempty"`
-	SinceDate        *string `protobuf:"bytes,2,opt,name=since_date" json:"since_date,omitempty"`
+	SinceDate        *uint64 `protobuf:"varint,2,opt,name=since_date" json:"since_date,omitempty"`
+	FromAddress      *string `protobuf:"bytes,3,opt,name=from_address" json:"from_address,omitempty"`
+	RetrievalType    []byte  `protobuf:"bytes,4,req,name=retrieval_type" json:"retrieval_type,omitempty"`
 	XXX_unrecognized []byte  `json:"-"`
 }
 
@@ -206,23 +208,37 @@ func (m *RetrieveData) GetMessageId() string {
 	return ""
 }
 
-func (m *RetrieveData) GetSinceDate() string {
+func (m *RetrieveData) GetSinceDate() uint64 {
 	if m != nil && m.SinceDate != nil {
 		return *m.SinceDate
+	}
+	return 0
+}
+
+func (m *RetrieveData) GetFromAddress() string {
+	if m != nil && m.FromAddress != nil {
+		return *m.FromAddress
 	}
 	return ""
 }
 
+func (m *RetrieveData) GetRetrievalType() []byte {
+	if m != nil {
+		return m.RetrievalType
+	}
+	return nil
+}
+
 type ArrayedData struct {
-	NumberOfMessages *int32 `protobuf:"varint,1,req,name=number_of_messages" json:"number_of_messages,omitempty"`
-	XXX_unrecognized []byte `json:"-"`
+	NumberOfMessages *uint32 `protobuf:"varint,1,req,name=number_of_messages" json:"number_of_messages,omitempty"`
+	XXX_unrecognized []byte  `json:"-"`
 }
 
 func (m *ArrayedData) Reset()         { *m = ArrayedData{} }
 func (m *ArrayedData) String() string { return proto.CompactTextString(m) }
 func (*ArrayedData) ProtoMessage()    {}
 
-func (m *ArrayedData) GetNumberOfMessages() int32 {
+func (m *ArrayedData) GetNumberOfMessages() uint32 {
 	if m != nil && m.NumberOfMessages != nil {
 		return *m.NumberOfMessages
 	}

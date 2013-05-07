@@ -134,6 +134,7 @@ func handleQuery(theAddress string, req *airdispatch.AddressRequest, conn net.Co
 	var info RegisteredAddress
 	var ok bool
 	if req.Username != nil {
+		// TODO: We should really use a database, this is _very_ inefficient.
 		// Lookup the Address (by username) in the Database
 		ok = false
 		for _, v := range(storedAddresses) {

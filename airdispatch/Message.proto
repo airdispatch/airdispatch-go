@@ -46,10 +46,13 @@ message AddressResponse {
 // SEN - Used to request that a MailServer forward mail on one's behalf.
 message SendMailRequest {
 	repeated string to_address = 1;
-	required Mail stored_message = 2;
+	
+	// This message is pre-signed so that the server can distribute it at will
+	required bytes stored_message = 2;
 }
 
 // ALE - Used to alert a neighboring mailserver that you are holding mail for one of its users.
+// ALE MESSAGES MAY BE SIGNED BY THE SERVER - NOT THE SENDER.
 message Alert {
 	optional string to_address = 1;
 	optional string location = 2;
@@ -61,7 +64,9 @@ message Alert {
 // RET - Used to download messages from a mailserver.
 message RetrieveData {
 	optional string message_id = 1;
-	optional string since_date = 2;
+	optional uint64 since_date = 2;
+	optional string from_address = 3;
+	required bytes retrieval_type = 4;
 }
 
 // ----------------
@@ -70,7 +75,7 @@ message RetrieveData {
 
 // ARR - Used to Signify that Multiple Messages are Expected
 message ArrayedData {
-	required int32 number_of_messages = 1;
+	required uint32 number_of_messages = 1;
 }
 
 // MAI - Used to store an encrypted message

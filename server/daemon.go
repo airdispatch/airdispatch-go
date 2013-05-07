@@ -5,7 +5,9 @@ import (
 	"net"
 	"flag"
 	"os"
+	"bytes"
 	"strings"
+	"time"
 	"airdispat.ch/common"
 	"airdispat.ch/airdispatch"
 	"code.google.com/p/goprotobuf/proto"
@@ -21,9 +23,13 @@ var trackers = flag.String("trackers", "", "prepopulate the list of trackers tha
 var mailboxes map[string] Mailbox
 type Mailbox map[string] Mail
 type Mail struct {
-	from string
-	location string
+	From string
+	Location string
+	data []byte
 }
+
+// Set up the outgoing public notes
+var notices map[string] []MailData
 
 // Set up the outgoing messages boxes
 var storedMessages map[string] MailData
@@ -33,6 +39,9 @@ type MailData struct {
 
 	// The actual mail message (We keep it marshalled for fast transmission
 	data []byte
+
+	// The time received
+	receivedTime time.Time
 }
 
 // Variables that store information about the server
@@ -129,7 +138,7 @@ func handleClient(conn net.Conn) {
 			if (err != nil) { fmt.Println("Bad Payload."); return; }
 
 			// Handle the Alert
-			handleAlert(assigned, theAddress)
+			handleAlert(assigned, downloadedMessage.Payload, theAddress)
 
 		case common.RETRIEVAL_MESSAGE:
 			fmt.Println("Received Retrival Request")
@@ -156,14 +165,15 @@ func handleClient(conn net.Conn) {
 }
 
 // Function that Handles an Alert of a Message
-func handleAlert(alert *airdispatch.Alert, fromAddr string) {
+func handleAlert(alert *airdispatch.Alert, alertData []byte, fromAddr string) {
 	// Get the recipient address of the message
 	toAddr := *alert.ToAddress
 
 	// Form a ReceivedMessage Record for the database
 	theMessage := Mail{
-		location: *alert.Location,
-		from: fromAddr,
+		Location: *alert.Location,
+		From: fromAddr,
+		data: alertData,
 	}
 
 	// Attempt to Get the Mailbox of the User
@@ -180,50 +190,115 @@ func handleAlert(alert *airdispatch.Alert, fromAddr string) {
 
 // Function that Handles a DataRetrieval Message
 func handleRetrieval(retrieval *airdispatch.RetrieveData, toAddr string, conn net.Conn) {
-	// Get the Outgoing Message with that ID
-	message, ok := storedMessages[*retrieval.MessageId]
-	if !ok {
-		// If there is no message stored with that ID, then send back an error
-		conn.Write(common.CreateErrorMessage("no message for that id"))
-		return
-	}
+	// Get the Type of the Message and Switch on it
+	c := retrieval.RetrievalType
+	switch {
 
-	// Check that the Sending Address is one of the Approved Recipients
-	if !common.SliceContains(message.approved, toAddr) {
-		conn.Write(common.CreateErrorMessage("not an approved sender"))
-		return
-	}
+		// Receieved a Normal Retrieval Message (Lookup the Message ID)
+		case bytes.Equal(c, common.RETRIEVAL_TYPE_NORMAL()):
+			// TODO: Allow this type of DATA to retrieve multiple messages... Maybe?
+			// Get the Outgoing Message with that ID
+			message, ok := storedMessages[*retrieval.MessageId]
+			if !ok {
+				// If there is no message stored with that ID, then send back an error
+				conn.Write(common.CreateErrorMessage("no message for that id"))
+				return
+			}
 
-	// If it passes these checks, send the message back through the connection
-	conn.Write(common.CreatePrefixedMessage(message.data))
+			// Check that the Sending Address is one of the Approved Recipients
+			if !common.SliceContains(message.approved, toAddr) {
+				conn.Write(common.CreateErrorMessage("not an approved recipient"))
+				return
+			}
+
+			// If it passes these checks, send the message back through the connection
+			conn.Write(common.CreatePrefixedMessage(message.data))
+
+		// Received a Public Retrieval Message (Return all Messages Since the Date Provided)
+		case bytes.Equal(c, common.RETRIEVAL_TYPE_PUBLIC()):
+			// Get the `TimeSince` field
+			timeSince := time.Unix(int64(*retrieval.SinceDate), 0)
+
+			// Get the public notices box for that address
+			boxes, ok := notices[*retrieval.FromAddress]
+			if !ok {
+				// If it does not exist, alert the user
+				conn.Write(common.CreateErrorMessage("no public messages for that id"))
+				return
+			}
+
+			// Make an array of messages to tack onto
+			output := make([][]byte, 0)
+
+			// Loop through the messages
+			for _, v := range(boxes) {
+				// Append the notice to the output if it was sent after the 'TimeSince'
+				if (v.receivedTime.After(timeSince)) {
+					output = append(output, v.data)
+				}
+			}
+
+			// Alert the Client that an Array is Coming
+			arrayData := common.CreateArrayedMessage(uint32(len(output)), serverKey)
+			conn.Write(arrayData)
+
+			// Write all of the Data
+			for _, v := range(output) {
+				conn.Write(common.CreatePrefixedMessage(v))
+			}
+
+		// Received a Mine Retrieval Message (Return all Messages that are Stored - Since the Date Provided)	
+		case bytes.Equal(c, common.RETRIEVAL_TYPE_MINE()):
+			fmt.Println("Mine get")
+		default:
+			fmt.Println("Unable to Respond to Message")
+	}
 }
 
 // Function that Handles a Request to Send a Message
 func handleSendRequest(request *airdispatch.SendMailRequest, fromAddr string) {
-	// Helper Variables so we don't have to access request. everytime
-	var toAddress []string = request.ToAddress
-	var theMail = request.StoredMessage
+	// Check to see if it a public message or not
+	if request.ToAddress != nil || request.ToAddress[0] == fromAddr {
+		// Helper Variables so we don't have to access request everytime
+		var toAddress []string = request.ToAddress
+		var theMail = request.StoredMessage
 
-	// Marshal the Mail Message into Bytes
-	mailData, _ := proto.Marshal(theMail)
+		// Get a hash of the Message
+		hash := hex.EncodeToString(common.HashSHA(theMail, nil))
 
-	// Get a hash of the Message
-	hash := hex.EncodeToString(common.HashSHA(mailData, nil))
+		for _, v := range(toAddress) {
+			// For every address that the Message is to be sent to, lookup its location and send it an alert
+			loc := LookupLocation(v)
+			SendAlert(loc, hash, v)
+		}
 
-	for _, v := range(toAddress) {
-		// For every address that the Message is to be sent to, lookup its location and send it an alert
-		loc := LookupLocation(v)
-		SendAlert(loc, hash, v)
+		// Create a Record to Store the Message in the Outgoing Mail Box
+		storeData := MailData {
+			approved: toAddress,
+			data: theMail,
+			receivedTime: time.Now(),
+		}
+
+		// Store the Message in the Database
+		storedMessages[hash] = storeData
+	} else {
+		var theMail = request.StoredMessage
+
+		// Populate the Record to Store the Dat
+		storedData := MailData {
+			data: theMail,
+			receivedTime: time.Now(),
+		}
+
+		// Get the notice box of the From Address
+		boxes, ok := notices[fromAddr]
+		if !ok {
+			boxes = make([]MailData, 0)
+		}
+
+		// Store the Public Message in the Box
+		notices[fromAddr] = append(boxes, storedData)
 	}
-
-	// Create a Record to Store the Message in the Outgoing Mail Box
-	storeData := MailData {
-		approved: toAddress,
-		data: mailData,
-	}
-
-	// Store the Message in the Database
-	storedMessages[hash] = storeData
 }
 
 // A function that will get the Location of an Address
