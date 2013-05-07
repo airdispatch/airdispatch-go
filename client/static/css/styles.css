@@ -1,6 +1,9 @@
 
 /* --- BEGIN INBOX --- */
 
+/*Header items 															*/
+/*																		*/
+
 .header {
 	background-color: #282623;
 	background-image: url('../img/background.png');
@@ -111,7 +114,8 @@
 }
 
 
-/* Make images circular and center them */
+/*User Tab on Header													*/
+/*																		*/
 
 #user-tab
 {
@@ -192,7 +196,8 @@
 
 
 
-/*---- Message List CSS ----*/
+/*Message list items													*/
+/*																		*/
 
 .panel.message-list {
     padding-left: 15px;
@@ -316,3 +321,4 @@ li a:hover {
 li:hover {
     background: #f6f6f6;
 }
+
