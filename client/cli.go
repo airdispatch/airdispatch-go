@@ -307,11 +307,16 @@ func sendMail(address string, mailserver string) {
 	// TODO: Encrypt theMail (if necessary)
 	mail.Data = theMail
 
+	// We need to marshal the mail message and pre-sign it, so the server can send it on our behalf
+	marshalledMail, _ := proto.Marshal(mail)
+	signedMessage, _ := common.CreateSignedMessage(credentials.key, marshalledMail, common.MAIL_MESSAGE)
+	toSave, _ := proto.Marshal(signedMessage)
+
 	// TODO: Allow sending to Multiple Recipients
 	// Load the Send Request with the MailMessage
 	sendRequest := &airdispatch.SendMailRequest {
 		ToAddress: []string{address},
-		StoredMessage: mail,
+		StoredMessage: toSave,
 	}
 
 	// Convert the Structure into Bytes
