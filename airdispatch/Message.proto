@@ -23,15 +23,20 @@ message AddressRegistration {
 
 // QUE - Used to query the mailserver for the location of the address.
 message AddressRequest {
-	required string address = 1;
-	optional bool need_key = 2;
+	// The Request may be for an Address or a Username
+	optional string address = 1;
+	optional string username = 2;
+
+	// The Requester may specify False here if it does not want the Key Returned
+	optional bool need_key = 3;
 }
 
 // RES - Sent from the Tracker contains the location of the address.
 message AddressResponse {
 	required string server_location = 1;
-	optional bytes public_key = 2;
-	required string address = 3;
+	required string address = 2;
+
+	optional bytes public_key = 3;
 }
 
 // --------------------

@@ -131,10 +131,23 @@ func handleRegistration(theAddress string, reg *airdispatch.AddressRegistration)
 func handleQuery(theAddress string, req *airdispatch.AddressRequest, conn net.Conn) {
 	fmt.Println("Querying for", *req.Address)
 
-	// Lookup the Address in the Database
-	info, ok := storedAddresses[*req.Address]
+	var info RegisteredAddress
+	var ok bool
+	if req.Username != nil {
+		// Lookup the Address (by username) in the Database
+		ok = false
+		for _, v := range(storedAddresses) {
+			if v.username == *req.Username {
+				info = v
+			}
+		}
+	} else {
+		// Lookup the Address (by address) in the Database
+		info, ok = storedAddresses[*req.Address]
+	}
+
+	// Return an Error Message if we could not find the address
 	if !ok {
-		// Return an Error Message if it Does not Exist
 		data := common.CreateErrorMessage("not located here")
 		conn.Write(data)
 		return
@@ -144,8 +157,13 @@ func handleQuery(theAddress string, req *airdispatch.AddressRequest, conn net.Co
 	response := &airdispatch.AddressResponse {
 		ServerLocation: &info.location,
 		Address: &theAddress,
-		PublicKey: info.public_key,
 	}
+
+	// If the requester does not want the public key, we should not provide it
+	if req.NeedKey == nil {
+		response.PublicKey = info.public_key
+	}
+
 	data, _ := proto.Marshal(response)
 
 	// Send the Response

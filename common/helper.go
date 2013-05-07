@@ -57,6 +57,13 @@ func ReadAirdispatchMessage(conn net.Conn) ([]byte, error) {
 			// The following two bytes contain the length of the message.
 			binary.Read(bytes.NewBuffer(prefixBuffer[2:]), binary.BigEndian, &length)
 			started = true
+
+			// Added the Ability to Catch 0-Length Messages
+			if length == 0 {
+				err := errors.New("Cannot read a message with no content.")
+				fmt.Println(err)
+				return nil, err
+			}
 		}
 
 		// We will read in data in chunks of the length of bytes
