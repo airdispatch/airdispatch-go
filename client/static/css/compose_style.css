@@ -8,16 +8,28 @@ textarea, textarea:hover {
     margin-bottom: 10px;
 }
 
-#message-title {
+#message-title
+{
     font-size: 24px;
     text-align: left;
 
     letter-spacing: 2px;
-    padding-left: 20px;
-    padding-right: 20px;
+    padding: 15px 20px 5px 20px;
 }
 
-#message-body {
+#message-to
+{
+    font-size: 20px;
+    text-align: left;
+
+    letter-spacing: 2px;
+    line-height: 20px;
+
+    padding: 15px 22px 5px 22px;
+}
+
+#message-body
+{
     font-size: 16px;
     height: 300px;
 
