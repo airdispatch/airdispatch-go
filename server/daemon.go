@@ -26,6 +26,7 @@ type Mail struct {
 	From string
 	Location string
 	data []byte
+	receivedTime time.Time
 }
 
 // Set up the outgoing public notes
@@ -174,6 +175,7 @@ func handleAlert(alert *airdispatch.Alert, alertData []byte, fromAddr string) {
 		Location: *alert.Location,
 		From: fromAddr,
 		data: alertData,
+		receivedTime: time.Now(),
 	}
 
 	// Attempt to Get the Mailbox of the User
@@ -249,7 +251,36 @@ func handleRetrieval(retrieval *airdispatch.RetrieveData, toAddr string, conn ne
 
 		// Received a Mine Retrieval Message (Return all Messages that are Stored - Since the Date Provided)	
 		case bytes.Equal(c, common.RETRIEVAL_TYPE_MINE()):
-			fmt.Println("Mine get")
+			// Get the `TimeSince` field
+			timeSince := time.Unix(int64(*retrieval.SinceDate), 0)
+
+			// Get the Users' Mailbox
+			mailbox, ok := mailboxes[toAddr]
+			if !ok {
+				// If it does nto exist, alert the user that this isn't their mailserver
+				conn.Write(common.CreateErrorMessage("user is not part of this server"))
+				return
+			}
+
+			// Make an array of messages to tack onto
+			output := make([][]byte, 0)
+
+			// Loop through the messages
+			for _, v := range(mailbox) {
+				// Append the notice to the output if it was sent after the 'TimeSince'
+				if (v.receivedTime.After(timeSince)) {
+					output = append(output, v.data)
+				}
+			}
+
+			arrayData := common.CreateArrayedMessage(uint32(len(output)), serverKey)
+			conn.Write(arrayData)
+
+			// Write all of the Data
+			for _, v := range(output) {
+				conn.Write(common.CreatePrefixedMessage(v))
+			}
+
 		default:
 			fmt.Println("Unable to Respond to Message")
 	}
