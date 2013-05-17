@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net"
 	"flag"
-	"os"
 	"bytes"
 	"strings"
 	"time"
@@ -18,6 +17,7 @@ import (
 // Configuration Varables
 var port = flag.String("port", "2048", "select the port on which to run the mail server")
 var trackers = flag.String("trackers", "", "prepopulate the list of trackers that this server will query by using a comma seperated list of values")
+var me = flag.String("me", "", "the location of the server that it should broadcast to the world")
 
 // Set up the Mailboxes of Users (to store incoming mail)
 var mailboxes map[string] Mailbox
@@ -66,7 +66,7 @@ func main() {
 	serverKey, _ = common.CreateKey()
 
 	// Find the location of this server
-	serverLocation, _ = os.Hostname()
+	serverLocation = *me
 
 	// Resolve the Address of the Server
 	service := ":" + *port
@@ -100,53 +100,34 @@ func handleClient(conn net.Conn) {
 	// Close the Connection after Handling
 	defer conn.Close()
 
-	// Read in the Sent Message
-	totalBytes, err := common.ReadAirdispatchMessage(conn)
+	// Read in the Message
+	payload, messageType, theAddress, err := common.ReadSignedMessage(conn)
 	if err != nil {
+		fmt.Println("Error reading the message.")
 		fmt.Println(err)
-		fmt.Println("Error reading in the message.")
 		return
 	}
-
-	// Get the Signed Message
-	downloadedMessage := &airdispatch.SignedMessage{}
-	err = proto.Unmarshal(totalBytes[0:], downloadedMessage)
-	if err != nil {
-		fmt.Println(err)
-		fmt.Println("The message is malformed!")
-		return
-	}
-
-	// Verify that the address of the message is not spoofed
-	if !common.VerifySignedMessage(downloadedMessage) {
-		fmt.Println("Message is not signed properly. Discarding")
-		return
-	}
-
-	// Determine the sending Address of the Message and the Message Type
-	messageType := downloadedMessage.MessageType
-	theAddress := common.StringAddress(common.BytesToKey(downloadedMessage.SigningKey))
 
 	// Switch based on the Message Type
-	switch *messageType {
+	switch messageType {
 
 		case common.ALERT_MESSAGE:
 			fmt.Println("Received Alert")
 
 			// Unmarshal the stored message
 			assigned := &airdispatch.Alert{}
-			err := proto.Unmarshal(downloadedMessage.Payload, assigned)
+			err := proto.Unmarshal(payload, assigned)
 			if (err != nil) { fmt.Println("Bad Payload."); return; }
 
 			// Handle the Alert
-			handleAlert(assigned, downloadedMessage.Payload, theAddress)
+			handleAlert(assigned, payload, theAddress)
 
 		case common.RETRIEVAL_MESSAGE:
 			fmt.Println("Received Retrival Request")
 
 			// Unmarshal the stored message
 			assigned := &airdispatch.RetrieveData{}
-			err := proto.Unmarshal(downloadedMessage.Payload, assigned)
+			err := proto.Unmarshal(payload, assigned)
 			if (err != nil) { fmt.Println("Bad Payload."); return; }
 
 			// Handle the Retrieval Message
@@ -157,7 +138,7 @@ func handleClient(conn net.Conn) {
 
 			// Unmarshal the stored message
 			assigned := &airdispatch.SendMailRequest{}
-			err := proto.Unmarshal(downloadedMessage.Payload, assigned)
+			err := proto.Unmarshal(payload, assigned)
 			if (err != nil) { fmt.Println("Bad Payload."); return; }
 
 			// Handle the Send Request

@@ -38,6 +38,7 @@ const QUERY = "query"
 const ALERT = "alert"
 const SEND = "send"
 const CHECK = "check"
+const PUBLIC = "pub_check"
 const KEYGEN = "keygen"
 
 // Keygen Variables
@@ -359,4 +360,71 @@ func sendAlert(tracker string, address string, mailserver string) {
 }
 
 func checkMail(mailserver string) {
+	// Connect to the mailserver
+	mailServer := connectToServer(mailserver)
+	
+	// Specify that we want to get ALL mail
+	date := uint64(0)
+
+	// Create the message to download the mail
+	newDownloadRequest := &airdispatch.RetrieveData {
+		RetrievalType: common.RETRIEVAL_TYPE_MINE(),
+		SinceDate: &date,
+	}
+
+	// Create the Message
+	retData, _ := proto.Marshal(newDownloadRequest)
+	toSend := common.CreateAirdispatchMessage(retData, credentials.key, common.RETRIEVAL_MESSAGE)
+
+	// Send the Message
+	mailServer.Write(toSend)
+
+	// Read the Signed Server Response
+	data, messageType, _, err := common.ReadSignedMessage(mailServer)
+	if err != nil {
+		fmt.Println("Could not read")
+		fmt.Println(err)
+	}
+
+	// Ensure that we have been given an array of values
+	if messageType == common.ARRAY_MESSAGE {
+		// Get the array from the data
+		theArray := &airdispatch.ArrayedData{}
+		proto.Unmarshal(data, theArray)
+
+		// Find the number of messsages
+		mesNumber := theArray.NumberOfMessages
+		fmt.Println("Received", int(*mesNumber), "message(s).")
+
+		// Loop over this number
+		for i := uint32(0); i < *mesNumber; i++ {
+			// Get the message and unmarshal it
+			mesData, _ := common.ReadAirdispatchMessage(mailServer)
+			newAlert := &airdispatch.Alert{}
+			proto.Unmarshal(mesData, newAlert)
+
+			// Print the contents of the Alert
+			// fmt.Println("Received ALE from", newAlert, err)
+			
+			// Now, get the contents of that message
+			getMessage := &airdispatch.RetrieveData {
+				RetrievalType: common.RETRIEVAL_TYPE_NORMAL(),
+				MessageId: newAlert.MessageId,
+			}
+			getData, _ := proto.Marshal(getMessage)
+			sendData := common.CreateAirdispatchMessage(getData, credentials.key, common.RETRIEVAL_MESSAGE)
+
+			// Send the retrieval request
+			remConn := connectToServer(*newAlert.Location)
+			remConn.Write(sendData)
+
+			// Get the MAI response and unmarshal it
+			theMessageData, _, _, _ := common.ReadSignedMessage(remConn)
+			theMessage := &airdispatch.Mail{}
+			proto.Unmarshal(theMessageData, theMessage)
+
+			// Print the Message
+			fmt.Println(common.PrintMessage(theMessage))
+		}
+	}
 }
