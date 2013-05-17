@@ -57,6 +57,7 @@ func main() {
 	// Initialize Incoming and Outgoing Mailboxes
 	mailboxes = make(map[string]Mailbox)
 	storedMessages = make(map[string]MailData)
+	notices = make(map[string] []MailData)
 
 	// Populate the Trackers List
 	connectedTrackers = strings.Split(*trackers, ",")
@@ -270,7 +271,7 @@ func handleRetrieval(retrieval *airdispatch.RetrieveData, toAddr string, conn ne
 // Function that Handles a Request to Send a Message
 func handleSendRequest(request *airdispatch.SendMailRequest, fromAddr string) {
 	// Check to see if it a public message or not
-	if request.ToAddress != nil || request.ToAddress[0] == fromAddr {
+	if len(request.ToAddress) != 0 && request.ToAddress[0] != fromAddr && request.ToAddress[0] != "" {
 		// Helper Variables so we don't have to access request everytime
 		var toAddress []string = request.ToAddress
 		var theMail = request.StoredMessage

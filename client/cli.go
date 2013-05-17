@@ -90,35 +90,38 @@ func main() {
 		}
 		fmt.Scanln(key_location)
 	}
+	if *mode != KEYGEN {
+		loadKeys(*key_location)
+	}
 
 	// Determine what to do based on the mode of the Client
 	switch {
 		// REGISTRATION Message
 		case *mode == REGISTRATION:
 			fmt.Println("Sending a Registration Request")
-			loadKeys(*key_location)
 			sendRegistration(*tracking_server, *mail_location)
 
 		// QUERY MESSAGE	
 		case *mode == QUERY:
 			fmt.Println("Sending a Query for " + *acting_address)
-			loadKeys(*key_location)
 			sendQuery(*tracking_server, *acting_address)
 
 		// ALERT MESSAGE
 		case *mode == ALERT:
 			fmt.Println("Sending a Mail Alert for " + *acting_address)
-			loadKeys(*key_location)
 			sendAlert(*tracking_server, *acting_address, *remote_mailserver)
 
 		// SEND MESSAGE
 		case *mode == SEND:
-			loadKeys(*key_location)
 			sendMail(*acting_address, *remote_mailserver)
 
+		// CHECK MESSAGE
 		case *mode == CHECK:
-			loadKeys(*key_location)
 			checkMail(*remote_mailserver)
+
+		// CHECK FOR PUBLIC MESSAGES
+		case *mode == PUBLIC:
+			checkPublic(*tracking_server, *acting_address)
 
 		// GENERATE KEYS
 		case *mode == KEYGEN:
@@ -127,7 +130,7 @@ func main() {
 		// Otherwise, throw an error.
 		default:
 			fmt.Println("You must specify a mode to run the program in, or specify interactive mode.")
-			fmt.Println("Currently supported modes: ", REGISTRATION, QUERY, ALERT, SEND, KEYGEN)
+			fmt.Println("Currently supported modes: ", REGISTRATION, QUERY, ALERT, SEND, KEYGEN, CHECK, PUBLIC)
 	}
 }
 
@@ -422,6 +425,60 @@ func checkMail(mailserver string) {
 			theMessageData, _, _, _ := common.ReadSignedMessage(remConn)
 			theMessage := &airdispatch.Mail{}
 			proto.Unmarshal(theMessageData, theMessage)
+
+			// Print the Message
+			fmt.Println(common.PrintMessage(theMessage))
+		}
+	}
+}
+
+func checkPublic(trackingServer string, toCheck string) {
+	// Get the Server where the Public Mail Resides (And Connect to It)
+	recipientServer := sendQuery(trackingServer, toCheck)
+	recipientConn := connectToServer(recipientServer)
+
+	// Get the Unix Timestamp of the earliest message you want
+	since := uint64(0)
+	if (*interactivity) {
+		fmt.Print("Retrieve Messages Sent Since (Unix Timestamp): ")
+		fmt.Scanln(&since)
+	}
+
+	// Create the Request Object
+	messageRequest := &airdispatch.RetrieveData {
+		RetrievalType: common.RETRIEVAL_TYPE_PUBLIC(),
+		FromAddress: &toCheck,
+		SinceDate: &since,
+	}
+	requestData, _ := proto.Marshal(messageRequest)
+	sendData := common.CreateAirdispatchMessage(requestData, credentials.key, common.RETRIEVAL_MESSAGE)
+
+	// Send the Request to the Server
+	recipientConn.Write(sendData)
+
+	// Read the Message Response
+	data, messageType, _, err := common.ReadSignedMessage(recipientConn)
+	if err != nil {
+		fmt.Println("Could not read")
+		fmt.Println(err)
+	}
+
+	// Ensure that we have been given an array of values
+	if messageType == common.ARRAY_MESSAGE {
+		// Get the array from the data
+		theArray := &airdispatch.ArrayedData{}
+		proto.Unmarshal(data, theArray)
+
+		// Find the number of messsages
+		mesNumber := theArray.NumberOfMessages
+		fmt.Println("Received", int(*mesNumber), "message(s).")
+
+		// Loop over this number
+		for i := uint32(0); i < *mesNumber; i++ {
+			// Get the message and unmarshal it
+			mesData, _, _, _ := common.ReadSignedMessage(recipientConn)
+			theMessage := &airdispatch.Mail{}
+			proto.Unmarshal(mesData, theMessage)
 
 			// Print the Message
 			fmt.Println(common.PrintMessage(theMessage))
