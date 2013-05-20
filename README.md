@@ -34,6 +34,10 @@ There are actually *two* provided clients in this repository:
   1. **The WebClient** - Currently, the webclient is used to implement 'email' using the airdispach protocol. This is part of the original project's mission, and will eventually be rolled out into its own repository.
   2. **The CLI** - This is used to test trackers and mailservers. You can interact with both sets of servers in every facet described in the protocol.
 
+We have provided a sample mail server and tracker than you can use to test the protocol with the CLI:
+  - Server: `mailserver.airdispat.ch:2048`
+  - Tracker: `mailserver.airdispat.ch:1024`
+
 ### More Information
 For more detailed information, we ask you to visit the wiki or read the original protocol definition.
 
