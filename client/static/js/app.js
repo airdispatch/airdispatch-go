@@ -1,1 +1,0 @@
-angular.module('DispatchApp', ['DispatchApp.controllers', 'DispatchApp.services']);
