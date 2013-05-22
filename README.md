@@ -8,6 +8,10 @@ Airdispatch is a new protocol that allows developers to create distributed netwo
 Airdispatch is provided under the [MIT License](https://github.com/huntaub/airdispatch-protocol/blob/master/LICENSE).
 
 ### Installing Airdispatch
+
+This repository is now go-gettable. Simply import the code `airdispat.ch/airdispatch` or `airdispat.ch/common` and go will find it automatically.
+
+##### Old Instructions
   1. `git clone` this repository
   2. Rename the created folder to `airdispat.ch`
   3. Drop that folder in your `$GOPATH/src`
