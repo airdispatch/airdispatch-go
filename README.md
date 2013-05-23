@@ -33,10 +33,8 @@ Some other benefits include:
   - Extensibility - because the protocol is built off of proven technologies (like protocol buffers) it is trivial to add extensions
 
 ### Information on the Provided Client
-There are actually *two* provided clients in this repository:
-
-  1. **The WebClient** - Currently, the webclient is used to implement 'email' using the airdispach protocol. This is part of the original project's mission, and will eventually be rolled out into its own repository.
-  2. **The CLI** - This is used to test trackers and mailservers. You can interact with both sets of servers in every facet described in the protocol.
+This is used to test trackers and mailservers. You can interact with both sets of servers in every facet described in the protocol.
+We will provide documentation on how to use the Client [here](https://github.com/huntaub/airdispatch-protocol/wiki/CLI-Documentation).
 
 We have provided a sample mail server and tracker than you can use to test the protocol with the CLI:
   - Server: `mailserver.airdispat.ch:2048`
