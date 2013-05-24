@@ -62,15 +62,15 @@ func ReadAirdispatchMessage(conn net.Conn) ([]byte, error) {
 	// This Buffer will Store the Data Temporarily
 	buf := &bytes.Buffer{}
 	started := false	
-	var length int16
+	var length int32
 
 	for {
 
 		// If this is the beginning of the message, we must take off the prefix.
 		if !started {
 
-			// Each Prefix is Two Bytes
-			prefixBuffer := make([]byte, 4)
+			// Each Prefix is Six Bytes
+			prefixBuffer := make([]byte, 6)
 			io.ReadFull(conn, prefixBuffer)
 
 			// The first two bytes should contain the standard message prefix.
@@ -79,7 +79,7 @@ func ReadAirdispatchMessage(conn net.Conn) ([]byte, error) {
 				return nil, errors.New("message is not for airdispatch...")
 			}
 
-			// The following two bytes contain the length of the message.
+			// The following four bytes contain the length of the message.
 			binary.Read(bytes.NewBuffer(prefixBuffer[2:]), binary.BigEndian, &length)
 			started = true
 
@@ -151,7 +151,7 @@ func CreateSignedMessage(key *ecdsa.PrivateKey, data []byte, mesType string) (*a
 
 func CreatePrefixedMessage(data []byte) []byte {
 	var prefix = MESSAGE_PREFIX() 
-	var length = int16(len(data))
+	var length = int32(len(data))
 	lengthBuf := &bytes.Buffer{}
 	binary.Write(lengthBuf, binary.BigEndian, length)
 	fullBuffer := bytes.Join([][]byte{prefix, lengthBuf.Bytes(), data}, nil)
