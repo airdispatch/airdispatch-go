@@ -10,7 +10,6 @@ import (
 	"io"
 	"math/big"
 	"bytes"
-	"encoding/binary"
 	"encoding/hex"
 	"airdispat.ch/airdispatch"
 )
@@ -55,20 +54,24 @@ func VerifySignedMessage(mes *airdispatch.SignedMessage) bool {
 }
 
 func KeyToBytes(key *ecdsa.PublicKey) []byte {
-	x := key.X.Bytes()
-	y := key.Y.Bytes()
-	length := int16(len(x))
-	buf := new(bytes.Buffer)
-	binary.Write(buf, binary.BigEndian, length)
-	total := bytes.Join([][]byte{buf.Bytes(), x, y}, nil)
+	x := key.X.Bytes() // 32 Byte Value
+	y := key.Y.Bytes() // 32 Byte Value
+	prefix := []byte{4} // For Bitcoin Compatibility
+	total := bytes.Join([][]byte{prefix, x, y}, nil)
 	return total
 }
 
 func BytesToKey(data []byte) *ecdsa.PublicKey {
-	var length int16
-	binary.Read(bytes.NewBuffer(data[0:2]), binary.BigEndian, &length)
-	x := new(big.Int).SetBytes(data[2:length + 2])
-	y := new(big.Int).SetBytes(data[length + 2:])
+	if len(data) != 65 {
+		// Key is not the correct number of bytes
+		return nil
+	}
+	if bytes.Equal([]byte{4}, data[0:1]) {
+		// Key does not possess the correct prefix
+		return nil
+	}
+	x := new(big.Int).SetBytes(data[1:33])
+	y := new(big.Int).SetBytes(data[33:65])
 	key := &ecdsa.PublicKey{
 		X: x,
 		Y: y,
