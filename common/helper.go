@@ -107,7 +107,7 @@ func ReadAirdispatchMessage(conn net.Conn) ([]byte, error) {
 		buf.Write(data)
 
 		// Stop reading if the buffer contains all of the data
-		if int16(buf.Len()) >= length {
+		if int32(buf.Len()) >= length {
 			break
 		}
 
