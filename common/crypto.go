@@ -56,7 +56,7 @@ func VerifySignedMessage(mes *airdispatch.SignedMessage) bool {
 func KeyToBytes(key *ecdsa.PublicKey) []byte {
 	x := key.X.Bytes() // 32 Byte Value
 	y := key.Y.Bytes() // 32 Byte Value
-	prefix := []byte{4} // For Bitcoin Compatibility
+	prefix := []byte{3} // For near-Bitcoin Compatibility
 	total := bytes.Join([][]byte{prefix, x, y}, nil)
 	return total
 }
@@ -66,7 +66,7 @@ func BytesToKey(data []byte) *ecdsa.PublicKey {
 		// Key is not the correct number of bytes
 		return nil
 	}
-	if bytes.Equal([]byte{4}, data[0:1]) {
+	if bytes.Equal([]byte{3}, data[0:1]) {
 		// Key does not possess the correct prefix
 		return nil
 	}
