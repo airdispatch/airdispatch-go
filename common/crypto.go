@@ -26,6 +26,17 @@ func main() {
 	fmt.Println(VerifySignature([]byte("hello"), signature, &key.PublicKey))
 }
 
+func padding(byteArray []byte, length int) []byte {
+	if(len(byteArray) > length) {
+		return nil
+	} else if (len(byteArray) == length) {
+		return byteArray
+	}
+	diff := length - len(byteArray)
+	pad := make([]byte, diff)
+	return bytes.Join([][]byte{pad, byteArray}, nil)
+}
+
 func CreateKey() (key *ecdsa.PrivateKey, err error) {
 	key, err = ecdsa.GenerateKey(EllipticCurve, random)
 	return
@@ -54,8 +65,8 @@ func VerifySignedMessage(mes *airdispatch.SignedMessage) bool {
 }
 
 func KeyToBytes(key *ecdsa.PublicKey) []byte {
-	x := key.X.Bytes() // 32 Byte Value
-	y := key.Y.Bytes() // 32 Byte Value
+	x := padding(key.X.Bytes(), 32) // 32 Byte Value
+	y := padding(key.Y.Bytes(), 32) // 32 Byte Value
 	prefix := []byte{3} // For near-Bitcoin Compatibility
 	total := bytes.Join([][]byte{prefix, x, y}, nil)
 	return total
