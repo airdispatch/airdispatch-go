@@ -74,10 +74,11 @@ func KeyToBytes(key *ecdsa.PublicKey) []byte {
 
 func BytesToKey(data []byte) *ecdsa.PublicKey {
 	if len(data) != 65 {
+		fmt.Println("Not Right Length")
 		// Key is not the correct number of bytes
 		return nil
 	}
-	if bytes.Equal([]byte{3}, data[0:1]) {
+	if !bytes.Equal([]byte{3}, data[0:1]) {
 		// Key does not possess the correct prefix
 		return nil
 	}
