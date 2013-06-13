@@ -14,6 +14,7 @@ import (
 	"encoding/gob"
 	"math/big"
 	"os"
+	"bufio"
 )
 
 // -----------------------
@@ -282,17 +283,18 @@ func sendMail(address string, mailserver string) {
 	// TODO: Find a way to do this non-interactively (if at all possible)
 	// Loop Forever
 	for {
+		stdin := bufio.NewReader(os.Stdin)
 		// Define variables to read into
 		var typename string
 		var data string
 
 		fmt.Print("Data Type (or done to stop): ")
-		fmt.Scanln(&typename)
+		typename, _ = ReadLine(stdin)
 		// Quit if we must stop
 		if typename == "done" { break }
 
 		fmt.Print("Data: ")
-		fmt.Scanln(&data)
+		data, _ = ReadLine(stdin)
 
 		// Fill out the Data Type Structure
 		newData := &airdispatch.MailData_DataType {
@@ -484,4 +486,18 @@ func checkPublic(trackingServer string, toCheck string) {
 			fmt.Println(common.PrintMessage(theMessage))
 		}
 	}
+}
+
+// Taken from http://stackoverflow.com/questions/6141604/go-readline-string
+
+func ReadLine(r *bufio.Reader) (string, error) {
+  var (isPrefix bool = true
+       err error = nil
+       line, ln []byte
+      )
+  for isPrefix && err == nil {
+      line, isPrefix, err = r.ReadLine()
+      ln = append(ln, line...)
+  }
+  return string(ln),err
 }

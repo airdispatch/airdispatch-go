@@ -1,49 +1,46 @@
 package main
 
 import (
+	"airdispat.ch/server/framework"
 	"fmt"
-	"net"
 	"flag"
-	"bytes"
 	"strings"
 	"time"
 	"airdispat.ch/common"
 	"airdispat.ch/airdispatch"
-	"code.google.com/p/goprotobuf/proto"
 	"crypto/ecdsa"
 	"encoding/hex"
+	"os"
 )
 
 // Configuration Varables
 var port = flag.String("port", "2048", "select the port on which to run the mail server")
 var trackers = flag.String("trackers", "", "prepopulate the list of trackers that this server will query by using a comma seperated list of values")
-var me = flag.String("me", "", "the location of the server that it should broadcast to the world")
+var me = flag.String("me", getHostname(), "the location of the server that it should broadcast to the world")
 
-// Set up the Mailboxes of Users (to store incoming mail)
-var mailboxes map[string] Mailbox
+func getHostname() string {
+	s, _ := os.Hostname()
+	return s
+}
+
+type PostOffice map[string]Mailbox
 type Mailbox map[string] Mail
 type Mail struct {
 	From string
 	Location string
+	approved []string
 	data []byte
 	receivedTime time.Time
 }
+
+// Set up the Mailboxes of Users (to store incoming mail)
+var mailboxes PostOffice
 
 // Set up the outgoing public notes
-var notices map[string] []MailData
+var notices PostOffice
 
 // Set up the outgoing messages boxes
-var storedMessages map[string] MailData
-type MailData struct {
-	// An array of approved recipients
-	approved []string
-
-	// The actual mail message (We keep it marshalled for fast transmission
-	data []byte
-
-	// The time received
-	receivedTime time.Time
-}
+var storedMessages Mailbox
 
 // Variables that store information about the server
 var connectedTrackers []string
@@ -55,9 +52,9 @@ func main() {
 	flag.Parse()
 
 	// Initialize Incoming and Outgoing Mailboxes
-	mailboxes = make(map[string]Mailbox)
-	storedMessages = make(map[string]MailData)
-	notices = make(map[string] []MailData)
+	mailboxes = make(PostOffice)
+	notices = make(PostOffice)
+	storedMessages = make(Mailbox)
 
 	// Populate the Trackers List
 	connectedTrackers = strings.Split(*trackers, ",")
@@ -68,87 +65,26 @@ func main() {
 
 	// Find the location of this server
 	serverLocation = *me
-
-	// Resolve the Address of the Server
-	service := ":" + *port
-	tcpAddr, _ := net.ResolveTCPAddr("tcp4", service)
-
-	// Start the Server
-	listener, err := net.ListenTCP("tcp", tcpAddr)
-	if err != nil {
-		fmt.Println(err)
-		fmt.Println("Unable to Listen for Requests")
-		return
+	theServer := framework.Server{
+		Port: *port,
+		LocationName: *me,
+		Key: serverKey,
+		TrackerList: connectedTrackers,
+		ServerHandler: &myServer{},
 	}
-	fmt.Println("Listening on", service)
-
-	// Loop forever, waiting for connections
-	for {
-		// Accept a Connection
-		conn, err := listener.Accept()
-		if err != nil {
-			fmt.Println(err)
-			fmt.Println("Unable to Connect to Client", conn.RemoteAddr())
-		}
-
-		// Concurrently handle the connection
-		go handleClient(conn)
-	}
+	framework.StartServer(&theServer)
 
 }
 
-func handleClient(conn net.Conn) {
-	// Close the Connection after Handling
-	defer conn.Close()
+type myServer struct{}
 
-	// Read in the Message
-	payload, messageType, theAddress, err := common.ReadSignedMessage(conn)
-	if err != nil {
-		fmt.Println("Error reading the message.")
-		fmt.Println(err)
-		return
-	}
-
-	// Switch based on the Message Type
-	switch messageType {
-
-		case common.ALERT_MESSAGE:
-			fmt.Println("Received Alert")
-
-			// Unmarshal the stored message
-			assigned := &airdispatch.Alert{}
-			err := proto.Unmarshal(payload, assigned)
-			if (err != nil) { fmt.Println("Bad Payload."); return; }
-
-			// Handle the Alert
-			handleAlert(assigned, payload, theAddress)
-
-		case common.RETRIEVAL_MESSAGE:
-			fmt.Println("Received Retrival Request")
-
-			// Unmarshal the stored message
-			assigned := &airdispatch.RetrieveData{}
-			err := proto.Unmarshal(payload, assigned)
-			if (err != nil) { fmt.Println("Bad Payload."); return; }
-
-			// Handle the Retrieval Message
-			handleRetrieval(assigned, theAddress, conn)
-
-		case common.SEND_REQUEST:
-			fmt.Println("Received Request to Send Message")
-
-			// Unmarshal the stored message
-			assigned := &airdispatch.SendMailRequest{}
-			err := proto.Unmarshal(payload, assigned)
-			if (err != nil) { fmt.Println("Bad Payload."); return; }
-
-			// Handle the Send Request
-			handleSendRequest(assigned, theAddress)
-	}
+func (myServer) HandleError(err framework.ServerError) {
+	fmt.Println(err.Error)
+	os.Exit(1)
 }
 
 // Function that Handles an Alert of a Message
-func handleAlert(alert *airdispatch.Alert, alertData []byte, fromAddr string) {
+func (myServer) SaveIncomingAlert(alert *airdispatch.Alert, alertData []byte, fromAddr string) {
 	// Get the recipient address of the message
 	toAddr := *alert.ToAddress
 
@@ -172,226 +108,84 @@ func handleAlert(alert *airdispatch.Alert, alertData []byte, fromAddr string) {
 	mailboxes[toAddr][*alert.MessageId] = theMessage
 }
 
-// Function that Handles a DataRetrieval Message
-func handleRetrieval(retrieval *airdispatch.RetrieveData, toAddr string, conn net.Conn) {
-	// Get the Type of the Message and Switch on it
-	c := retrieval.RetrievalType
-	switch {
-
-		// Receieved a Normal Retrieval Message (Lookup the Message ID)
-		case bytes.Equal(c, common.RETRIEVAL_TYPE_NORMAL()):
-			// TODO: Allow this type of DATA to retrieve multiple messages... Maybe?
-			// Get the Outgoing Message with that ID
-			message, ok := storedMessages[*retrieval.MessageId]
-			if !ok {
-				// If there is no message stored with that ID, then send back an error
-				conn.Write(common.CreateErrorMessage("no message for that id"))
-				return
-			}
-
-			// Check that the Sending Address is one of the Approved Recipients
-			if !common.SliceContains(message.approved, toAddr) {
-				conn.Write(common.CreateErrorMessage("not an approved recipient"))
-				return
-			}
-
-			// If it passes these checks, send the message back through the connection
-			conn.Write(common.CreatePrefixedMessage(message.data))
-
-		// Received a Public Retrieval Message (Return all Messages Since the Date Provided)
-		case bytes.Equal(c, common.RETRIEVAL_TYPE_PUBLIC()):
-			// Get the `TimeSince` field
-			timeSince := time.Unix(int64(*retrieval.SinceDate), 0)
-
-			// Get the public notices box for that address
-			boxes, ok := notices[*retrieval.FromAddress]
-			if !ok {
-				// If it does not exist, alert the user
-				conn.Write(common.CreateErrorMessage("no public messages for that id"))
-				return
-			}
-
-			// Make an array of messages to tack onto
-			output := make([][]byte, 0)
-
-			// Loop through the messages
-			for _, v := range(boxes) {
-				// Append the notice to the output if it was sent after the 'TimeSince'
-				if (v.receivedTime.After(timeSince)) {
-					output = append(output, v.data)
-				}
-			}
-
-			// Alert the Client that an Array is Coming
-			arrayData := common.CreateArrayedMessage(uint32(len(output)), serverKey)
-			conn.Write(arrayData)
-
-			// Write all of the Data
-			for _, v := range(output) {
-				conn.Write(common.CreatePrefixedMessage(v))
-			}
-
-		// Received a Mine Retrieval Message (Return all Messages that are Stored - Since the Date Provided)	
-		case bytes.Equal(c, common.RETRIEVAL_TYPE_MINE()):
-			// Get the `TimeSince` field
-			timeSince := time.Unix(int64(*retrieval.SinceDate), 0)
-
-			// Get the Users' Mailbox
-			mailbox, ok := mailboxes[toAddr]
-			if !ok {
-				// If it does nto exist, alert the user that this isn't their mailserver
-				conn.Write(common.CreateErrorMessage("user is not part of this server"))
-				return
-			}
-
-			// Make an array of messages to tack onto
-			output := make([][]byte, 0)
-
-			// Loop through the messages
-			for _, v := range(mailbox) {
-				// Append the notice to the output if it was sent after the 'TimeSince'
-				if (v.receivedTime.After(timeSince)) {
-					output = append(output, v.data)
-				}
-			}
-
-			arrayData := common.CreateArrayedMessage(uint32(len(output)), serverKey)
-			conn.Write(arrayData)
-
-			// Write all of the Data
-			for _, v := range(output) {
-				conn.Write(common.CreatePrefixedMessage(v))
-			}
-
-		default:
-			fmt.Println("Unable to Respond to Message")
-	}
+func (myServer) AllowConnection(fromAddr string) bool {
+	return true
 }
 
-// Function that Handles a Request to Send a Message
-func handleSendRequest(request *airdispatch.SendMailRequest, fromAddr string) {
-	// Check to see if it a public message or not
-	if len(request.ToAddress) != 0 && request.ToAddress[0] != fromAddr && request.ToAddress[0] != "" {
-		// Helper Variables so we don't have to access request everytime
-		var toAddress []string = request.ToAddress
-		var theMail = request.StoredMessage
-
-		// Get a hash of the Message
-		hash := hex.EncodeToString(common.HashSHA(theMail, nil))
-
-		for _, v := range(toAddress) {
-			// For every address that the Message is to be sent to, lookup its location and send it an alert
-			loc := LookupLocation(v)
-			SendAlert(loc, hash, v)
-		}
-
-		// Create a Record to Store the Message in the Outgoing Mail Box
-		storeData := MailData {
-			approved: toAddress,
-			data: theMail,
-			receivedTime: time.Now(),
-		}
-
-		// Store the Message in the Database
-		storedMessages[hash] = storeData
-	} else {
-		var theMail = request.StoredMessage
-
-		// Populate the Record to Store the Dat
-		storedData := MailData {
-			data: theMail,
-			receivedTime: time.Now(),
-		}
-
-		// Get the notice box of the From Address
-		boxes, ok := notices[fromAddr]
-		if !ok {
-			boxes = make([]MailData, 0)
-		}
-
-		// Store the Public Message in the Box
-		notices[fromAddr] = append(boxes, storedData)
+func (myServer) SavePublicMail(theMail []byte, fromAddr string) {
+	// Populate the Record to Store the Data
+	storedData := Mail {
+		data: theMail,
+		receivedTime: time.Now(),
 	}
+
+	// Get the notice box of the From Address
+	_, ok := notices[fromAddr]
+	if !ok {
+		notices[fromAddr] = make(Mailbox)
+	}
+
+	// Store the Public Message in the Box
+	notices[fromAddr][GetMessageId(theMail)] = storedData
 }
 
-// A function that will get the Location of an Address
-func LookupLocation(toAddr string) string {
-	// Loop Over Every Connected Tracker
-	for _, v := range(connectedTrackers) {
-		address, _ := net.ResolveTCPAddr("tcp", v)
+func (myServer) SavePrivateMail(theMail []byte, toAddress []string) (id string) {
+	// Get a hash of the Message
+	hash := GetMessageId(theMail)
 
-		// Connect to Tracker
-		conn, err := net.DialTCP("tcp", nil, address)
-		if err != nil {
-			fmt.Println(err)
-			fmt.Println("Unable to connect to the tracking server.")
-			continue
-		}
-
-		// Send a Query to the Tracker
-		finalLocation, err := SendQuery(conn, toAddr)
-		// Return the Address if there were no errors
-		if err == nil {
-			return finalLocation
-		}
-
-		// Close the connection
-		conn.Close()
+	// Create a Record to Store the Message in the Outgoing Mail Box
+	storedData := Mail {
+		approved: toAddress,
+		data: theMail,
+		receivedTime: time.Now(),
 	}
-	// If we have not returned a location yet, we cannot return anything
-	return ""
+
+	// Store the Message in the Database
+	storedMessages[hash] = storedData
+
+	return hash
 }
 
-// A function that will send a query message over a connection
-func SendQuery(conn net.Conn, addr string) (string, error) {
-	// Create a new Query Message
-	newQuery := &airdispatch.AddressRequest {
-		Address: &addr,
-	}
-
-	// Set the Message Type and get the Bytes of the Message
-	mesType := common.QUERY_MESSAGE
-	queryData, _ := proto.Marshal(newQuery)
-
-	// Create the Message to be sent over the wire
-	totalBytes := common.CreateAirdispatchMessage(queryData, serverKey, mesType)
-
-	// Send the message and wait for a response
-	conn.Write(totalBytes)
-	data, _ := common.ReadAirdispatchMessage(conn)
-
-	// Unmarshal the Response
-	newQueryResponse := &airdispatch.AddressResponse{}
-	proto.Unmarshal(data, newQueryResponse)
-
-	// Return the Location
-	return *newQueryResponse.ServerLocation, nil
+func GetMessageId(theMail []byte) string {
+	return hex.EncodeToString(common.HashSHA(theMail, nil))
 }
 
-// A function that delivers an alert to a location
-func SendAlert(location string, message_id string, toAddr string) {
-	address, _ := net.ResolveTCPAddr("tcp", location)
+func (myServer) RetrieveMessage(id string) ([]byte, []string) {
+	// TODO: Allow this type of DATA to retrieve multiple messages... Maybe?
+	// Get the Outgoing Message with that ID
+	message, _ := storedMessages[id]
+	return message.data, message.approved
+}
 
-	// Connect to the remote server
-	conn, err := net.DialTCP("tcp", nil, address)
-	if err != nil {
-		fmt.Println(err)
-		fmt.Println("Unable to connect to the receiving server.")
-		return
+func (m myServer) RetrieveInbox(addr string, since uint64) [][]byte {
+	return m.retrieveData(addr, since, mailboxes)
+}
+
+func (m myServer) RetrievePublic(fromAddr string, since uint64) [][]byte {
+	return m.retrieveData(fromAddr, since, notices)
+}
+
+func (myServer) retrieveData(fromAddr string, since uint64, theBox PostOffice) [][]byte {
+	// Get the `TimeSince` field
+	timeSince := time.Unix(int64(since), 0)
+
+	// Get the public notices box for that address
+	boxes, ok := theBox[fromAddr]
+	if !ok {
+		// If it does not exist, alert the user
+		// conn.Write(common.CreateErrorMessage("no public messages for that id"))
+		return nil
 	}
 
-	// Populate the Alert message
-	newAlert := &airdispatch.Alert {
-		ToAddress: &toAddr,
-		Location: &serverLocation,
-		MessageId: &message_id,
+	// Make an array of messages to tack onto
+	output := make([][]byte, 0)
+
+	// Loop through the messages
+	for _, v := range(boxes) {
+		// Append the notice to the output if it was sent after the 'TimeSince'
+		if (v.receivedTime.After(timeSince)) {
+			output = append(output, v.data)
+		}
 	}
-	alertData, _ := proto.Marshal(newAlert)
-
-	// Create the Message to Send
-	bytesToSend := common.CreateAirdispatchMessage(alertData, serverKey, common.ALERT_MESSAGE)
-
-	// Write the Message
-	conn.Write(bytesToSend)
-	conn.Close()
+	return output
 }
