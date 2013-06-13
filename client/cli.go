@@ -230,36 +230,9 @@ func sendRegistration(tracker string, location string) {
 }
 
 func sendQuery(tracker string, address string) string {
-	// Connect to the Tracking Server
-	tracker_conn := connectToServer(tracker)
-	defer tracker_conn.Close()
-
-	newQuery := &airdispatch.AddressRequest {
-		Address: &address,
-	}
-
-	// Setup the new Message
-	mesType := common.QUERY_MESSAGE
-	queryData, _ := proto.Marshal(newQuery)
-	totalBytes := common.CreateAirdispatchMessage(queryData, credentials.key, mesType)
-
-	// Send the Message
-	tracker_conn.Write(totalBytes)
-
-	// Get the Response
-	data, err := common.ReadAirdispatchMessage(tracker_conn)
-	if err != nil {
-		fmt.Println("Unable to get address.")
-		return ""
-	}
-
-	// Format the Response
-	newQueryResponse := &airdispatch.AddressResponse{}
-	proto.Unmarshal(data, newQueryResponse)
-
-	// Alert the User to the Found Address
-	fmt.Println("Received Location for Address: ", *newQueryResponse.ServerLocation)
-	return *newQueryResponse.ServerLocation
+	location := common.LookupLocation(address, []string{tracker}, credentials.key)
+	fmt.Println("Found Location", location)
+	return location
 }
 
 func sendMail(address string, mailserver string) {
