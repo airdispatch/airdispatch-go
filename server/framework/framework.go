@@ -15,7 +15,7 @@ type ServerError struct {
 	Error string
 }
 
-type serverHandler interface {
+type ServerHandler interface {
 	HandleError(err ServerError)
 
 	SavePublicMail(mailData []byte, fromAddress string)
@@ -35,7 +35,7 @@ type Server struct {
 	LocationName string
 	TrackerList []string
 	Key *ecdsa.PrivateKey
-	ServerHandler serverHandler
+	ServerHandler ServerHandler
 }
 
 var thisServer *Server

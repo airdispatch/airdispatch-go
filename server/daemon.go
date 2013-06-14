@@ -65,22 +65,21 @@ func main() {
 
 	// Find the location of this server
 	serverLocation = *me
+	handler := &myServer{}
 	theServer := framework.Server{
 		Port: *port,
 		LocationName: *me,
 		Key: serverKey,
 		TrackerList: connectedTrackers,
-		ServerHandler: &myServer{},
+		ServerHandler: handler,
 	}
+	fmt.Println(handler.AllowConnection("hi"))
 	framework.StartServer(&theServer)
 
 }
 
-type myServer struct{}
-
-func (myServer) HandleError(err framework.ServerError) {
-	fmt.Println(err.Error)
-	os.Exit(1)
+type myServer struct{
+	framework.BasicServer
 }
 
 // Function that Handles an Alert of a Message
@@ -106,10 +105,6 @@ func (myServer) SaveIncomingAlert(alert *airdispatch.Alert, alertData []byte, fr
 
 	// Store the Record in the User's Mailbox
 	mailboxes[toAddr][*alert.MessageId] = theMessage
-}
-
-func (myServer) AllowConnection(fromAddr string) bool {
-	return true
 }
 
 func (myServer) SavePublicMail(theMail []byte, fromAddr string) {
