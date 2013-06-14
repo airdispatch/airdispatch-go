@@ -198,7 +198,12 @@ func handleSendRequest(request *airdispatch.SendMailRequest, fromAddr string) {
 
 		for _, v := range(request.ToAddress) {
 			// For every address that the Message is to be sent to, lookup its location and send it an alert
-			loc := common.LookupLocation(v, thisServer.TrackerList, thisServer.Key)
+			loc, err := common.LookupLocation(v, thisServer.TrackerList, thisServer.Key)
+			if err != nil {
+				fmt.Println(err)
+				fmt.Println("Could not find Location for Address")
+				return
+			}
 			SendAlert(loc, hash, v)
 		}
 	} else {
@@ -208,10 +213,7 @@ func handleSendRequest(request *airdispatch.SendMailRequest, fromAddr string) {
 
 // A function that delivers an alert to a location
 func SendAlert(location string, message_id string, toAddr string) {
-	address, _ := net.ResolveTCPAddr("tcp", location)
-
-	// Connect to the remote server
-	conn, err := net.DialTCP("tcp", nil, address)
+	conn, err := common.ConnectToServer(location)
 	if err != nil {
 		fmt.Println(err)
 		fmt.Println("Unable to connect to the receiving server.")

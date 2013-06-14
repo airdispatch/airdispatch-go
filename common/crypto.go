@@ -8,6 +8,8 @@ import (
 	"code.google.com/p/go.crypto/ripemd160"
 	"fmt"
 	"io"
+	"os"
+	"encoding/gob"
 	"math/big"
 	"bytes"
 	"encoding/hex"
@@ -130,4 +132,53 @@ func VerifyAddress(address []byte) bool {
 	checksum := address[location:]
 	rest := address[:location]
 	return bytes.Equal(GenerateChecksum(rest), checksum)
+}
+
+// Keygen Variables
+type EncodedECDSAKey struct {
+	D, X, Y *big.Int
+}
+
+func LoadKeyFromFile(filename string) (*ecdsa.PrivateKey, error) {
+	// Open the File for Loading
+	file, err := os.Open(filename)
+	if err != nil {
+		return nil, err
+	}
+
+	decodedKey := &EncodedECDSAKey{}
+
+	// Create the decoder
+	dec := gob.NewDecoder(file)
+	// Load from the File
+	err = dec.Decode(&decodedKey)
+	if err != nil {
+		return nil, err
+	}
+
+	// Reconstruct the Key
+	newPublicKey := ecdsa.PublicKey{EllipticCurve, decodedKey.X, decodedKey.Y}
+	newPrivateKey := ecdsa.PrivateKey{newPublicKey, decodedKey.D}
+
+	return &newPrivateKey, nil
+}
+
+func SaveKeyToFile(filename string, key *ecdsa.PrivateKey) error {
+	saveKey := EncodedECDSAKey{key.D, key.PublicKey.X, key.PublicKey.Y}
+
+	// Create the File to Store the Keys in
+	file, err := os.Create(filename)
+	if err != nil {
+		return err
+	}
+
+	// Create the Encoder
+	enc := gob.NewEncoder(file)
+
+	// Write to File
+	err = enc.Encode(saveKey)
+	if err != nil {
+		return err
+	}
+	return nil
 }

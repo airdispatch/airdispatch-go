@@ -3,16 +3,12 @@
 package main
 
 import (
-	"net"
 	"fmt"
 	"code.google.com/p/goprotobuf/proto"
+	"airdispat.ch/client/framework"
 	"airdispat.ch/airdispatch"
 	"airdispat.ch/common"
 	"flag"
-	"crypto/ecdsa"
-	"encoding/hex"
-	"encoding/gob"
-	"math/big"
 	"os"
 	"bufio"
 )
@@ -42,22 +38,13 @@ const CHECK = "check"
 const PUBLIC = "pub_check"
 const KEYGEN = "keygen"
 
-// Keygen Variables
-type EncodedKey struct {
-	D, X, Y *big.Int
-}
-
-type CLIKey struct {
-	Address string
-	key *ecdsa.PrivateKey
-	SaveKey EncodedKey
-}
-
-var credentials CLIKey
+var credentials *framework.Client
 
 func main() {
 	// Parse the Command Line Flags
 	flag.Parse()
+
+	credentials = &framework.Client{}
 
 	// If we expect to be interactive, prompt the user for the configuration variables.
 	if *interactivity {
@@ -92,7 +79,8 @@ func main() {
 		fmt.Scanln(key_location)
 	}
 	if *mode != KEYGEN {
-		loadKeys(*key_location)
+		theKey, _ := common.LoadKeyFromFile(*key_location)
+		credentials.Populate(theKey)
 	}
 
 	// Determine what to do based on the mode of the Client
@@ -100,17 +88,13 @@ func main() {
 		// REGISTRATION Message
 		case *mode == REGISTRATION:
 			fmt.Println("Sending a Registration Request")
-			sendRegistration(*tracking_server, *mail_location)
+			credentials.SendRegistration(*tracking_server, *mail_location)
 
 		// QUERY MESSAGE	
 		case *mode == QUERY:
 			fmt.Println("Sending a Query for " + *acting_address)
-			sendQuery(*tracking_server, *acting_address)
-
-		// ALERT MESSAGE
-		case *mode == ALERT:
-			fmt.Println("Sending a Mail Alert for " + *acting_address)
-			sendAlert(*tracking_server, *acting_address, *remote_mailserver)
+			queriedLocation, _ := common.LookupLocation(*acting_address, []string{*tracking_server}, credentials.Key)
+			fmt.Println("Found Location", queriedLocation)
 
 		// SEND MESSAGE
 		case *mode == SEND:
@@ -122,11 +106,15 @@ func main() {
 
 		// CHECK FOR PUBLIC MESSAGES
 		case *mode == PUBLIC:
-			checkPublic(*tracking_server, *acting_address)
+			allMail, _ := credentials.DownloadPublicMail(*tracking_server, *acting_address, 0)
+			for _, v := range(allMail) {
+				fmt.Println(common.PrintMessage(v))
+			}
 
 		// GENERATE KEYS
 		case *mode == KEYGEN:
-			saveKeys(*key_location)
+			key, _ := common.CreateKey()
+			common.SaveKeyToFile(*key_location, key)
 
 		// Otherwise, throw an error.
 		default:
@@ -135,109 +123,18 @@ func main() {
 	}
 }
 
-func connectToServer(remote string) net.Conn {
-	address, _ := net.ResolveTCPAddr("tcp", remote)
+// func createKey() {
+// 	key, _ := common.CreateKey()
+// 	createdAddress := common.StringAddress(&key.PublicKey)
 
-	// Connect to the Remote Mail Server
-	conn, err := net.DialTCP("tcp", nil, address)
-	if err != nil {
-		fmt.Println(err)
-		fmt.Println("Cannot connect to server.")
-		return nil
-	}
-	return conn
-}
-
-func createKey() {
-	key, _ := common.CreateKey()
-	createdAddress := common.StringAddress(&key.PublicKey)
-
-	saveKey := EncodedKey{key.D, key.PublicKey.X, key.PublicKey.Y}
-	credentials = CLIKey{createdAddress, key, saveKey}
-	fmt.Println("Created the Address:", createdAddress)
-}
-
-func loadKeys(filename string) {
-	// Open the File for Loading
-	file, err := os.Open(filename)
-	if err != nil {
-		fmt.Println("Unable to Open File")
-		fmt.Println(err)
-		return
-	}
-
-	// Create the decoder
-	dec := gob.NewDecoder(file)
-	// Load from the File
-	err = dec.Decode(&credentials)
-	if err != nil {
-		fmt.Println("Unable to get the credentials from the file.")
-		fmt.Println(err)
-	}
-
-	// Reconstruct the Key
-	newPublicKey := ecdsa.PublicKey{common.EllipticCurve, credentials.SaveKey.X, credentials.SaveKey.Y}
-	newPrivateKey := ecdsa.PrivateKey{newPublicKey, credentials.SaveKey.D}
-	credentials.key = &newPrivateKey
-
-	fmt.Println("Your address is: ", credentials.Address)
-}
-
-func saveKeys(filename string) {
-	// First, create the keys that we will use
-	createKey()
-
-	// Create the File to Store the Keys in
-	file, err := os.Create(filename)
-	if err != nil {
-		fmt.Println("Unable to Create File")
-		fmt.Println(err)
-		return
-	}
-
-	// Create the Encoder
-	enc := gob.NewEncoder(file)
-
-	// Write to File
-	err = enc.Encode(credentials)
-	if err != nil {
-		fmt.Println("Unable to Write Credentials")
-		fmt.Println(err)
-	}
-}
-
-func sendRegistration(tracker string, location string) {
-	// Connect to the Tracking Server
-	tracker_conn := connectToServer(tracker)
-	defer tracker_conn.Close()
-
-	mesType := common.REGISTRATION_MESSAGE
-	byteKey := common.KeyToBytes(&credentials.key.PublicKey)
-
-	// Create the Registration Message
-	newRegistration := &airdispatch.AddressRegistration{
-		Address: &credentials.Address,
-		PublicKey: byteKey,
-		Location: &location,
-	}
-
-	// Create the Signed Message
-	regData, _ := proto.Marshal(newRegistration)
-	toSend := common.CreateAirdispatchMessage(regData, credentials.key, mesType)
-
-	// Send the Message
-	tracker_conn.Write(toSend)
-}
-
-func sendQuery(tracker string, address string) string {
-	location := common.LookupLocation(address, []string{tracker}, credentials.key)
-	fmt.Println("Found Location", location)
-	return location
-}
+// 	saveKey := EncodedKey{key.D, key.PublicKey.X, key.PublicKey.Y}
+// 	credentials = CLIKey{createdAddress, key, saveKey}
+// 	fmt.Println("Created the Address:", createdAddress)
+// }
 
 func sendMail(address string, mailserver string) {
 	// Connect to the Remote Mailserver
-	mail_conn := connectToServer(mailserver)
+	mail_conn, _ := common.ConnectToServer(mailserver)
 	defer mail_conn.Close()
 
 	fmt.Println("Time to define the data!")
@@ -288,7 +185,7 @@ func sendMail(address string, mailserver string) {
 
 	// We need to marshal the mail message and pre-sign it, so the server can send it on our behalf
 	marshalledMail, _ := proto.Marshal(mail)
-	signedMessage, _ := common.CreateSignedMessage(credentials.key, marshalledMail, common.MAIL_MESSAGE)
+	signedMessage, _ := common.CreateSignedMessage(credentials.Key, marshalledMail, common.MAIL_MESSAGE)
 	toSave, _ := proto.Marshal(signedMessage)
 
 	// TODO: Allow sending to Multiple Recipients
@@ -301,45 +198,15 @@ func sendMail(address string, mailserver string) {
 	// Convert the Structure into Bytes
 	sendBytes, _ := proto.Marshal(sendRequest)
 	mesType := common.SEND_REQUEST
-	toSend := common.CreateAirdispatchMessage(sendBytes, credentials.key, mesType)
+	toSend := common.CreateAirdispatchMessage(sendBytes, credentials.Key, mesType)
 
 	// Send the Message
 	mail_conn.Write(toSend)
 }
 
-func sendAlert(tracker string, address string, mailserver string) {
-	// Find the recipientServer for the address, and connect to it
-	recipientServer := sendQuery(tracker, address)
-	recipient_conn := connectToServer(recipientServer)
-
-	// Allow the User to Specify a Specific Hash
-	toHash := "hello"
-	if *interactivity {
-		fmt.Println("Specifiy a message to generate an ID for: ")
-		fmt.Scanln(&toHash)
-	}
-
-	// Create the Message Id
-	hash := hex.EncodeToString(common.HashSHA(nil, []byte(toHash)))
-
-	// Fill Out the alert Structure
-	newAlert := &airdispatch.Alert {
-		ToAddress: &address,
-		Location: &mailserver,
-		MessageId: &hash,
-	}
-
-	// Create the Message
-	alertData, _ := proto.Marshal(newAlert)
-	toSend := common.CreateAirdispatchMessage(alertData, credentials.key, common.ALERT_MESSAGE)
-
-	// Send the Alert
-	recipient_conn.Write(toSend)
-}
-
 func checkMail(mailserver string) {
 	// Connect to the mailserver
-	mailServer := connectToServer(mailserver)
+	mailServer, _ := common.ConnectToServer(mailserver)
 	
 	// Specify that we want to get ALL mail
 	date := uint64(0)
@@ -352,7 +219,7 @@ func checkMail(mailserver string) {
 
 	// Create the Message
 	retData, _ := proto.Marshal(newDownloadRequest)
-	toSend := common.CreateAirdispatchMessage(retData, credentials.key, common.RETRIEVAL_MESSAGE)
+	toSend := common.CreateAirdispatchMessage(retData, credentials.Key, common.RETRIEVAL_MESSAGE)
 
 	// Send the Message
 	mailServer.Write(toSend)
@@ -390,10 +257,10 @@ func checkMail(mailserver string) {
 				MessageId: newAlert.MessageId,
 			}
 			getData, _ := proto.Marshal(getMessage)
-			sendData := common.CreateAirdispatchMessage(getData, credentials.key, common.RETRIEVAL_MESSAGE)
+			sendData := common.CreateAirdispatchMessage(getData, credentials.Key, common.RETRIEVAL_MESSAGE)
 
 			// Send the retrieval request
-			remConn := connectToServer(*newAlert.Location)
+			remConn, _ := common.ConnectToServer(*newAlert.Location)
 			remConn.Write(sendData)
 
 			// Get the MAI response and unmarshal it
@@ -407,59 +274,13 @@ func checkMail(mailserver string) {
 	}
 }
 
-func checkPublic(trackingServer string, toCheck string) {
-	// Get the Server where the Public Mail Resides (And Connect to It)
-	recipientServer := sendQuery(trackingServer, toCheck)
-	recipientConn := connectToServer(recipientServer)
 
-	// Get the Unix Timestamp of the earliest message you want
-	since := uint64(0)
-	if (*interactivity) {
-		fmt.Print("Retrieve Messages Sent Since (Unix Timestamp): ")
-		fmt.Scanln(&since)
-	}
-
-	// Create the Request Object
-	messageRequest := &airdispatch.RetrieveData {
-		RetrievalType: common.RETRIEVAL_TYPE_PUBLIC(),
-		FromAddress: &toCheck,
-		SinceDate: &since,
-	}
-	requestData, _ := proto.Marshal(messageRequest)
-	sendData := common.CreateAirdispatchMessage(requestData, credentials.key, common.RETRIEVAL_MESSAGE)
-
-	// Send the Request to the Server
-	recipientConn.Write(sendData)
-
-	// Read the Message Response
-	data, messageType, _, err := common.ReadSignedMessage(recipientConn)
-	if err != nil {
-		fmt.Println("Could not read")
-		fmt.Println(err)
-	}
-
-	// Ensure that we have been given an array of values
-	if messageType == common.ARRAY_MESSAGE {
-		// Get the array from the data
-		theArray := &airdispatch.ArrayedData{}
-		proto.Unmarshal(data, theArray)
-
-		// Find the number of messsages
-		mesNumber := theArray.NumberOfMessages
-		fmt.Println("Received", int(*mesNumber), "message(s).")
-
-		// Loop over this number
-		for i := uint32(0); i < *mesNumber; i++ {
-			// Get the message and unmarshal it
-			mesData, _, _, _ := common.ReadSignedMessage(recipientConn)
-			theMessage := &airdispatch.Mail{}
-			proto.Unmarshal(mesData, theMessage)
-
-			// Print the Message
-			fmt.Println(common.PrintMessage(theMessage))
-		}
-	}
-}
+	// // Get the Unix Timestamp of the earliest message you want
+	// since := uint64(0)
+	// if (*interactivity) {
+	// 	fmt.Print("Retrieve Messages Sent Since (Unix Timestamp): ")
+	// 	fmt.Scanln(&since)
+	// }
 
 // Taken from http://stackoverflow.com/questions/6141604/go-readline-string
 
