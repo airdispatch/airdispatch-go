@@ -124,18 +124,9 @@ func main() {
 		// Otherwise, throw an error.
 		default:
 			fmt.Println("You must specify a mode to run the program in, or specify interactive mode.")
-			fmt.Println("Currently supported modes: ", REGISTRATION, QUERY, ALERT, SEND, KEYGEN, CHECK, PUBLIC)
+			fmt.Println("Currently supported modes: ", REGISTRATION, QUERY, SEND, KEYGEN, CHECK, PUBLIC)
 	}
 }
-
-// func createKey() {
-// 	key, _ := common.CreateKey()
-// 	createdAddress := common.StringAddress(&key.PublicKey)
-
-// 	saveKey := EncodedKey{key.D, key.PublicKey.X, key.PublicKey.Y}
-// 	credentials = CLIKey{createdAddress, key, saveKey}
-// 	fmt.Println("Created the Address:", createdAddress)
-// }
 
 func sendMail(address string) {
 	fmt.Println("Time to define the data!")

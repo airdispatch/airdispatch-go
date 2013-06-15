@@ -57,59 +57,22 @@ func (c *Client) DownloadPublicMail(trackingServers []string, toCheck string, si
 		return nil, err
 	}
 
-	recipientConn, err := common.ConnectToServer(recipientServer)
-	if err != nil {
-		return nil, err
-	}
-	defer recipientConn.Close()
-
-	// Create the Request Object
 	messageRequest := &airdispatch.RetrieveData {
 		RetrievalType: common.RETRIEVAL_TYPE_PUBLIC(),
 		FromAddress: &toCheck,
 		SinceDate: &since,
 	}
-	requestData, _ := proto.Marshal(messageRequest)
-	sendData := common.CreateAirdispatchMessage(requestData, c.Key, common.RETRIEVAL_MESSAGE)
 
-	// Send the Request to the Server
-	recipientConn.Write(sendData)
-
-	// Read the Message Response
-	data, messageType, _, err := common.ReadSignedMessage(recipientConn)
-	if err != nil {
-		return nil, err
-	}
-
-	// Ensure that we have been given an array of values
-	if messageType == common.ARRAY_MESSAGE {
-		// Get the array from the data
-		theArray := &airdispatch.ArrayedData{}
-		proto.Unmarshal(data, theArray)
-
-		outputMessages := []*airdispatch.Mail{}
-
-		// Loop over this number
-		for i := uint32(0); i < *theArray.NumberOfMessages; i++ {
-			// Get the message and unmarshal it
-			mesData, _, _, _ := common.ReadSignedMessage(recipientConn)
+	return c.getMessagesWithRetrieval(messageRequest,
+		func(inputData[]byte) (outputData *airdispatch.Mail, error error) {
 			theMessage := &airdispatch.Mail{}
-			proto.Unmarshal(mesData, theMessage)
+			proto.Unmarshal(inputData, theMessage)
 
-			// Print the Message
-			outputMessages = append(outputMessages, theMessage)
-		}
-		return outputMessages, nil
-	}
-	return nil, errors.New("Did Not Return Correct Message Type Array, Instead" + messageType)
+			return theMessage, nil
+		}, recipientServer)
 }
 
 func (c *Client) DownloadInbox(since uint64) ([]*airdispatch.Mail, error) {
-	// Connect to the mailserver
-	mailServer, err := common.ConnectToServer(c.MailServer)
-	if err != nil {
-		return nil, err
-	}
 
 	// Create the message to download the mail
 	newDownloadRequest := &airdispatch.RetrieveData {
@@ -117,8 +80,29 @@ func (c *Client) DownloadInbox(since uint64) ([]*airdispatch.Mail, error) {
 		SinceDate: &since,
 	}
 
+	return c.getMessagesWithRetrieval(newDownloadRequest,
+		func(inputData[]byte) (outputData *airdispatch.Mail, error error) {
+			newAlert := &airdispatch.Alert{}
+			proto.Unmarshal(inputData, newAlert)
+
+			// Print the contents of the Alert
+			// fmt.Println("Received ALE from", newAlert, err)
+			return c.DownloadSpecificMessageFromServer(*newAlert.MessageId, *newAlert.Location)
+		}, c.MailServer)
+}
+
+type messageRetriever func(inputData []byte) (outputMessage *airdispatch.Mail, error error)
+
+func (c *Client) getMessagesWithRetrieval(serverMessage *airdispatch.RetrieveData, retriever messageRetriever, server string) ([]*airdispatch.Mail, error) {
+	// Connect to the mailserver
+	mailServer, err := common.ConnectToServer(server)
+	if err != nil {
+		return nil, err
+	}
+	defer mailServer.Close()
+
 	// Create the Message
-	retData, err := proto.Marshal(newDownloadRequest)
+	retData, err := proto.Marshal(serverMessage)
 	if err != nil {
 		return nil, err
 	}
@@ -149,14 +133,13 @@ func (c *Client) DownloadInbox(since uint64) ([]*airdispatch.Mail, error) {
 		for i := uint32(0); i < *mesNumber; i++ {
 			// Get the message and unmarshal it
 			mesData, _ := common.ReadAirdispatchMessage(mailServer)
-			newAlert := &airdispatch.Alert{}
-			proto.Unmarshal(mesData, newAlert)
 
-			// Print the contents of the Alert
-			// fmt.Println("Received ALE from", newAlert, err)
-			theMessage, _ := c.DownloadSpecificMessageFromServer(*newAlert.MessageId, *newAlert.Location)
+			theMessage, _ := retriever(mesData)
+
 			outputMessages = append(outputMessages, theMessage)
 		}
+
+		return outputMessages, nil
 	}
 	return nil, errors.New("Did Not Return Correct Message Type Array, Instead" + messageType)
 }
