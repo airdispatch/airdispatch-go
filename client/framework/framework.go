@@ -11,6 +11,7 @@ import (
 type Client struct {
 	Address string
 	Key *ecdsa.PrivateKey
+	MailServer string
 }
 
 func (c *Client) Populate(key *ecdsa.PrivateKey) {
@@ -60,6 +61,7 @@ func (c *Client) DownloadPublicMail(trackingServers []string, toCheck string, si
 	if err != nil {
 		return nil, err
 	}
+	defer recipientConn.Close()
 
 	// Create the Request Object
 	messageRequest := &airdispatch.RetrieveData {
@@ -100,4 +102,128 @@ func (c *Client) DownloadPublicMail(trackingServers []string, toCheck string, si
 		return outputMessages, nil
 	}
 	return nil, errors.New("Did Not Return Correct Message Type Array, Instead" + messageType)
+}
+
+func (c *Client) DownloadInbox(since uint64) ([]*airdispatch.Mail, error) {
+	// Connect to the mailserver
+	mailServer, err := common.ConnectToServer(c.MailServer)
+	if err != nil {
+		return nil, err
+	}
+
+	// Create the message to download the mail
+	newDownloadRequest := &airdispatch.RetrieveData {
+		RetrievalType: common.RETRIEVAL_TYPE_MINE(),
+		SinceDate: &since,
+	}
+
+	// Create the Message
+	retData, err := proto.Marshal(newDownloadRequest)
+	if err != nil {
+		return nil, err
+	}
+
+	toSend := common.CreateAirdispatchMessage(retData, c.Key, common.RETRIEVAL_MESSAGE)
+
+	// Send the Message
+	mailServer.Write(toSend)
+
+	// Read the Signed Server Response
+	data, messageType, _, err := common.ReadSignedMessage(mailServer)
+	if err != nil {
+		return nil, err
+	}
+
+	// Ensure that we have been given an array of values
+	if messageType == common.ARRAY_MESSAGE {
+		// Get the array from the data
+		theArray := &airdispatch.ArrayedData{}
+		proto.Unmarshal(data, theArray)
+
+		outputMessages := []*airdispatch.Mail{}
+
+		// Find the number of messsages
+		mesNumber := theArray.NumberOfMessages
+
+		// Loop over this number
+		for i := uint32(0); i < *mesNumber; i++ {
+			// Get the message and unmarshal it
+			mesData, _ := common.ReadAirdispatchMessage(mailServer)
+			newAlert := &airdispatch.Alert{}
+			proto.Unmarshal(mesData, newAlert)
+
+			// Print the contents of the Alert
+			// fmt.Println("Received ALE from", newAlert, err)
+			theMessage, _ := c.DownloadSpecificMessageFromServer(*newAlert.MessageId, *newAlert.Location)
+			outputMessages = append(outputMessages, theMessage)
+		}
+	}
+	return nil, errors.New("Did Not Return Correct Message Type Array, Instead" + messageType)
+}
+
+func (c *Client) DownloadSpecificMessageFromServer(messageId string, server string) (*airdispatch.Mail, error) {
+	// Now, get the contents of that message
+	getMessage := &airdispatch.RetrieveData {
+		RetrievalType: common.RETRIEVAL_TYPE_NORMAL(),
+		MessageId: &messageId,
+	}
+
+	getData, err := proto.Marshal(getMessage)
+	if err != nil {
+		return nil, err
+	}
+
+	sendData := common.CreateAirdispatchMessage(getData, c.Key, common.RETRIEVAL_MESSAGE)
+
+	// Send the retrieval request
+	remConn, err := common.ConnectToServer(server)
+	if err != nil {
+		return nil, err
+	}
+	defer remConn.Close()
+
+	remConn.Write(sendData)
+
+	// Get the MAI response and unmarshal it
+	theMessageData, dataType, _, err := common.ReadSignedMessage(remConn)
+	if err != nil {
+		return nil, err
+	}
+	if dataType != common.MAIL_MESSAGE {
+		return nil, errors.New("The Returned Message is not of MAI format.")
+	}
+
+	theMessage := &airdispatch.Mail{}
+	proto.Unmarshal(theMessageData, theMessage)
+
+	return theMessage, nil
+}
+
+func (c *Client) SendMail(toAddresses []string, theMail []byte) error {
+	// Connect to the Remote Mailserver
+	mail_conn, err := common.ConnectToServer(c.MailServer)
+	if err != nil {
+		return err
+	}
+	defer mail_conn.Close()
+
+	// TODO: Allow sending to Multiple Recipients
+	// Load the Send Request with the MailMessage
+	sendRequest := &airdispatch.SendMailRequest {
+		ToAddress: toAddresses,
+		StoredMessage: theMail,
+	}
+
+	// Convert the Structure into Bytes
+	sendBytes, err := proto.Marshal(sendRequest)
+	if err != nil {
+		return err
+	}
+
+	mesType := common.SEND_REQUEST
+	toSend := common.CreateAirdispatchMessage(sendBytes, c.Key, mesType)
+
+	// Send the Message
+	mail_conn.Write(toSend)
+	return nil
 }

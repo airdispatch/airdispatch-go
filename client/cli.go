@@ -82,6 +82,7 @@ func main() {
 		theKey, _ := common.LoadKeyFromFile(*key_location)
 		credentials.Populate(theKey)
 	}
+	credentials.MailServer = *remote_mailserver
 
 	// Determine what to do based on the mode of the Client
 	switch {
@@ -98,15 +99,19 @@ func main() {
 
 		// SEND MESSAGE
 		case *mode == SEND:
-			sendMail(*acting_address, *remote_mailserver)
+			sendMail(*acting_address)
 
 		// CHECK MESSAGE
 		case *mode == CHECK:
-			checkMail(*remote_mailserver)
+			inbox, _ := credentials.DownloadInbox(uint64(0))
+			for _, v := range(inbox) {
+				// Print the Message
+				fmt.Println(common.PrintMessage(v))
+			}
 
 		// CHECK FOR PUBLIC MESSAGES
 		case *mode == PUBLIC:
-			allMail, _ := credentials.DownloadPublicMail(*tracking_server, *acting_address, 0)
+			allMail, _ := credentials.DownloadPublicMail([]string{*tracking_server}, *acting_address, 0)
 			for _, v := range(allMail) {
 				fmt.Println(common.PrintMessage(v))
 			}
@@ -132,11 +137,7 @@ func main() {
 // 	fmt.Println("Created the Address:", createdAddress)
 // }
 
-func sendMail(address string, mailserver string) {
-	// Connect to the Remote Mailserver
-	mail_conn, _ := common.ConnectToServer(mailserver)
-	defer mail_conn.Close()
-
+func sendMail(address string) {
 	fmt.Println("Time to define the data!")
 
 	// TODO: Add some encryption types
@@ -188,92 +189,8 @@ func sendMail(address string, mailserver string) {
 	signedMessage, _ := common.CreateSignedMessage(credentials.Key, marshalledMail, common.MAIL_MESSAGE)
 	toSave, _ := proto.Marshal(signedMessage)
 
-	// TODO: Allow sending to Multiple Recipients
-	// Load the Send Request with the MailMessage
-	sendRequest := &airdispatch.SendMailRequest {
-		ToAddress: []string{address},
-		StoredMessage: toSave,
-	}
-
-	// Convert the Structure into Bytes
-	sendBytes, _ := proto.Marshal(sendRequest)
-	mesType := common.SEND_REQUEST
-	toSend := common.CreateAirdispatchMessage(sendBytes, credentials.Key, mesType)
-
-	// Send the Message
-	mail_conn.Write(toSend)
+	credentials.SendMail([]string{address}, toSave)
 }
-
-func checkMail(mailserver string) {
-	// Connect to the mailserver
-	mailServer, _ := common.ConnectToServer(mailserver)
-	
-	// Specify that we want to get ALL mail
-	date := uint64(0)
-
-	// Create the message to download the mail
-	newDownloadRequest := &airdispatch.RetrieveData {
-		RetrievalType: common.RETRIEVAL_TYPE_MINE(),
-		SinceDate: &date,
-	}
-
-	// Create the Message
-	retData, _ := proto.Marshal(newDownloadRequest)
-	toSend := common.CreateAirdispatchMessage(retData, credentials.Key, common.RETRIEVAL_MESSAGE)
-
-	// Send the Message
-	mailServer.Write(toSend)
-
-	// Read the Signed Server Response
-	data, messageType, _, err := common.ReadSignedMessage(mailServer)
-	if err != nil {
-		fmt.Println("Could not read")
-		fmt.Println(err)
-	}
-
-	// Ensure that we have been given an array of values
-	if messageType == common.ARRAY_MESSAGE {
-		// Get the array from the data
-		theArray := &airdispatch.ArrayedData{}
-		proto.Unmarshal(data, theArray)
-
-		// Find the number of messsages
-		mesNumber := theArray.NumberOfMessages
-		fmt.Println("Received", int(*mesNumber), "message(s).")
-
-		// Loop over this number
-		for i := uint32(0); i < *mesNumber; i++ {
-			// Get the message and unmarshal it
-			mesData, _ := common.ReadAirdispatchMessage(mailServer)
-			newAlert := &airdispatch.Alert{}
-			proto.Unmarshal(mesData, newAlert)
-
-			// Print the contents of the Alert
-			// fmt.Println("Received ALE from", newAlert, err)
-			
-			// Now, get the contents of that message
-			getMessage := &airdispatch.RetrieveData {
-				RetrievalType: common.RETRIEVAL_TYPE_NORMAL(),
-				MessageId: newAlert.MessageId,
-			}
-			getData, _ := proto.Marshal(getMessage)
-			sendData := common.CreateAirdispatchMessage(getData, credentials.Key, common.RETRIEVAL_MESSAGE)
-
-			// Send the retrieval request
-			remConn, _ := common.ConnectToServer(*newAlert.Location)
-			remConn.Write(sendData)
-
-			// Get the MAI response and unmarshal it
-			theMessageData, _, _, _ := common.ReadSignedMessage(remConn)
-			theMessage := &airdispatch.Mail{}
-			proto.Unmarshal(theMessageData, theMessage)
-
-			// Print the Message
-			fmt.Println(common.PrintMessage(theMessage))
-		}
-	}
-}
-
 
 	// // Get the Unix Timestamp of the earliest message you want
 	// since := uint64(0)
