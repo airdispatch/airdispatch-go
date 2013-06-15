@@ -32,7 +32,6 @@ var key_location *string = flag.String("key", "", "specify a file to save or loa
 // Mode Constants
 const REGISTRATION = "registration"
 const QUERY = "query"
-const ALERT = "alert"
 const SEND = "send"
 const CHECK = "check"
 const PUBLIC = "pub_check"
@@ -50,38 +49,58 @@ func main() {
 	if *interactivity {
 		fmt.Print("Mode: ")
 		fmt.Scanln(mode)
+	}
+
+	// Go ahead and verify the mode.
+	if *mode != REGISTRATION && *mode != QUERY && *mode != SEND && *mode != CHECK && *mode != PUBLIC && *mode != KEYGEN {
+		fmt.Println("You must specify a mode to run the program in, or specify interactive mode.")
+		fmt.Println("Currently supported modes: ", REGISTRATION, QUERY, SEND, KEYGEN, CHECK, PUBLIC)
+		os.Exit(1)
+	}
+
+	if *interactivity {
 
 		// Nothing else needed if its a KEYGEN Query
-		if *mode != KEYGEN {
+		if *mode == KEYGEN {
+			fmt.Print("File to Save Keys to: ")
+			fmt.Scanln(key_location)
+
+			key, _ := common.CreateKey()
+			common.SaveKeyToFile(*key_location, key)
+
+			return
+		}
+
+		if *mode != SEND && *mode != CHECK {
 			fmt.Print("Tracking Server: ")
 			fmt.Scanln(tracking_server)
-
-			// Specify the Remote Mailserver if you are Sending an Alert
-			if *mode != REGISTRATION && *mode != QUERY {
-				fmt.Print("Remote Mailserver: ")
-				fmt.Scanln(remote_mailserver)
-			}
-
-			// Specify the Location to Send Messages to if you are Sending a registration
-			if *mode == REGISTRATION {
-				fmt.Print("Location to Send Messages to: ")
-				fmt.Scanln(mail_location)
-			} else if *mode != CHECK {
-				// Otherwise, specify the address that you are querying or sending to.
-				fmt.Print("Send or Query Address: ")
-				fmt.Scanln(acting_address)
-			}
-
-			fmt.Print("File to Load Keys From: ")
-		} else {
-			fmt.Print("File to Save Keys to: ")
 		}
+
+		// Specify the Remote Mailserver if you are Sending an Alert
+		if *mode != REGISTRATION && *mode != QUERY && *mode != PUBLIC {
+			fmt.Print("Remote Mailserver: ")
+			fmt.Scanln(remote_mailserver)
+		}
+
+		// Specify the Location to Send Messages to if you are Sending a registration
+		if *mode == REGISTRATION {
+			fmt.Print("Location to Send Messages to: ")
+			fmt.Scanln(mail_location)
+		} 
+
+		if *mode != CHECK && *mode != REGISTRATION {
+			// Otherwise, specify the address that you are querying or sending to.
+			fmt.Print("Send or Query Address: ")
+			fmt.Scanln(acting_address)
+		}
+
+		fmt.Print("File to Load Keys From: ")
 		fmt.Scanln(key_location)
 	}
-	if *mode != KEYGEN {
-		theKey, _ := common.LoadKeyFromFile(*key_location)
-		credentials.Populate(theKey)
-	}
+
+	theKey, _ := common.LoadKeyFromFile(*key_location)
+	credentials.Populate(theKey)
+
 	credentials.MailServer = *remote_mailserver
 
 	// Determine what to do based on the mode of the Client
@@ -117,14 +136,6 @@ func main() {
 			}
 
 		// GENERATE KEYS
-		case *mode == KEYGEN:
-			key, _ := common.CreateKey()
-			common.SaveKeyToFile(*key_location, key)
-
-		// Otherwise, throw an error.
-		default:
-			fmt.Println("You must specify a mode to run the program in, or specify interactive mode.")
-			fmt.Println("Currently supported modes: ", REGISTRATION, QUERY, SEND, KEYGEN, CHECK, PUBLIC)
 	}
 }
 
@@ -182,13 +193,6 @@ func sendMail(address string) {
 
 	credentials.SendMail([]string{address}, toSave)
 }
-
-	// // Get the Unix Timestamp of the earliest message you want
-	// since := uint64(0)
-	// if (*interactivity) {
-	// 	fmt.Print("Retrieve Messages Sent Since (Unix Timestamp): ")
-	// 	fmt.Scanln(&since)
-	// }
 
 // Taken from http://stackoverflow.com/questions/6141604/go-readline-string
 
