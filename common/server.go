@@ -75,14 +75,20 @@ func SendQueryToConnection(conn net.Conn, addr string, key *ecdsa.PrivateKey) (s
 
 	// Set the Message Type and get the Bytes of the Message
 	mesType := QUERY_MESSAGE
-	queryData, _ := proto.Marshal(newQuery)
+	queryData, err := proto.Marshal(newQuery)
+	if err != nil {
+		return "", err
+	}
 
 	// Create the Message to be sent over the wire
 	totalBytes := CreateAirdispatchMessage(queryData, key, mesType)
 
 	// Send the message and wait for a response
 	conn.Write(totalBytes)
-	data, _ := ReadAirdispatchMessage(conn)
+	data, err := ReadAirdispatchMessage(conn)
+	if err != nil {
+		return "", err
+	}
 
 	// Unmarshal the Response
 	newQueryResponse := &airdispatch.AddressResponse{}

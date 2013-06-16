@@ -7,7 +7,6 @@ import (
 	"bytes"
 	"io"
 	"encoding/binary"
-	"fmt"
 	"errors"
 	"reflect"
 	"code.google.com/p/goprotobuf/proto"
@@ -75,8 +74,7 @@ func ReadAirdispatchMessage(conn net.Conn) ([]byte, error) {
 
 			// The first two bytes should contain the standard message prefix.
 			if !bytes.Equal(prefixBuffer[0:2], MESSAGE_PREFIX()) {
-				fmt.Println("Not an Airdispat.ch Message")
-				return nil, errors.New("message is not for airdispatch...")
+				return nil, errors.New("Message is not for airdispatch...")
 			}
 
 			// The following four bytes contain the length of the message.
@@ -86,20 +84,15 @@ func ReadAirdispatchMessage(conn net.Conn) ([]byte, error) {
 			// Added the Ability to Catch 0-Length Messages
 			if length == 0 {
 				err := errors.New("Cannot read a message with no content.")
-				fmt.Println(err)
 				return nil, err
 			}
 		}
 
 		// We will read in data in chunks of the length of bytes
 		data := make([]byte, length)
-		n, err := io.ReadFull(conn, data)
+		_, err := io.ReadFull(conn, data)
 
-		// TODO: Change this to actually report a read error if it occured
-		// Only report an error if it read in more data than was possible.
-		if err != nil && n > len(data) {
-			fmt.Println(err)
-			fmt.Println("Unable to read from client!")
+		if err != nil {
 			return nil, err
 		}
 
@@ -118,10 +111,7 @@ func ReadAirdispatchMessage(conn net.Conn) ([]byte, error) {
 
 	if string(totalBytes)[:4] == "ERR:" {
 		// This is not a regular message, but an error message. Ruh roh.
-		fmt.Println("Error Message Returned")
-		fmt.Println(string(totalBytes))
-		newErr := errors.New(string(totalBytes))
-		return nil, newErr
+		return nil, errors.New(string(totalBytes))
 	}
 
 	// The data may contain extra 0s, we trim it to the lenght of the message here
