@@ -5,10 +5,14 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/sha256"
+	"crypto/rsa"
+	"crypto/aes"
+	"crypto/cipher"
 	"code.google.com/p/go.crypto/ripemd160"
 	"fmt"
 	"io"
 	"os"
+	"errors"
 	"encoding/gob"
 	"math/big"
 	"bytes"
@@ -40,13 +44,11 @@ func padding(byteArray []byte, length int) []byte {
 }
 
 func CreateKey() (key *ecdsa.PrivateKey, err error) {
-	key, err = ecdsa.GenerateKey(EllipticCurve, random)
-	return
+	return ecdsa.GenerateKey(EllipticCurve, random)
 }
 
 func Sign(key *ecdsa.PrivateKey, payload []byte) (r, s *big.Int, err error) {
-	r, s, err = ecdsa.Sign(random, key, payload)
-	return
+	return ecdsa.Sign(random, key, payload)
 }
 
 func Verify(key *ecdsa.PublicKey, payload []byte, r, s *big.Int) bool {
@@ -181,4 +183,81 @@ func SaveKeyToFile(filename string, key *ecdsa.PrivateKey) error {
 		return err
 	}
 	return nil
+}
+
+func hybridEncryption(rsaKey *rsa.PublicKey, plaintext []byte) (aesKey []byte, ciphertext []byte, error error) {
+	aesBits := 256
+
+	aesKey, err := generateRandomAESKey(aesBits)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	encryptedKey, err := rsa.EncryptOAEP(sha256.New(), random, rsaKey, aesKey, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	aesCipher, err := encryptAES(plaintext, aesKey)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return encryptedKey, aesCipher, nil
+}
+
+func hybridDecryption(rsaKey *rsa.PrivateKey, encryptedAesKey []byte, ciphertext []byte) (plaintext []byte, error error) {
+	decryptedKey, err := rsa.DecryptOAEP(sha256.New(), random, rsaKey, encryptedAesKey, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return decryptAES(ciphertext, decryptedKey)
+}
+
+func generateRandomAESKey(nbits int) ([]byte, error) {
+	b := make([]byte, (nbits/8))
+	n, err := io.ReadFull(random, b)
+
+	if n != len(b) || err != nil {
+		return nil, err
+	}
+
+	return b, nil
+}
+
+func encryptAES(plaintext []byte, key []byte) (ciphertext []byte, error error) {
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return nil, err
+	}
+
+	// Create IV
+	ciphertext = make([]byte, aes.BlockSize + len(plaintext))
+	iv := ciphertext[:aes.BlockSize]
+	if _, err := io.ReadFull(random, iv); err != nil {
+		return nil, err
+	}
+
+	stream := cipher.NewCFBEncrypter(block, iv)
+	stream.XORKeyStream(ciphertext[aes.BlockSize:], plaintext)
+
+	return ciphertext, nil
+}
+
+func decryptAES(ciphertext []byte, key []byte) (plaintext []byte, error error) {
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(ciphertext) < aes.BlockSize {
+		return nil, errors.New("Ciphertext was too short.")
+	}
+	iv := ciphertext[:aes.BlockSize]
+	ciphertext = ciphertext[aes.BlockSize:]
+
+	stream := cipher.NewCFBDecrypter(block, iv)
+	stream.XORKeyStream(ciphertext, ciphertext)
+	return ciphertext, nil
 }
