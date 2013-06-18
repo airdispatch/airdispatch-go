@@ -8,7 +8,6 @@ import (
 	"io"
 	"encoding/binary"
 	"errors"
-	"reflect"
 	"code.google.com/p/goprotobuf/proto"
 )
 
@@ -51,7 +50,12 @@ func ReadSignedMessage(conn net.Conn) (data []byte, mesType string, addr string,
 
 	// Determine the sending Address of the Message and the Message Type
 	messageType := downloadedMessage.MessageType
-	theAddress := StringAddress(BytesToKey(downloadedMessage.SigningKey))
+	keyByte, err := BytesToKey(downloadedMessage.SigningKey)
+	if err != nil {
+		return nil, "", "", err
+	}
+
+	theAddress := StringAddress(keyByte)
 
 	// Return all of the data
 	return downloadedMessage.Payload, *messageType, theAddress, nil
@@ -70,7 +74,12 @@ func ReadAirdispatchMessage(conn net.Conn) ([]byte, error) {
 
 			// Each Prefix is Six Bytes
 			prefixBuffer := make([]byte, 6)
-			io.ReadFull(conn, prefixBuffer)
+
+			// Read the Prefix
+			_, err := io.ReadFull(conn, prefixBuffer)
+			if err != nil {
+				return nil, err
+			}
 
 			// The first two bytes should contain the standard message prefix.
 			if !bytes.Equal(prefixBuffer[0:2], MESSAGE_PREFIX()) {
@@ -119,24 +128,32 @@ func ReadAirdispatchMessage(conn net.Conn) ([]byte, error) {
 }
 
 func GenerateSignature(key *ecdsa.PrivateKey, payload []byte) (*airdispatch.Signature, error) {
-	r, s, err := Sign(key, payload)
+	r, s, err := signPayload(key, payload)
+	if err != nil {
+		return nil, err
+	}
+
 	newSignature := &airdispatch.Signature {
 		R: r.Bytes(),
 		S: s.Bytes(),
 	}
-	return newSignature, err
+	return newSignature, nil
 }
 
 func CreateSignedMessage(key *ecdsa.PrivateKey, data []byte, mesType string) (*airdispatch.SignedMessage, error) {
 	hash := HashSHA(nil, data)
 	newSignature, err := GenerateSignature(key, hash)
+	if err != nil {
+		return nil, err
+	}
+
 	newSignedMessage := &airdispatch.SignedMessage {
 		Payload: data,
 		Signature: newSignature,
 		SigningKey: KeyToBytes(&key.PublicKey),
 		MessageType: &mesType,
 	}
-	return newSignedMessage, err
+	return newSignedMessage, nil
 }
 
 func CreatePrefixedMessage(data []byte) []byte {
@@ -148,29 +165,31 @@ func CreatePrefixedMessage(data []byte) []byte {
 	return fullBuffer
 }
 
-func CreateAirdispatchMessage(data []byte, key *ecdsa.PrivateKey, mesType string) []byte {
-	newSignedMessage, _ := CreateSignedMessage(key, data, mesType)
-	signedData, _ := proto.Marshal(newSignedMessage)
+func CreateAirdispatchMessage(data []byte, key *ecdsa.PrivateKey, mesType string) ([]byte, error) {
+	newSignedMessage, err := CreateSignedMessage(key, data, mesType)
+	if err != nil {
+		return nil, err
+	}
+
+	signedData, err := proto.Marshal(newSignedMessage)
+	if err != nil {
+		return nil, err
+	}
+
 	toSend := CreatePrefixedMessage(signedData)
-	return toSend
+	return toSend, nil
 }
 
-func CreateArrayedMessage(itemLength uint32, key *ecdsa.PrivateKey) []byte {
+func CreateArrayedMessage(itemLength uint32, key *ecdsa.PrivateKey) ([]byte, error) {
 	newArray := &airdispatch.ArrayedData{
 		NumberOfMessages: &itemLength,
 	}
-	dataArray, _ := proto.Marshal(newArray)
-	return CreateAirdispatchMessage(dataArray, key, ARRAY_MESSAGE)
-}
-
-func SliceContains(array interface{}, elem interface{}) bool {
-	v := reflect.ValueOf(array)
-	for i := 0; i < v.Len(); i++ {
-		if v.Index(i).Interface() == elem {
-			return true
-		}
+	dataArray, err := proto.Marshal(newArray)
+	if err != nil {
+		return nil, err
 	}
-	return false
+	
+	return CreateAirdispatchMessage(dataArray, key, ARRAY_MESSAGE)
 }
 
 func CreateErrorMessage(error string) []byte {

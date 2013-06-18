@@ -43,7 +43,10 @@ func (c *Client) SendRegistration(tracker string, location string) error {
 		return err
 	}
 
-	toSend := common.CreateAirdispatchMessage(regData, c.Key, mesType)
+	toSend, err := common.CreateAirdispatchMessage(regData, c.Key, mesType)
+	if err != nil {
+		return err
+	}
 
 	// Send the Message
 	tracker_conn.Write(toSend)
@@ -107,7 +110,10 @@ func (c *Client) getMessagesWithRetrieval(serverMessage *airdispatch.RetrieveDat
 		return nil, err
 	}
 
-	toSend := common.CreateAirdispatchMessage(retData, c.Key, common.RETRIEVAL_MESSAGE)
+	toSend, err := common.CreateAirdispatchMessage(retData, c.Key, common.RETRIEVAL_MESSAGE)
+	if err != nil {
+		return nil, err
+	}
 
 	// Send the Message
 	mailServer.Write(toSend)
@@ -132,9 +138,15 @@ func (c *Client) getMessagesWithRetrieval(serverMessage *airdispatch.RetrieveDat
 		// Loop over this number
 		for i := uint32(0); i < *mesNumber; i++ {
 			// Get the message and unmarshal it
-			mesData, _ := common.ReadAirdispatchMessage(mailServer)
+			mesData, err := common.ReadAirdispatchMessage(mailServer)
+			if err != nil {
+				continue
+			}
 
-			theMessage, _ := retriever(mesData)
+			theMessage, err := retriever(mesData)
+			if err != nil {
+				continue
+			}
 
 			outputMessages = append(outputMessages, theMessage)
 		}
@@ -156,7 +168,10 @@ func (c *Client) DownloadSpecificMessageFromServer(messageId string, server stri
 		return nil, err
 	}
 
-	sendData := common.CreateAirdispatchMessage(getData, c.Key, common.RETRIEVAL_MESSAGE)
+	sendData, err := common.CreateAirdispatchMessage(getData, c.Key, common.RETRIEVAL_MESSAGE)
+	if err != nil {
+		return nil, err
+	}
 
 	// Send the retrieval request
 	remConn, err := common.ConnectToServer(server)
@@ -204,7 +219,10 @@ func (c *Client) SendMail(toAddresses []string, theMail []byte) error {
 	}
 
 	mesType := common.SEND_REQUEST
-	toSend := common.CreateAirdispatchMessage(sendBytes, c.Key, mesType)
+	toSend, err := common.CreateAirdispatchMessage(sendBytes, c.Key, mesType)
+	if err != nil {
+		return err
+	}
 
 	// Send the Message
 	mail_conn.Write(toSend)

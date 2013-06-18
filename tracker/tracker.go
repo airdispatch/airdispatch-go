@@ -81,7 +81,12 @@ func handleClient(conn net.Conn) {
 	// Get the Message Type
 	messageType := downloadedMessage.MessageType
 	// Get the Sending Address
-	theAddress := common.StringAddress(common.BytesToKey(downloadedMessage.SigningKey))
+	keyByte, err := common.BytesToKey(downloadedMessage.SigningKey)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	theAddress := common.StringAddress(keyByte)
 
 	// Determine how to Proceed based on the Message Type
 	switch *messageType {

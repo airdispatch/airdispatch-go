@@ -7,6 +7,7 @@ import (
 	"crypto/ecdsa"
 	"strings"
 	"errors"
+	"reflect"
 )
 
 func ConnectToServer(remote string) (net.Conn, error) {
@@ -81,7 +82,10 @@ func SendQueryToConnection(conn net.Conn, addr string, key *ecdsa.PrivateKey) (s
 	}
 
 	// Create the Message to be sent over the wire
-	totalBytes := CreateAirdispatchMessage(queryData, key, mesType)
+	totalBytes, err := CreateAirdispatchMessage(queryData, key, mesType)
+	if err != nil {
+		return "", err
+	}
 
 	// Send the message and wait for a response
 	conn.Write(totalBytes)
@@ -113,4 +117,14 @@ func GetAddressType(addr string) AirdispatchAddressType {
 			return AirdispatchAddressDirect
 	}
 	return -1
+}
+
+func SliceContains(array interface{}, elem interface{}) bool {
+	v := reflect.ValueOf(array)
+	for i := 0; i < v.Len(); i++ {
+		if v.Index(i).Interface() == elem {
+			return true
+		}
+	}
+	return false
 }

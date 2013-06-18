@@ -9,7 +9,6 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"code.google.com/p/go.crypto/ripemd160"
-	"fmt"
 	"io"
 	"os"
 	"errors"
@@ -22,15 +21,6 @@ import (
 
 var EllipticCurve elliptic.Curve = elliptic.P256()
 var random io.Reader = rand.Reader
-
-func main() {
-	key, err := CreateKey()
-	fmt.Println(err)
-	fmt.Println(key)
-	signature, _ := GenerateSignature(key, []byte("hello"))
-	fmt.Println(signature)
-	fmt.Println(VerifySignature([]byte("hello"), signature, &key.PublicKey))
-}
 
 func padding(byteArray []byte, length int) []byte {
 	if(len(byteArray) > length) {
@@ -47,25 +37,29 @@ func CreateKey() (key *ecdsa.PrivateKey, err error) {
 	return ecdsa.GenerateKey(EllipticCurve, random)
 }
 
-func Sign(key *ecdsa.PrivateKey, payload []byte) (r, s *big.Int, err error) {
+func signPayload(key *ecdsa.PrivateKey, payload []byte) (r, s *big.Int, err error) {
 	return ecdsa.Sign(random, key, payload)
 }
 
-func Verify(key *ecdsa.PublicKey, payload []byte, r, s *big.Int) bool {
+func verifyPayload(key *ecdsa.PublicKey, payload []byte, r, s *big.Int) bool {
 	return ecdsa.Verify(key, payload, r, s)
 }
 
-func VerifySignature(hash []byte, sig *airdispatch.Signature, key *ecdsa.PublicKey) bool {
+func verifySignature(hash []byte, sig *airdispatch.Signature, key *ecdsa.PublicKey) bool {
 	var r, s = new(big.Int), new(big.Int)
 	r.SetBytes(sig.R)
 	s.SetBytes(sig.S)
-	return Verify(key, hash, r, s)
+	return verifyPayload(key, hash, r, s)
 }
 
 func VerifySignedMessage(mes *airdispatch.SignedMessage) bool {
-	key := BytesToKey(mes.SigningKey)
+	key, err := BytesToKey(mes.SigningKey)
+	if err != nil {
+		return false
+	}
+
 	hash := HashSHA(nil, mes.Payload)
-	return VerifySignature(hash, mes.Signature, key)
+	return verifySignature(hash, mes.Signature, key)
 }
 
 func KeyToBytes(key *ecdsa.PublicKey) []byte {
@@ -76,15 +70,14 @@ func KeyToBytes(key *ecdsa.PublicKey) []byte {
 	return total
 }
 
-func BytesToKey(data []byte) *ecdsa.PublicKey {
+func BytesToKey(data []byte) (*ecdsa.PublicKey, error) {
 	if len(data) != 65 {
-		fmt.Println("Not Right Length")
 		// Key is not the correct number of bytes
-		return nil
+		return nil, errors.New("The key is not the correct length.")
 	}
 	if !bytes.Equal([]byte{3}, data[0:1]) {
 		// Key does not possess the correct prefix
-		return nil
+		return nil, errors.New("The key does not contain the correct prefix.")
 	}
 	x := new(big.Int).SetBytes(data[1:33])
 	y := new(big.Int).SetBytes(data[33:65])
@@ -93,7 +86,7 @@ func BytesToKey(data []byte) *ecdsa.PublicKey {
 		Y: y,
 		Curve: EllipticCurve,
 	}
-	return key
+	return key, nil
 }
 
 func HashSHA(prepend []byte, payload []byte) []byte {
@@ -108,8 +101,24 @@ func HashRIP(prepend []byte, payload []byte) []byte {
 	return hasher.Sum(prepend)
 }
 
-func GenerateChecksum(address []byte) []byte {
+func generateChecksum(address []byte) []byte {
 	return HashSHA(nil, HashSHA(nil, address))[0:4]
+}
+
+func VerifyStringAddress(address string) bool {
+	byteAddress, err := hex.DecodeString(address)
+	if err != nil {
+		return false
+	}
+
+	return VerifyAddress(byteAddress)
+}
+
+func VerifyAddress(address []byte) bool {
+	location := len(address) - 4
+	checksum := address[location:]
+	rest := address[:location]
+	return bytes.Equal(generateChecksum(rest), checksum)
 }
 
 func StringAddress(key *ecdsa.PublicKey) string {
@@ -117,23 +126,11 @@ func StringAddress(key *ecdsa.PublicKey) string {
 	return hex.EncodeToString(address)
 }
 
-func VerifyStringAddress(address string) bool {
-	byteAddress, _ := hex.DecodeString(address)
-	return VerifyAddress(byteAddress)
-}
-
 func AddressFromKey(key *ecdsa.PublicKey) []byte {
 	toHash := KeyToBytes(key)
 	address := HashRIP(nil, HashSHA(nil, toHash))
-	checksum := GenerateChecksum(address)
+	checksum := generateChecksum(address)
 	return bytes.Join([][]byte{address, checksum}, nil)
-}
-
-func VerifyAddress(address []byte) bool {
-	location := len(address) - 4
-	checksum := address[location:]
-	rest := address[:location]
-	return bytes.Equal(GenerateChecksum(rest), checksum)
 }
 
 // Keygen Variables
@@ -184,6 +181,8 @@ func SaveKeyToFile(filename string, key *ecdsa.PrivateKey) error {
 	}
 	return nil
 }
+
+// Message Encryption Methods
 
 func hybridEncryption(rsaKey *rsa.PublicKey, plaintext []byte) (aesKey []byte, ciphertext []byte, error error) {
 	aesBits := 256

@@ -174,7 +174,12 @@ func (s *Server) handleRetrieval(retrieval *airdispatch.RetrieveData, toAddr str
 			}
 
 			// Alert the Client that an Array is Coming
-			arrayData := common.CreateArrayedMessage(uint32(len(output)), s.Key)
+			arrayData, err := common.CreateArrayedMessage(uint32(len(output)), s.Key)
+			if err != nil {
+				s.handleError("Handle Retrieval (Creating AD Message)", err)
+				return
+			}
+
 			conn.Write(arrayData)
 
 			// Write all of the Data
@@ -191,7 +196,12 @@ func (s *Server) handleRetrieval(retrieval *airdispatch.RetrieveData, toAddr str
 				return
 			}
 
-			arrayData := common.CreateArrayedMessage(uint32(len(output)), s.Key)
+			arrayData, err := common.CreateArrayedMessage(uint32(len(output)), s.Key)
+			if err != nil {
+				s.handleError("Handle Retrieval (Creating AD Message)", err)
+				return
+			}
+
 			conn.Write(arrayData)
 
 			// Write all of the Data
@@ -243,7 +253,11 @@ func (s *Server) SendAlert(location string, message_id string, toAddr string) {
 	alertData, _ := proto.Marshal(newAlert)
 
 	// Create the Message to Send
-	bytesToSend := common.CreateAirdispatchMessage(alertData, s.Key, common.ALERT_MESSAGE)
+	bytesToSend, err := common.CreateAirdispatchMessage(alertData, s.Key, common.ALERT_MESSAGE)
+	if err != nil {
+		s.handleError("Send Alert (Create AD Message)", err)
+		return
+	}
 
 	// Write the Message
 	conn.Write(bytesToSend)
