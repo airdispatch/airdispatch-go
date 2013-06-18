@@ -2,7 +2,6 @@ package main
 
 import (
 	"airdispat.ch/server/framework"
-	"fmt"
 	"flag"
 	"strings"
 	"time"
@@ -73,8 +72,7 @@ func main() {
 		TrackerList: connectedTrackers,
 		ServerHandler: handler,
 	}
-	fmt.Println(handler.AllowConnection("hi"))
-	framework.StartServer(&theServer)
+	theServer.StartServer()
 
 }
 

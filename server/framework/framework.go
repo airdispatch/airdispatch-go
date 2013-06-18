@@ -1,22 +1,23 @@
 package framework
 
 import (
-	"fmt"
 	"net"
 	"airdispat.ch/common"
 	"airdispat.ch/airdispatch"
 	"code.google.com/p/goprotobuf/proto"
 	"crypto/ecdsa"
 	"bytes"
+	"errors"
 )
 
 type ServerError struct {
 	Location string
-	Error string
+	Error error
 }
 
 type ServerHandler interface {
-	HandleError(err ServerError)
+	HandleError(err *ServerError)
+	LogMessage(toLog string)
 
 	SavePublicMail(mailData []byte, fromAddress string)
 	SavePrivateMail(mailData []byte, toAddresses []string) (messageId string)
@@ -38,57 +39,57 @@ type Server struct {
 	ServerHandler ServerHandler
 }
 
-var thisServer *Server
-
-func StartServer(theServer *Server) *Server {
-	thisServer = theServer
+func (s *Server) StartServer() (error) {
 	// Resolve the Address of the Server
-	service := ":" + thisServer.Port
+	service := ":" + s.Port
 	tcpAddr, _ := net.ResolveTCPAddr("tcp4", service)
-	fmt.Println("Starting Airdispatch Server On ", service)
+	s.ServerHandler.LogMessage("Starting Server on " + service)
 
 	// Start the Server
 	listener, err := net.ListenTCP("tcp", tcpAddr)
 	if err != nil {
-		fmt.Println(err)
-		fmt.Println("Unable to Listen for Requests")
-		return nil
+		return err
 	}
-	fmt.Println("Server is running...")
+	s.ServerHandler.LogMessage("Server is Running...")
 
-	serverLoop(listener)
-
-	return thisServer
+	s.serverLoop(listener)
+	return nil
 }
 
-func serverLoop(listener *net.TCPListener) {
+func (s *Server) handleError(location string, error error) {
+	s.ServerHandler.HandleError(&ServerError {
+		Location: location,
+		Error: error,
+	})
+}
+
+func (s *Server) serverLoop(listener *net.TCPListener) {
 	// Loop forever, waiting for connections
 	for {
 		// Accept a Connection
 		conn, err := listener.Accept()
 		if err != nil {
-			fmt.Println(err)
-			fmt.Println("Unable to Connect to Client", conn.RemoteAddr())
+			s.handleError("Server Loop (Accepting New Client)", err)
+			continue
 		}
 
 		// Concurrently handle the connection
-		go handleClient(conn)
+		go s.handleClient(conn)
 	}	
 }
 
-func handleClient(conn net.Conn) {
+func (s *Server) handleClient(conn net.Conn) {
 	// Close the Connection after Handling
 	defer conn.Close()
 
 	// Read in the Message
 	payload, messageType, theAddress, err := common.ReadSignedMessage(conn)
 	if err != nil {
-		fmt.Println("Error reading the message.")
-		fmt.Println(err)
+		s.handleError("Handle Client (Reading Signed Message)", err)
 		return
 	}
 
-	if !thisServer.ServerHandler.AllowConnection(theAddress) {
+	if !s.ServerHandler.AllowConnection(theAddress) {
 		return
 	}
 
@@ -96,54 +97,57 @@ func handleClient(conn net.Conn) {
 	switch messageType {
 
 		case common.ALERT_MESSAGE:
-			fmt.Println("Received Alert")
-
 			// Unmarshal the stored message
 			assigned := &airdispatch.Alert{}
 			err := proto.Unmarshal(payload, assigned)
-			if (err != nil) { fmt.Println("Bad Payload."); return; }
+			if err != nil {
+				s.handleError("Handle Client (Unloading Alert Payload)", err)
+				return
+			}
 
 			// Handle the Alert
-			handleAlert(assigned, payload, theAddress)
+			s.handleAlert(assigned, payload, theAddress)
 
 		case common.RETRIEVAL_MESSAGE:
-			fmt.Println("Received Retrival Request")
-
 			// Unmarshal the stored message
 			assigned := &airdispatch.RetrieveData{}
 			err := proto.Unmarshal(payload, assigned)
-			if (err != nil) { fmt.Println("Bad Payload."); return; }
+			if err != nil {
+				s.handleError("Handle Client (Unloading Retrieval Payload)", err)
+				return
+			}
 
 			// Handle the Retrieval Message
-			handleRetrieval(assigned, theAddress, conn)
+			s.handleRetrieval(assigned, theAddress, conn)
 
 		case common.SEND_REQUEST:
-			fmt.Println("Received Request to Send Message")
-
 			// Unmarshal the stored message
 			assigned := &airdispatch.SendMailRequest{}
 			err := proto.Unmarshal(payload, assigned)
-			if (err != nil) { fmt.Println("Bad Payload."); return; }
+			if err != nil {
+				s.handleError("Handle Client (Unloading Send Request Payload)", err)
+				return
+			}
 
 			// Handle the Send Request
-			handleSendRequest(assigned, theAddress)
+			s.handleSendRequest(assigned, theAddress)
 	}
 }
 
 // Function that Handles an Alert of a Message
-func handleAlert(alert *airdispatch.Alert, alertData []byte, fromAddr string) {
-	thisServer.ServerHandler.SaveIncomingAlert(alert, alertData, fromAddr)
+func (s *Server) handleAlert(alert *airdispatch.Alert, alertData []byte, fromAddr string) {
+	s.ServerHandler.SaveIncomingAlert(alert, alertData, fromAddr)
 }
 
 // Function that Handles a DataRetrieval Message
-func handleRetrieval(retrieval *airdispatch.RetrieveData, toAddr string, conn net.Conn) {
+func (s *Server) handleRetrieval(retrieval *airdispatch.RetrieveData, toAddr string, conn net.Conn) {
 	// Get the Type of the Message and Switch on it
 	c := retrieval.RetrievalType
 	switch {
-
 		// Receieved a Normal Retrieval Message (Lookup the Message ID)
 		case bytes.Equal(c, common.RETRIEVAL_TYPE_NORMAL()):
-			message, approved := thisServer.ServerHandler.RetrieveMessage(*retrieval.MessageId)
+			message, approved := s.ServerHandler.RetrieveMessage(*retrieval.MessageId)
+
 			if message == nil {
 				// If there is no message stored with that ID, then send back an error
 				conn.Write(common.CreateErrorMessage("no message for that id"))
@@ -162,10 +166,15 @@ func handleRetrieval(retrieval *airdispatch.RetrieveData, toAddr string, conn ne
 		// Received a Public Retrieval Message (Return all Messages Since the Date Provided)
 		case bytes.Equal(c, common.RETRIEVAL_TYPE_PUBLIC()):
 
-			output := thisServer.ServerHandler.RetrievePublic(*retrieval.FromAddress, *retrieval.SinceDate)
+			output := s.ServerHandler.RetrievePublic(*retrieval.FromAddress, *retrieval.SinceDate)
+
+			if len(output) == 0 {
+				conn.Write(common.CreateErrorMessage("no public messages for that address"))
+				return
+			}
 
 			// Alert the Client that an Array is Coming
-			arrayData := common.CreateArrayedMessage(uint32(len(output)), thisServer.Key)
+			arrayData := common.CreateArrayedMessage(uint32(len(output)), s.Key)
 			conn.Write(arrayData)
 
 			// Write all of the Data
@@ -175,9 +184,14 @@ func handleRetrieval(retrieval *airdispatch.RetrieveData, toAddr string, conn ne
 
 		// Received a Mine Retrieval Message (Return all Messages that are Stored - Since the Date Provided)	
 		case bytes.Equal(c, common.RETRIEVAL_TYPE_MINE()):
-			output := thisServer.ServerHandler.RetrieveInbox(toAddr, *retrieval.SinceDate)
+			output := s.ServerHandler.RetrieveInbox(toAddr, *retrieval.SinceDate)
 
-			arrayData := common.CreateArrayedMessage(uint32(len(output)), thisServer.Key)
+			if len(output) == 0 {
+				conn.Write(common.CreateErrorMessage("no inbox messages for that address"))
+				return
+			}
+
+			arrayData := common.CreateArrayedMessage(uint32(len(output)), s.Key)
 			conn.Write(arrayData)
 
 			// Write all of the Data
@@ -186,50 +200,50 @@ func handleRetrieval(retrieval *airdispatch.RetrieveData, toAddr string, conn ne
 			}
 
 		default:
-			fmt.Println("Unable to Respond to Message")
+			s.handleError("Handle Retrieval", errors.New("Invalid Retrieval Type"))
 	}
 }
 
 // Function that Handles a Request to Send a Message
-func handleSendRequest(request *airdispatch.SendMailRequest, fromAddr string) {
+func (s *Server) handleSendRequest(request *airdispatch.SendMailRequest, fromAddr string) {
 	// Check to see if it a public message or not
 	if len(request.ToAddress) != 0 && request.ToAddress[0] != fromAddr && request.ToAddress[0] != "" {
-		hash := thisServer.ServerHandler.SavePrivateMail(request.StoredMessage, request.ToAddress)
+		hash := s.ServerHandler.SavePrivateMail(request.StoredMessage, request.ToAddress)
 
 		for _, v := range(request.ToAddress) {
 			// For every address that the Message is to be sent to, lookup its location and send it an alert
-			loc, err := common.LookupLocation(v, thisServer.TrackerList, thisServer.Key)
+			loc, err := common.LookupLocation(v, s.TrackerList, s.Key)
 			if err != nil {
-				fmt.Println(err)
-				fmt.Println("Could not find Location for Address")
+				s.handleError("Handle Send Request (Lookup Address)", errors.New("Address Lookup Failed"))
 				return
 			}
-			SendAlert(loc, hash, v)
+
+			s.SendAlert(loc, hash, v)
 		}
+
 	} else {
-		thisServer.ServerHandler.SavePublicMail(request.StoredMessage, fromAddr)
+		s.ServerHandler.SavePublicMail(request.StoredMessage, fromAddr)
 	}
 }
 
 // A function that delivers an alert to a location
-func SendAlert(location string, message_id string, toAddr string) {
+func (s *Server) SendAlert(location string, message_id string, toAddr string) {
 	conn, err := common.ConnectToServer(location)
 	if err != nil {
-		fmt.Println(err)
-		fmt.Println("Unable to connect to the receiving server.")
+		s.handleError("Send Alert", errors.New("Unable to Connect to Server"))
 		return
 	}
 
 	// Populate the Alert message
 	newAlert := &airdispatch.Alert {
 		ToAddress: &toAddr,
-		Location: &thisServer.LocationName,
+		Location: &s.LocationName,
 		MessageId: &message_id,
 	}
 	alertData, _ := proto.Marshal(newAlert)
 
 	// Create the Message to Send
-	bytesToSend := common.CreateAirdispatchMessage(alertData, thisServer.Key, common.ALERT_MESSAGE)
+	bytesToSend := common.CreateAirdispatchMessage(alertData, s.Key, common.ALERT_MESSAGE)
 
 	// Write the Message
 	conn.Write(bytesToSend)
