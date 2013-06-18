@@ -32,16 +32,15 @@ type ServerDelegate interface {
 }
 
 type Server struct {
-	Port string
 	LocationName string
 	TrackerList []string
 	Key *ecdsa.PrivateKey
 	Delegate ServerDelegate
 }
 
-func (s *Server) StartServer() (error) {
+func (s *Server) StartServer(port string) (error) {
 	// Resolve the Address of the Server
-	service := ":" + s.Port
+	service := ":" + port
 	tcpAddr, _ := net.ResolveTCPAddr("tcp4", service)
 	s.Delegate.LogMessage("Starting Server on " + service)
 

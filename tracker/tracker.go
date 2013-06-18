@@ -1,177 +1,57 @@
 package main
 
 import (
-	"net"
 	"fmt"
-	"code.google.com/p/goprotobuf/proto"
-	"airdispat.ch/airdispatch"
+	"airdispat.ch/tracker/framework"
 	"airdispat.ch/common"
 	"flag"
 )
 
 var port = flag.String("port", "2048", "select the port on which to run the tracking server")
 
-var storedAddresses map[string]RegisteredAddress
-
-type RegisteredAddress struct {
-	public_key []byte
-	location string
-	username string
-}
+var storedAddresses map[string]*framework.TrackerRecord
 
 func main() {
 	flag.Parse()
 
 	// Initialize the Database of Addresses
-	storedAddresses = make(map[string]RegisteredAddress)
+	storedAddresses = make(map[string]*framework.TrackerRecord)
 
-	// Get the Address of the Server
-	service := ":" + *port
-	tcpAddr, _ := net.ResolveTCPAddr("tcp4", service)
-
-	// Start the Server Listener
-	listener, err := net.ListenTCP("tcp", tcpAddr)
+	theKey, err := common.CreateKey()
 	if err != nil {
-		fmt.Println(err)
-		fmt.Println("Unable to Listen for Requests")
+		fmt.Println("Unable to Create Tracker Key")
 		return
 	}
-	fmt.Println("Listening on", service)
 
-	// Loop Forever while we wait for Clients
-	for {
-		// Open a Connection to the Client
-		conn, err := listener.Accept()
-		if err != nil {
-			fmt.Println(err)
-			fmt.Println("Unable to Connect to Client", conn.RemoteAddr())
-		}
-
-		// Concurrently Handle the Connection
-		go handleClient(conn)
-
+	theTracker := &framework.Tracker {
+		Key: theKey,
+		Delegate: &myTracker{},
 	}
-
+	theTracker.StartServer(*port)
 }
 
-func handleClient(conn net.Conn) {
-	// Read in the Message Sent from the Client
-	totalBytes, err := common.ReadAirdispatchMessage(conn)
-	if err != nil {
-		fmt.Println(err)
-		fmt.Println("Error reading in the message.")
-		return
-	}
-
-	// Unmarshal the Message into the Message Type
-	downloadedMessage := &airdispatch.SignedMessage{}
-	err = proto.Unmarshal(totalBytes[0:], downloadedMessage)
-	if err != nil {
-		fmt.Println(err)
-		fmt.Println("The message is malformed!")
-		return
-	}
-
-	// Verify the Signed Message is Correct (Check for Spoofing)
-	if !common.VerifySignedMessage(downloadedMessage) {
-		fmt.Println("Message is not signed properly. Discarding")
-		return
-	}
-
-	// Get the Message Type
-	messageType := downloadedMessage.MessageType
-	// Get the Sending Address
-	keyByte, err := common.BytesToKey(downloadedMessage.SigningKey)
-	if err != nil {
-		fmt.Println(err)
-	}
-
-	theAddress := common.StringAddress(keyByte)
-
-	// Determine how to Proceed based on the Message Type
-	switch *messageType {
-
-		// Handle Registration
-		case common.REGISTRATION_MESSAGE:
-			fmt.Println("Received Registration")
-
-			// Unmarshal the Sent Data
-			assigned := &airdispatch.AddressRegistration{}
-			err := proto.Unmarshal(downloadedMessage.Payload, assigned)
-			if (err != nil) { fmt.Println("Bad Payload."); return; }
-
-			handleRegistration(theAddress, assigned) 
-
-		// Handle Query
-		case common.QUERY_MESSAGE:
-			fmt.Println("Received Query")
-
-			// Unmarshall the Sent Data
-			assigned := &airdispatch.AddressRequest{}
-			err := proto.Unmarshal(downloadedMessage.Payload, assigned)
-			if (err != nil) { fmt.Println("Bad Payload."); return; }
-
-			handleQuery(theAddress, assigned, conn)
-	}
+type myTracker struct {
+	framework.BasicTracker
 }
 
-func handleRegistration(theAddress string, reg *airdispatch.AddressRegistration) {
-	// Check to see if a Username was provided
-	username := ""
-	if reg.Username != nil {
-		username = *reg.Username
-	}
-
-	// Load the RegisteredAddress with the sent information
-	data := RegisteredAddress{
-		public_key: reg.PublicKey,
-		location: *reg.Location,
-		username: username,
-	}
-
+func (myTracker) SaveTrackerRecord(data *framework.TrackerRecord) {
 	// Store the RegisterdAddress in the Database
-	storedAddresses[theAddress] = data
+	storedAddresses[data.Address] = data
 }
 
-func handleQuery(theAddress string, req *airdispatch.AddressRequest, conn net.Conn) {
-	fmt.Println("Querying for", *req.Address)
-
-	var info RegisteredAddress
-	var ok bool
-	if req.Username != nil {
-		// TODO: We should really use a database, this is _very_ inefficient.
-		// Lookup the Address (by username) in the Database
-		ok = false
-		for _, v := range(storedAddresses) {
-			if v.username == *req.Username {
-				info = v
-			}
+func (myTracker) GetRecordByUsername(username string) *framework.TrackerRecord {
+	// TODO: We should really use a database, this is _very_ inefficient.
+	// Lookup the Address (by username) in the Database
+	for _, v := range(storedAddresses) {
+		if v.Username == username {
+			return v
 		}
-	} else {
-		// Lookup the Address (by address) in the Database
-		info, ok = storedAddresses[*req.Address]
 	}
+	return nil
+}
 
-	// Return an Error Message if we could not find the address
-	if !ok {
-		data := common.CreateErrorMessage("not located here")
-		conn.Write(data)
-		return
-	}
-
-	// Create a Formatted Message
-	response := &airdispatch.AddressResponse {
-		ServerLocation: &info.location,
-		Address: &theAddress,
-	}
-
-	// If the requester does not want the public key, we should not provide it
-	if req.NeedKey == nil {
-		response.PublicKey = info.public_key
-	}
-
-	data, _ := proto.Marshal(response)
-
-	// Send the Response
-	conn.Write(common.CreatePrefixedMessage(data))
+func (myTracker) GetRecordByAddress(address string) *framework.TrackerRecord {
+	// Lookup the Address (by address) in the Database
+	info, _ := storedAddresses[address]
+	return info
 }

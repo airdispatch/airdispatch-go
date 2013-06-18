@@ -10,6 +10,7 @@ import (
 	"crypto/ecdsa"
 	"encoding/hex"
 	"os"
+	"fmt"
 )
 
 // Configuration Varables
@@ -66,13 +67,16 @@ func main() {
 	serverLocation = *me
 	handler := &myServer{}
 	theServer := framework.Server{
-		Port: *port,
 		LocationName: *me,
 		Key: serverKey,
 		TrackerList: connectedTrackers,
 		Delegate: handler,
 	}
-	theServer.StartServer()
+	err := theServer.StartServer(*port)
+	if err != nil {
+		fmt.Println("Unable to Start Server")
+		fmt.Println(err)
+	}
 
 }
 
