@@ -5,7 +5,7 @@ import (
 )
 
 type BasicServer struct{
-	ServerHandler
+	ServerDelegate
 }
 
 func (BasicServer) HandleError(err *ServerError) {

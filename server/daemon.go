@@ -70,7 +70,7 @@ func main() {
 		LocationName: *me,
 		Key: serverKey,
 		TrackerList: connectedTrackers,
-		ServerHandler: handler,
+		Delegate: handler,
 	}
 	theServer.StartServer()
 
