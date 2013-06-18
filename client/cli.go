@@ -98,8 +98,14 @@ func main() {
 		fmt.Scanln(key_location)
 	}
 
-	theKey, _ := common.LoadKeyFromFile(*key_location)
+	theKey, err := common.LoadKeyFromFile(*key_location)
+	if err != nil {
+		fmt.Println("Unable to Load Keys From File")
+		fmt.Println(err)
+		return
+	}
 	credentials.Populate(theKey)
+	fmt.Println(credentials.Address)
 
 	credentials.MailServer = *remote_mailserver
 
@@ -113,7 +119,12 @@ func main() {
 		// QUERY MESSAGE	
 		case *mode == QUERY:
 			fmt.Println("Sending a Query for " + *acting_address)
-			queriedLocation, _ := common.LookupLocation(*acting_address, []string{*tracking_server}, credentials.Key)
+			queriedLocation, err := common.LookupLocation(*acting_address, []string{*tracking_server}, credentials.Key)
+			if err != nil {
+				fmt.Println("Unable to Lookup Location")
+				fmt.Println(err)
+				return
+			}
 			fmt.Println("Found Location", queriedLocation)
 
 		// SEND MESSAGE
@@ -122,7 +133,13 @@ func main() {
 
 		// CHECK MESSAGE
 		case *mode == CHECK:
-			inbox, _ := credentials.DownloadInbox(uint64(0))
+			inbox, err := credentials.DownloadInbox(uint64(0))
+			if err != nil {
+				fmt.Println("Unable to Download Inbox")
+				fmt.Println(err)
+				return
+			}
+
 			for _, v := range(inbox) {
 				// Print the Message
 				fmt.Println(common.PrintMessage(v))
@@ -130,7 +147,13 @@ func main() {
 
 		// CHECK FOR PUBLIC MESSAGES
 		case *mode == PUBLIC:
-			allMail, _ := credentials.DownloadPublicMail([]string{*tracking_server}, *acting_address, 0)
+			allMail, err := credentials.DownloadPublicMail([]string{*tracking_server}, *acting_address, 0)
+			if err != nil {
+				fmt.Println("Unable to Download Public Mail")
+				fmt.Println(err)
+				return
+			}
+			
 			for _, v := range(allMail) {
 				fmt.Println(common.PrintMessage(v))
 			}

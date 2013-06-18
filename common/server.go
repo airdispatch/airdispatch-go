@@ -89,9 +89,13 @@ func SendQueryToConnection(conn net.Conn, addr string, key *ecdsa.PrivateKey) (s
 
 	// Send the message and wait for a response
 	conn.Write(totalBytes)
-	data, err := ReadAirdispatchMessage(conn)
+	data, mesType, _, err := ReadSignedMessage(conn)
 	if err != nil {
 		return "", err
+	}
+
+	if mesType != QUERY_RESPONSE_MESSAGE {
+		return "", errors.New("Tracker Did Not Return Correct Message Type")
 	}
 
 	// Unmarshal the Response

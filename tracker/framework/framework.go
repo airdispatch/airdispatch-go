@@ -141,7 +141,7 @@ func (t *Tracker) handleQuery(theAddress string, req *airdispatch.AddressRequest
 	}
 
 	// Return an Error Message if we could not find the address
-	if info != nil {
+	if info == nil {
 		conn.Write(common.CreateErrorMessage("not located here"))
 		return
 	}
@@ -153,7 +153,7 @@ func (t *Tracker) handleQuery(theAddress string, req *airdispatch.AddressRequest
 	}
 
 	// If the requester does not want the public key, we should not provide it
-	if req.NeedKey == nil {
+	if req.NeedKey == nil && info.PublicKey != nil {
 		response.PublicKey = info.PublicKey
 	}
 
