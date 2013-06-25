@@ -17,6 +17,7 @@ import (
 var port = flag.String("port", "2048", "select the port on which to run the mail server")
 var trackers = flag.String("trackers", "", "prepopulate the list of trackers that this server will query by using a comma seperated list of values")
 var me = flag.String("me", getHostname(), "the location of the server that it should broadcast to the world")
+var key_file = flag.String("key", "", "the file to store keys")
 
 func getHostname() string {
 	s, _ := os.Hostname()
@@ -61,19 +62,39 @@ func main() {
 	if (*trackers == "") { connectedTrackers = make([]string, 0) }
 
 	// Create a Signing Key for the Server
-	serverKey, _ = common.CreateKey()
+	loadedKey, err := common.LoadKeyFromFile(*key_file)
+
+	if err != nil {
+
+		loadedKey, err = common.CreateKey()
+		if err != nil {
+			fmt.Println("Unable to Create Tracker Key")
+			return
+		}
+
+		if *key_file != "" {
+
+			err = common.SaveKeyToFile(*key_file, loadedKey)
+			if err != nil {
+				fmt.Println("Unable to Save Tracker Key")
+				return
+			}
+		}
+
+	}
+	fmt.Println("Loaded Address", common.StringAddress(&loadedKey.PublicKey))
 
 	// Find the location of this server
 	serverLocation = *me
 	handler := &myServer{}
 	theServer := framework.Server{
 		LocationName: *me,
-		Key: serverKey,
+		Key: loadedKey,
 		TrackerList: connectedTrackers,
 		Delegate: handler,
 	}
-	err := theServer.StartServer(*port)
-	if err != nil {
+	serverErr := theServer.StartServer(*port)
+	if serverErr != nil {
 		fmt.Println("Unable to Start Server")
 		fmt.Println(err)
 	}
