@@ -145,41 +145,50 @@ func LoadKeyFromFile(filename string) (*ecdsa.PrivateKey, error) {
 		return nil, err
 	}
 
-	decodedKey := &EncodedECDSAKey{}
-
-	// Create the decoder
-	dec := gob.NewDecoder(file)
-	// Load from the File
-	err = dec.Decode(&decodedKey)
-	if err != nil {
-		return nil, err
-	}
-
-	// Reconstruct the Key
-	newPublicKey := ecdsa.PublicKey{EllipticCurve, decodedKey.X, decodedKey.Y}
-	newPrivateKey := ecdsa.PrivateKey{newPublicKey, decodedKey.D}
-
-	return &newPrivateKey, nil
+	return GobDecodeKey(file)
 }
 
 func SaveKeyToFile(filename string, key *ecdsa.PrivateKey) error {
-	saveKey := EncodedECDSAKey{key.D, key.PublicKey.X, key.PublicKey.Y}
-
 	// Create the File to Store the Keys in
 	file, err := os.Create(filename)
 	if err != nil {
 		return err
 	}
 
-	// Create the Encoder
-	enc := gob.NewEncoder(file)
-
-	// Write to File
-	err = enc.Encode(saveKey)
+	_, err = GobEncodeKey(key, file)
 	if err != nil {
 		return err
 	}
+
 	return nil
+}
+
+func GobEncodeKey(key *ecdsa.PrivateKey, buffer io.Writer) (io.Writer, error){
+	saveKey := EncodedECDSAKey{key.D, key.PublicKey.X, key.PublicKey.Y}
+
+	enc := gob.NewEncoder(buffer)
+	err := enc.Encode(saveKey)
+	if err != nil {
+		return nil, err
+	}
+	return buffer, nil
+}
+
+func GobDecodeKey(buffer io.Reader) (*ecdsa.PrivateKey, error) {
+	decodedKey := &EncodedECDSAKey{}
+
+	// Create the decoder
+	dec := gob.NewDecoder(buffer)
+	// Load from the File
+	err := dec.Decode(&decodedKey)
+	if err != nil {
+		return nil, err
+	}
+
+	newPublicKey := ecdsa.PublicKey{EllipticCurve, decodedKey.X, decodedKey.Y}
+	newPrivateKey := ecdsa.PrivateKey{newPublicKey, decodedKey.D}
+
+	return &newPrivateKey, nil
 }
 
 // Message Encryption Methods

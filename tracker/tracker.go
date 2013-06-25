@@ -8,6 +8,7 @@ import (
 )
 
 var port = flag.String("port", "2048", "select the port on which to run the tracking server")
+var key_file = flag.String("key", "", "the file that will save or load your keys")
 
 var storedAddresses map[string]*framework.TrackerRecord
 
@@ -17,14 +18,30 @@ func main() {
 	// Initialize the Database of Addresses
 	storedAddresses = make(map[string]*framework.TrackerRecord)
 
-	theKey, err := common.CreateKey()
+	loadedKey, err := common.LoadKeyFromFile(*key_file)
+
 	if err != nil {
-		fmt.Println("Unable to Create Tracker Key")
-		return
+
+		loadedKey, err = common.CreateKey()
+		if err != nil {
+			fmt.Println("Unable to Create Tracker Key")
+			return
+		}
+
+		if *key_file != "" {
+
+			err = common.SaveKeyToFile(*key_file, loadedKey)
+			if err != nil {
+				fmt.Println("Unable to Save Tracker Key")
+				return
+			}
+		}
+
 	}
+	fmt.Println("Loaded Address", common.StringAddress(&loadedKey.PublicKey))
 
 	theTracker := &framework.Tracker {
-		Key: theKey,
+		Key: loadedKey,
 		Delegate: &myTracker{},
 	}
 	theTracker.StartServer(*port)
