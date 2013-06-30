@@ -138,13 +138,23 @@ func (c *Client) getMessagesWithRetrieval(serverMessage *airdispatch.RetrieveDat
 		// Loop over this number
 		for i := uint32(0); i < *mesNumber; i++ {
 			// Get the message and unmarshal it
-			mesData, err := common.ReadAirdispatchMessage(mailServer)
+			mesData, mesType, addr, err := common.ReadSignedMessage(mailServer)
 			if err != nil {
+				continue
+			}
+
+			if mesType != common.MAIL_MESSAGE {
+				// fmt.Println("Message from " + addr + " not MAI type.")
 				continue
 			}
 
 			theMessage, err := retriever(mesData)
 			if err != nil {
+				continue
+			}
+
+			if *theMessage.FromAddress != addr {
+				// fmt.Println("Insecure Message from " + addr + " Skipped")
 				continue
 			}
 
