@@ -51,11 +51,7 @@ func LookupLocation(toAddr string, trackerList []string, key *ecdsa.PrivateKey) 
 }
 
 func SendQuery(tracker string, addr string, key *ecdsa.PrivateKey) (string, error) {
-	address, _ := net.ResolveTCPAddr("tcp", tracker)
-
-	// Connect to Tracker
-	conn, err := net.DialTCP("tcp", nil, address)
-
+	conn, err := ConnectToServer(tracker)
 	if err != nil {
 		return "", err
 	}
@@ -64,11 +60,11 @@ func SendQuery(tracker string, addr string, key *ecdsa.PrivateKey) (string, erro
 	defer conn.Close()
 
 	// Send a Query to the Tracker
-	return SendQueryToConnection(conn, addr, key)
+	return SendQueryToConnection(conn, tracker, addr, key)
 }
 
 // A function that will send a query message over a connection
-func SendQueryToConnection(conn net.Conn, addr string, key *ecdsa.PrivateKey) (string, error) {
+func SendQueryToConnection(conn net.Conn, trackerLocation string, addr string, key *ecdsa.PrivateKey) (string, error) {
 	// Create a new Query Message
 	newQuery := &airdispatch.AddressRequest {
 		Address: &addr,
@@ -89,9 +85,16 @@ func SendQueryToConnection(conn net.Conn, addr string, key *ecdsa.PrivateKey) (s
 
 	// Send the message and wait for a response
 	conn.Write(totalBytes)
-	data, mesType, _, err := ReadSignedMessage(conn)
+	data, mesType, trackerAddress, err := ReadSignedMessage(conn)
 	if err != nil {
 		return "", err
+	}
+
+	expectedAddress, err := VerifyTrackerAddress(trackerLocation)
+	if err == nil {
+		if expectedAddress != trackerAddress {
+			return "", errors.New("Tracker DNS did not have the correct Address")
+		}
 	}
 
 	if mesType != QUERY_RESPONSE_MESSAGE {
@@ -104,6 +107,21 @@ func SendQueryToConnection(conn net.Conn, addr string, key *ecdsa.PrivateKey) (s
 
 	// Return the Location
 	return *newQueryResponse.ServerLocation, nil
+}
+
+func VerifyTrackerAddress(tracker string) (string, error) {
+	records, err := net.LookupTXT(tracker)
+	if err != nil {
+		return "", errors.New("Couldn't fetch TXT Records")
+	}
+
+	for _, v := range(records) {
+		if strings.HasPrefix(v, "adtp__cert:") {
+			return strings.TrimPrefix(v, "adtp__cert:"), nil
+		}
+	}
+
+	return "", errors.New("Couldn't Find Certificate")
 }
 
 type AirdispatchAddressType int
