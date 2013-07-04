@@ -18,7 +18,10 @@ message AddressRegistration {
 	required string address = 1;
 	required bytes public_key = 2;
 	required string location = 3;
+
 	optional string username = 4;
+
+	required uint64 timestamp = 5;
 }
 
 // QUE - Used to query the mailserver for the location of the address.
@@ -83,6 +86,9 @@ message Mail {
 	required string from_address = 1; // The Address of the Sending User
 	required string encryption = 2; // The Encryption Algorithim of the Message
 	required bytes data = 3; // The Encrypted Data
+
+	required string to_address = 4;
+	required uint64 timestamp = 5;
 }
 
 message MailData {

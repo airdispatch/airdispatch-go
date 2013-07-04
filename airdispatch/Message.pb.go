@@ -18,6 +18,7 @@ type AddressRegistration struct {
 	PublicKey        []byte  `protobuf:"bytes,2,req,name=public_key" json:"public_key,omitempty"`
 	Location         *string `protobuf:"bytes,3,req,name=location" json:"location,omitempty"`
 	Username         *string `protobuf:"bytes,4,opt,name=username" json:"username,omitempty"`
+	Timestamp        *uint64 `protobuf:"varint,5,req,name=timestamp" json:"timestamp,omitempty"`
 	XXX_unrecognized []byte  `json:"-"`
 }
 
@@ -51,6 +52,13 @@ func (m *AddressRegistration) GetUsername() string {
 		return *m.Username
 	}
 	return ""
+}
+
+func (m *AddressRegistration) GetTimestamp() uint64 {
+	if m != nil && m.Timestamp != nil {
+		return *m.Timestamp
+	}
+	return 0
 }
 
 type AddressRequest struct {
@@ -249,6 +257,8 @@ type Mail struct {
 	FromAddress      *string `protobuf:"bytes,1,req,name=from_address" json:"from_address,omitempty"`
 	Encryption       *string `protobuf:"bytes,2,req,name=encryption" json:"encryption,omitempty"`
 	Data             []byte  `protobuf:"bytes,3,req,name=data" json:"data,omitempty"`
+	ToAddress        *string `protobuf:"bytes,4,req,name=to_address" json:"to_address,omitempty"`
+	Timestamp        *uint64 `protobuf:"varint,5,req,name=timestamp" json:"timestamp,omitempty"`
 	XXX_unrecognized []byte  `json:"-"`
 }
 
@@ -275,6 +285,20 @@ func (m *Mail) GetData() []byte {
 		return m.Data
 	}
 	return nil
+}
+
+func (m *Mail) GetToAddress() string {
+	if m != nil && m.ToAddress != nil {
+		return *m.ToAddress
+	}
+	return ""
+}
+
+func (m *Mail) GetTimestamp() uint64 {
+	if m != nil && m.Timestamp != nil {
+		return *m.Timestamp
+	}
+	return 0
 }
 
 type MailData struct {
