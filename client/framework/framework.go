@@ -6,6 +6,7 @@ import (
 	"airdispat.ch/common"
 	"crypto/ecdsa"
 	"errors"
+	"time"
 )
 
 type Client struct {
@@ -29,12 +30,15 @@ func (c *Client) SendRegistration(tracker string, location string) error {
 
 	mesType := common.REGISTRATION_MESSAGE
 	byteKey := common.KeyToBytes(&c.Key.PublicKey)
+	
+	currentTime := uint64(time.Now().Unix())
 
 	// Create the Registration Message
 	newRegistration := &airdispatch.AddressRegistration{
 		Address: &c.Address,
 		PublicKey: byteKey,
 		Location: &location,
+		Timestamp: &currentTime,
 	}
 
 	// Create the Signed Message

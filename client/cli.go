@@ -10,6 +10,7 @@ import (
 	"airdispat.ch/common"
 	"flag"
 	"os"
+	"time"
 	"bufio"
 )
 
@@ -170,7 +171,11 @@ func sendMail(address string) {
 	var enc = "none"
 
 	// Make Shell for Mail to Send
-	mail := &airdispatch.Mail { FromAddress: &credentials.Address, Encryption: &enc }
+	mail := &airdispatch.Mail { FromAddress: &credentials.Address, Encryption: &enc, ToAddress: &address }
+
+	currentTime := uint64(time.Now().Unix())
+	mail.Timestamp = &currentTime
+
 	mailData := &airdispatch.MailData{}
 
 	// Create an Array of Mail Data Types for us to append to
