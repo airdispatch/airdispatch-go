@@ -141,7 +141,7 @@ func (c *Client) getMessagesWithRetrieval(serverMessage *airdispatch.RetrieveDat
 		// Loop over this number
 		for i := uint32(0); i < *mesNumber; i++ {
 			// Get the message and unmarshal it
-			mesData, _, addr, err := common.ReadSignedMessage(mailServer)
+			mesData, mesType, addr, err := common.ReadSignedMessage(mailServer)
 			if err != nil {
 				continue
 			}
@@ -151,7 +151,13 @@ func (c *Client) getMessagesWithRetrieval(serverMessage *airdispatch.RetrieveDat
 				continue
 			}
 
-			if *theMessage.FromAddress != addr {
+			if mesType == common.MAIL_MESSAGE {
+				if *theMessage.FromAddress != addr {
+					continue
+				}
+			} else if mesType == common.ALERT_MESSAGE {
+				// No Alert Validation
+			} else {
 				continue
 			}
 
