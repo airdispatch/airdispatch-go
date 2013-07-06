@@ -30,36 +30,40 @@ func RETRIEVAL_TYPE_NORMAL() []byte { return []byte{0, 0} }
 func RETRIEVAL_TYPE_PUBLIC() []byte { return []byte{0, 1} }
 func RETRIEVAL_TYPE_MINE() []byte { return []byte{0, 2} }
 
-func ReadSignedMessage(conn net.Conn) (data []byte, mesType string, addr string, returnErr error) {
+func ReadTotalMessage(conn net.Conn) (unmarshalledData []byte, signedMessage []byte, mesType string, addr string, returnErr error) {
 	// Read in the Sent Message
 	totalBytes, err := ReadAirdispatchMessage(conn)
 	if err != nil {
-		return nil, "", "", err
+		return nil, nil, "", "", err
 	}
-
 	// Get the Signed Message
 	downloadedMessage := &airdispatch.SignedMessage{}
 	err = proto.Unmarshal(totalBytes[0:], downloadedMessage)
 	if err != nil {
-		return nil, "", "", err
+		return nil, nil, "", "", err
 	}
 
 	// Verify that the address of the message is not spoofed
 	if !VerifySignedMessage(downloadedMessage) {
-		return nil, "", "", errors.New("Message is not signed properly. Discarding.")
+		return nil, nil, "", "", errors.New("Message is not signed properly. Discarding.")
 	}
 
 	// Determine the sending Address of the Message and the Message Type
 	messageType := downloadedMessage.MessageType
 	keyByte, err := BytesToKey(downloadedMessage.SigningKey)
 	if err != nil {
-		return nil, "", "", err
+		return nil, nil, "", "", err
 	}
 
 	theAddress := StringAddress(keyByte)
 
 	// Return all of the data
-	return downloadedMessage.Payload, *messageType, theAddress, nil
+	return downloadedMessage.Payload, totalBytes, *messageType, theAddress, nil
+}
+
+func ReadSignedMessage(conn net.Conn) (data []byte, mesType string, addr string, returnErr error) {
+	data, _, mesType, addr, returnErr = ReadTotalMessage(conn)
+	return
 }
 
 func ReadAirdispatchMessage(conn net.Conn) ([]byte, error) {

@@ -93,7 +93,6 @@ func (c *Client) DownloadInbox(since uint64) ([]*airdispatch.Mail, error) {
 			proto.Unmarshal(inputData, newAlert)
 
 			// Print the contents of the Alert
-			// fmt.Println("Received ALE from", newAlert, err)
 			return c.DownloadSpecificMessageFromServer(*newAlert.MessageId, *newAlert.Location)
 		}, c.MailServer)
 }
@@ -142,13 +141,8 @@ func (c *Client) getMessagesWithRetrieval(serverMessage *airdispatch.RetrieveDat
 		// Loop over this number
 		for i := uint32(0); i < *mesNumber; i++ {
 			// Get the message and unmarshal it
-			mesData, mesType, addr, err := common.ReadSignedMessage(mailServer)
+			mesData, _, addr, err := common.ReadSignedMessage(mailServer)
 			if err != nil {
-				continue
-			}
-
-			if mesType != common.MAIL_MESSAGE {
-				// fmt.Println("Message from " + addr + " not MAI type.")
 				continue
 			}
 
@@ -158,7 +152,6 @@ func (c *Client) getMessagesWithRetrieval(serverMessage *airdispatch.RetrieveDat
 			}
 
 			if *theMessage.FromAddress != addr {
-				// fmt.Println("Insecure Message from " + addr + " Skipped")
 				continue
 			}
 
