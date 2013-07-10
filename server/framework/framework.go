@@ -85,7 +85,7 @@ func (s *Server) handleClient(conn net.Conn) {
 	defer conn.Close()
 
 	// Read in the Message
-	payload, messageType, theAddress, err := common.ReadSignedMessage(conn)
+	payload, totalBytes, messageType, theAddress, err := common.ReadTotalMessage(conn)
 	if err != nil {
 		s.handleError("Handle Client (Reading Signed Message)", err)
 		return
@@ -104,7 +104,7 @@ func (s *Server) handleClient(conn net.Conn) {
 			}
 
 			// Handle the Alert
-			s.handleAlert(assigned, payload, theAddress)
+			s.handleAlert(assigned, totalBytes, theAddress)
 
 		case common.RETRIEVAL_MESSAGE:
 			// Unmarshal the stored message
