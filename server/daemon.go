@@ -168,11 +168,17 @@ func GetMessageId(theMail []byte) string {
 	return hex.EncodeToString(common.HashSHA(theMail, nil))
 }
 
-func (myServer) RetrieveMessage(id string) ([]byte, []string) {
+func (myServer) RetrieveMessageForUser(id string, addr string) ([]byte) {
 	// TODO: Allow this type of DATA to retrieve multiple messages... Maybe?
 	// Get the Outgoing Message with that ID
 	message, _ := storedMessages[id]
-	return message.data, message.approved
+
+	// Check that the Sending Address is one of the Approved Recipients
+	if !common.SliceContains(message.approved, addr) {
+		return nil
+	}
+
+	return message.data
 }
 
 func (m myServer) RetrieveInbox(addr string, since uint64) [][]byte {

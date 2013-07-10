@@ -15,6 +15,9 @@ type ServerError struct {
 	Error error
 }
 
+
+// This interface defines the functions that an
+// Airdispatch server must respond to in order to properly function
 type ServerDelegate interface {
 	HandleError(err *ServerError)
 	LogMessage(toLog string)
@@ -24,9 +27,9 @@ type ServerDelegate interface {
 
 	SaveIncomingAlert(alert *airdispatch.Alert, alertData []byte, fromAddr string)
 
-	AllowConnection(fromAddr string) bool
+	AllowSendConnection(fromAddr string) bool
 
-	RetrieveMessage(id string) (message []byte, approvedRecipients []string)
+	RetrieveMessageForUser(id string, addr string) (message []byte)
 	RetrievePublic(fromAddr string, since uint64) (messages [][]byte)
 	RetrieveInbox(addr string, since uint64) (messages [][]byte)
 }
@@ -88,10 +91,6 @@ func (s *Server) handleClient(conn net.Conn) {
 		return
 	}
 
-	if !s.Delegate.AllowConnection(theAddress) {
-		return
-	}
-
 	// Switch based on the Message Type
 	switch messageType {
 
@@ -120,6 +119,11 @@ func (s *Server) handleClient(conn net.Conn) {
 			s.handleRetrieval(assigned, theAddress, conn)
 
 		case common.SEND_REQUEST:
+
+			if !s.Delegate.AllowSendConnection(theAddress) {
+				return
+			}
+
 			// Unmarshal the stored message
 			assigned := &airdispatch.SendMailRequest{}
 			err := proto.Unmarshal(payload, assigned)
@@ -145,17 +149,11 @@ func (s *Server) handleRetrieval(retrieval *airdispatch.RetrieveData, toAddr str
 	switch {
 		// Receieved a Normal Retrieval Message (Lookup the Message ID)
 		case bytes.Equal(c, common.RETRIEVAL_TYPE_NORMAL()):
-			message, approved := s.Delegate.RetrieveMessage(*retrieval.MessageId)
+			message := s.Delegate.RetrieveMessageForUser(*retrieval.MessageId, toAddr)
 
 			if message == nil {
 				// If there is no message stored with that ID, then send back an error
-				conn.Write(common.CreateErrorMessage("no message for that id"))
-				return
-			}
-
-			// Check that the Sending Address is one of the Approved Recipients
-			if !common.SliceContains(approved, toAddr) {
-				conn.Write(common.CreateErrorMessage("not an approved recipient"))
+				conn.Write(common.CreateErrorMessage("no message for that id and user"))
 				return
 			}
 

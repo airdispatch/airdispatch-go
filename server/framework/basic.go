@@ -13,7 +13,7 @@ func (BasicServer) HandleError(err *ServerError) {
 	// os.Exit(1)
 }
 
-func (BasicServer) AllowConnection(fromAddr string) bool {
+func (BasicServer) AllowSendConnection(fromAddr string) bool {
 	return true
 }
 
