@@ -11,12 +11,6 @@ import (
 	"io"
 )
 
-type ADMessage struct {
-	Payload []byte
-	MessageType string
-	FromAddress string
-}
-
 func ReadADMessage(conn net.Conn) (allData []byte, theMessage *ADMessage, returnErr error) {
 	// Read in the Sent Message
 	totalBytes, err := readADBytes(conn)

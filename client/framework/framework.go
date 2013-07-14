@@ -4,7 +4,6 @@ import (
 	"code.google.com/p/goprotobuf/proto"
 	"airdispat.ch/airdispatch"
 	"airdispat.ch/common"
-	"crypto/ecdsa"
 	"errors"
 	"time"
 )
@@ -13,18 +12,19 @@ import (
 // as all of the following methods are defined on it.
 type Client struct {
 	Address string 		  // The Airdispatch Address of the User represented by this structure
-	Key *ecdsa.PrivateKey // The ECDSA Keypair of the User represented by this structure
+	Key *common.ADKey // The ECDSA Keypair of the User represented by this structure
 	MailServer string     // The Mailserver associated with the User represented by this structure
 }
 
 // This function populates the Address portion of the Client structure
-// by providing the ECDSA Private Key
-func (c *Client) Populate(key *ecdsa.PrivateKey) {
+// by providing the ADKey
+func (c *Client) Populate(key *common.ADKey) {
 	c.Key = key
-	c.Address = common.StringAddress(&key.PublicKey)
+	c.Address = key.HexEncode()
 }
 
-func (c *Client) SendRegistration(tracker string, location string) error {
+// This function is used to Register a Client with a Tracker
+func (c *Client) SendRegistration(tracker string) error {
 	// Connect to the Tracking Server
 	tracker_conn, err := common.ConnectToServer(tracker)
 	if err != nil {
@@ -33,7 +33,7 @@ func (c *Client) SendRegistration(tracker string, location string) error {
 	defer tracker_conn.Close()
 
 	mesType := common.REGISTRATION_MESSAGE
-	byteKey := common.KeyToBytes(&c.Key.PublicKey)
+	byteKey := common.KeyToBytes(&c.Key.SignatureKey.PublicKey)
 	
 	currentTime := uint64(time.Now().Unix())
 
@@ -41,7 +41,7 @@ func (c *Client) SendRegistration(tracker string, location string) error {
 	newRegistration := &airdispatch.AddressRegistration{
 		Address: &c.Address,
 		PublicKey: byteKey,
-		Location: &location,
+		Location: &c.MailServer,
 		Timestamp: &currentTime,
 	}
 
@@ -51,7 +51,9 @@ func (c *Client) SendRegistration(tracker string, location string) error {
 		return err
 	}
 
-	toSend, err := common.CreateAirdispatchMessage(regData, c.Key, mesType)
+	newMessage := &common.ADMessage {regData, mesType, ""}
+
+	toSend, err := c.Key.CreateADMessage(newMessage)
 	if err != nil {
 		return err
 	}
@@ -61,6 +63,7 @@ func (c *Client) SendRegistration(tracker string, location string) error {
 	return nil
 }
 
+// This function downloads public mail from an Address given a list of trackers
 func (c *Client) DownloadPublicMail(trackingServers []string, toCheck string, since uint64) ([]*airdispatch.Mail, error) {
 	// Get the Server where the Public Mail Resides (And Connect to It)
 	recipientServer, err := common.LookupLocation(toCheck, trackingServers, c.Key)
@@ -69,7 +72,7 @@ func (c *Client) DownloadPublicMail(trackingServers []string, toCheck string, si
 	}
 
 	messageRequest := &airdispatch.RetrieveData {
-		RetrievalType: common.RETRIEVAL_TYPE_PUBLIC(),
+		RetrievalType: common.ADRetrievalPublic,
 		FromAddress: &toCheck,
 		SinceDate: &since,
 	}
@@ -87,7 +90,7 @@ func (c *Client) DownloadInbox(since uint64) ([]*airdispatch.Mail, error) {
 
 	// Create the message to download the mail
 	newDownloadRequest := &airdispatch.RetrieveData {
-		RetrievalType: common.RETRIEVAL_TYPE_MINE(),
+		RetrievalType: common.ADRetrievalMine,
 		SinceDate: &since,
 	}
 
@@ -117,7 +120,9 @@ func (c *Client) getMessagesWithRetrieval(serverMessage *airdispatch.RetrieveDat
 		return nil, err
 	}
 
-	toSend, err := common.CreateAirdispatchMessage(retData, c.Key, common.RETRIEVAL_MESSAGE)
+	newMessage := &common.ADMessage{retData, common.RETRIEVAL_MESSAGE, ""}
+
+	toSend, err := c.Key.CreateADMessage(newMessage)
 	if err != nil {
 		return nil, err
 	}
@@ -126,16 +131,16 @@ func (c *Client) getMessagesWithRetrieval(serverMessage *airdispatch.RetrieveDat
 	mailServer.Write(toSend)
 
 	// Read the Signed Server Response
-	data, messageType, _, err := common.ReadSignedMessage(mailServer)
+	_, readMessage, err := common.ReadADMessage(mailServer)
 	if err != nil {
 		return nil, err
 	}
 
 	// Ensure that we have been given an array of values
-	if messageType == common.ARRAY_MESSAGE {
+	if readMessage.MessageType == common.ARRAY_MESSAGE {
 		// Get the array from the data
 		theArray := &airdispatch.ArrayedData{}
-		proto.Unmarshal(data, theArray)
+		proto.Unmarshal(readMessage.Payload, theArray)
 
 		outputMessages := []*airdispatch.Mail{}
 
@@ -145,21 +150,21 @@ func (c *Client) getMessagesWithRetrieval(serverMessage *airdispatch.RetrieveDat
 		// Loop over this number
 		for i := uint32(0); i < *mesNumber; i++ {
 			// Get the message and unmarshal it
-			mesData, mesType, addr, err := common.ReadSignedMessage(mailServer)
+			_, retrievedMessage, err := common.ReadADMessage(mailServer)
 			if err != nil {
 				continue
 			}
 
-			theMessage, err := retriever(mesData)
+			theMessage, err := retriever(retrievedMessage.Payload)
 			if err != nil {
 				continue
 			}
 
-			if mesType == common.MAIL_MESSAGE {
-				if *theMessage.FromAddress != addr {
+			if retrievedMessage.MessageType == common.MAIL_MESSAGE {
+				if *theMessage.FromAddress != retrievedMessage.FromAddress {
 					continue
 				}
-			} else if mesType == common.ALERT_MESSAGE {
+			} else if retrievedMessage.MessageType == common.ALERT_MESSAGE {
 				// No Alert Validation
 			} else {
 				continue
@@ -170,13 +175,14 @@ func (c *Client) getMessagesWithRetrieval(serverMessage *airdispatch.RetrieveDat
 
 		return outputMessages, nil
 	}
-	return nil, errors.New("Did Not Return Correct Message Type Array, Instead" + messageType)
+	return nil, errors.New("Did Not Return Correct Message Type Array, Instead" + readMessage.MessageType)
 }
 
+// This function downloads a Message with ID from a Server server
 func (c *Client) DownloadSpecificMessageFromServer(messageId string, server string) (*airdispatch.Mail, error) {
 	// Now, get the contents of that message
 	getMessage := &airdispatch.RetrieveData {
-		RetrievalType: common.RETRIEVAL_TYPE_NORMAL(),
+		RetrievalType: common.ADRetrievalNormal,
 		MessageId: &messageId,
 	}
 
@@ -185,7 +191,9 @@ func (c *Client) DownloadSpecificMessageFromServer(messageId string, server stri
 		return nil, err
 	}
 
-	sendData, err := common.CreateAirdispatchMessage(getData, c.Key, common.RETRIEVAL_MESSAGE)
+	newMessage := &common.ADMessage{getData, common.RETRIEVAL_MESSAGE, ""}
+
+	sendData, err := c.Key.CreateADMessage(newMessage)
 	if err != nil {
 		return nil, err
 	}
@@ -200,20 +208,21 @@ func (c *Client) DownloadSpecificMessageFromServer(messageId string, server stri
 	remConn.Write(sendData)
 
 	// Get the MAI response and unmarshal it
-	theMessageData, dataType, _, err := common.ReadSignedMessage(remConn)
+	_, readMessage, err := common.ReadADMessage(remConn)
 	if err != nil {
 		return nil, err
 	}
-	if dataType != common.MAIL_MESSAGE {
+	if readMessage.MessageType != common.MAIL_MESSAGE {
 		return nil, errors.New("The Returned Message is not of MAI format.")
 	}
 
 	theMessage := &airdispatch.Mail{}
-	proto.Unmarshal(theMessageData, theMessage)
+	proto.Unmarshal(readMessage.Payload, theMessage)
 
 	return theMessage, nil
 }
 
+// This function sends mail to addresses
 func (c *Client) SendMail(toAddresses []string, theMail []byte) error {
 	// Connect to the Remote Mailserver
 	mail_conn, err := common.ConnectToServer(c.MailServer)
@@ -235,8 +244,9 @@ func (c *Client) SendMail(toAddresses []string, theMail []byte) error {
 		return err
 	}
 
-	mesType := common.SEND_REQUEST
-	toSend, err := common.CreateAirdispatchMessage(sendBytes, c.Key, mesType)
+	newMessage := &common.ADMessage{sendBytes, common.SEND_REQUEST, ""}
+
+	toSend, err := c.Key.CreateADMessage(newMessage)
 	if err != nil {
 		return err
 	}

@@ -46,3 +46,9 @@ type ADKey struct {
 	SignatureKey *ecdsa.PrivateKey
 	EncryptionKey *rsa.PrivateKey
 }
+
+type ADMessage struct {
+	Payload []byte
+	MessageType string
+	FromAddress string
+}
