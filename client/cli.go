@@ -66,8 +66,8 @@ func main() {
 			fmt.Print("File to Save Keys to: ")
 			fmt.Scanln(key_location)
 
-			key, _ := common.CreateKey()
-			common.SaveKeyToFile(*key_location, key)
+			key, _ := common.CreateADKey()
+			key.SaveKeyToFile(*key_location)
 
 			return
 		}
@@ -106,6 +106,7 @@ func main() {
 		return
 	}
 	credentials.Populate(theKey)
+	credentials.MailServer = *mail_location
 	fmt.Println(credentials.Address)
 
 	credentials.MailServer = *remote_mailserver
@@ -115,7 +116,7 @@ func main() {
 		// REGISTRATION Message
 		case *mode == REGISTRATION:
 			fmt.Println("Sending a Registration Request")
-			credentials.SendRegistration(*tracking_server, *mail_location)
+			credentials.SendRegistration(*tracking_server)
 
 		// QUERY MESSAGE	
 		case *mode == QUERY:
@@ -216,7 +217,10 @@ func sendMail(address string) {
 
 	// We need to marshal the mail message and pre-sign it, so the server can send it on our behalf
 	marshalledMail, _ := proto.Marshal(mail)
-	signedMessage, _ := common.CreateSignedMessage(credentials.Key, marshalledMail, common.MAIL_MESSAGE)
+
+	newMessage := &common.ADMessage{marshalledMail, common.MAIL_MESSAGE, ""}
+	
+	signedMessage, _ := credentials.Key.CreateADSignedMessage(newMessage)
 	toSave, _ := proto.Marshal(signedMessage)
 
 	credentials.SendMail([]string{address}, toSave)
