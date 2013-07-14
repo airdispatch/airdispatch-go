@@ -22,7 +22,7 @@ func main() {
 
 	if err != nil {
 
-		loadedKey, err = common.CreateKey()
+		loadedKey, err = common.CreateADKey()
 		if err != nil {
 			fmt.Println("Unable to Create Tracker Key")
 			return
@@ -30,7 +30,7 @@ func main() {
 
 		if *key_file != "" {
 
-			err = common.SaveKeyToFile(*key_file, loadedKey)
+			err = loadedKey.SaveKeyToFile(*key_file)
 			if err != nil {
 				fmt.Println("Unable to Save Tracker Key")
 				return
@@ -38,7 +38,7 @@ func main() {
 		}
 
 	}
-	fmt.Println("Loaded Address", common.StringAddress(&loadedKey.PublicKey))
+	fmt.Println("Loaded Address", loadedKey.HexEncode())
 
 	theTracker := &framework.Tracker {
 		Key: loadedKey,
