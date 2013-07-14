@@ -4,7 +4,6 @@ import (
 	"net"
 	"airdispat.ch/airdispatch"
 	"code.google.com/p/goprotobuf/proto"
-	"crypto/ecdsa"
 	"strings"
 	"errors"
 	"reflect"
@@ -25,7 +24,7 @@ func ConnectToServer(remote string) (net.Conn, error) {
 }
 
 // A function that will get the Location of an Address
-func LookupLocation(toAddr string, trackerList []string, key *ecdsa.PrivateKey) (string, error) {
+func LookupLocation(toAddr string, trackerList []string, key *ADKey) (string, error) {
 	switch GetAddressType(toAddr) {
 		case AirdispatchAddressNormal:
 			// Loop Over Every Connected Tracker
@@ -50,7 +49,7 @@ func LookupLocation(toAddr string, trackerList []string, key *ecdsa.PrivateKey) 
 	return "", errors.New("Could Not Locate Address In Provided Trackers")
 }
 
-func SendQuery(tracker string, addr string, key *ecdsa.PrivateKey) (string, error) {
+func SendQuery(tracker string, addr string, key *ADKey) (string, error) {
 	conn, err := ConnectToServer(tracker)
 	if err != nil {
 		return "", err
@@ -64,46 +63,50 @@ func SendQuery(tracker string, addr string, key *ecdsa.PrivateKey) (string, erro
 }
 
 // A function that will send a query message over a connection
-func SendQueryToConnection(conn net.Conn, trackerLocation string, addr string, key *ecdsa.PrivateKey) (string, error) {
+func SendQueryToConnection(conn net.Conn, trackerLocation string, addr string, key *ADKey) (string, error) {
 	// Create a new Query Message
 	newQuery := &airdispatch.AddressRequest {
 		Address: &addr,
 	}
 
 	// Set the Message Type and get the Bytes of the Message
-	mesType := QUERY_MESSAGE
 	queryData, err := proto.Marshal(newQuery)
 	if err != nil {
 		return "", err
 	}
 
 	// Create the Message to be sent over the wire
-	totalBytes, err := CreateAirdispatchMessage(queryData, key, mesType)
+	newMessage := &ADMessage {
+		Payload: queryData,
+		MessageType: QUERY_MESSAGE,
+	}
+
+	totalBytes, err := key.CreateADMessage(newMessage)
 	if err != nil {
 		return "", err
 	}
 
 	// Send the message and wait for a response
 	conn.Write(totalBytes)
-	data, mesType, trackerAddress, err := ReadSignedMessage(conn)
+	_, readMessage, err := ReadADMessage(conn)
 	if err != nil {
 		return "", err
 	}
 
 	expectedAddress, err := VerifyTrackerAddress(trackerLocation)
 	if err == nil {
-		if expectedAddress != trackerAddress {
+		if expectedAddress != readMessage.FromAddress {
 			return "", errors.New("Tracker DNS did not have the correct Address")
 		}
 	}
 
-	if mesType != QUERY_RESPONSE_MESSAGE {
+	if readMessage.MessageType != QUERY_RESPONSE_MESSAGE {
 		return "", errors.New("Tracker Did Not Return Correct Message Type")
 	}
 
 	// Unmarshal the Response
 	newQueryResponse := &airdispatch.AddressResponse{}
-	proto.Unmarshal(data, newQueryResponse)
+	proto.Unmarshal(readMessage.Payload, newQueryResponse)
 
 	// Return the Location
 	return *newQueryResponse.ServerLocation, nil
@@ -123,11 +126,6 @@ func VerifyTrackerAddress(tracker string) (string, error) {
 
 	return "", errors.New("Couldn't Find Certificate")
 }
-
-type AirdispatchAddressType int
-var AirdispatchAddressNormal AirdispatchAddressType = 1
-var AirdispatchAddressLegacy AirdispatchAddressType = 2
-var AirdispatchAddressDirect AirdispatchAddressType = 3
 
 func GetAddressType(addr string) AirdispatchAddressType {
 	switch strings.Count(addr, "@") {

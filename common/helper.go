@@ -1,82 +1,69 @@
 package common
 
 import (
-	"airdispat.ch/airdispatch"
-	"crypto/ecdsa"
-	"net"
-	"bytes"
-	"io"
-	"encoding/binary"
-	"errors"
 	"code.google.com/p/goprotobuf/proto"
+	"airdispat.ch/airdispatch"
+	"encoding/binary"
+	"encoding/hex"
+	"errors"
+	"bytes"
+	"net"
+	"io"
 )
 
-const (
-	REGISTRATION_MESSAGE = "REG"
-	QUERY_MESSAGE = "QUE"
-	QUERY_RESPONSE_MESSAGE = "RES"
-	ALERT_MESSAGE = "ALE"
-	RETRIEVAL_MESSAGE = "RET"
-	SEND_REQUEST = "SEN"
-	MAIL_MESSAGE = "MAI"
-	ARRAY_MESSAGE = "ARR"
-)
-
-func MESSAGE_PREFIX() []byte {
-	return []byte("AD")
+type ADMessage struct {
+	Payload []byte
+	MessageType string
+	FromAddress string
 }
 
-func RETRIEVAL_TYPE_NORMAL() []byte { return []byte{0, 0} }
-func RETRIEVAL_TYPE_PUBLIC() []byte { return []byte{0, 1} }
-func RETRIEVAL_TYPE_MINE() []byte { return []byte{0, 2} }
-
-func ReadTotalMessage(conn net.Conn) (unmarshalledData []byte, signedMessage []byte, mesType string, addr string, returnErr error) {
+func ReadADMessage(conn net.Conn) (allData []byte, theMessage *ADMessage, returnErr error) {
 	// Read in the Sent Message
-	totalBytes, err := ReadAirdispatchMessage(conn)
+	totalBytes, err := readADBytes(conn)
 	if err != nil {
-		return nil, nil, "", "", err
+		return nil, nil, err
 	}
 
-	payload, mesType, addr, err := ReadSignedBytes(totalBytes)
+	theMessage, err = ReadADMessageFromBytes(totalBytes)
 	if err != nil {
-		return nil, nil, "", "", err
+		return nil, nil, err
 	}
 
 	// Return all of the data
-	return payload, totalBytes, mesType, addr, nil
+	return totalBytes, theMessage, nil
 }
 
-func ReadSignedBytes(theData []byte) (payload []byte, mesType string, addr string, returnErr error) {
+func ReadADMessageFromBytes(theData []byte) (theMessage *ADMessage, returnErr error) {
 	// Get the Signed Message
 	downloadedMessage := &airdispatch.SignedMessage{}
 	err := proto.Unmarshal(theData, downloadedMessage)
 	if err != nil {
-		return nil, "", "", err
+		return nil, err
 	}
 
 	// Verify that the address of the message is not spoofed
 	if !VerifySignedMessage(downloadedMessage) {
-		return nil, "", "", errors.New("Message is not signed properly. Discarding.")
+		return nil, errors.New("Message is not signed properly. Discarding.")
 	}
 
-	// Determine the sending Address of the Message and the Message Type
-	messageType := downloadedMessage.GetMessageType()
-	keyByte, err := BytesToKey(downloadedMessage.SigningKey)
-	if err != nil {
-		return nil, "", "", err
+	theAddress := hex.EncodeToString(downloadedMessage.SigningKey)
+
+	mesType := downloadedMessage.GetMessageType()
+
+	if mesType == "ERR" {
+		return nil, errors.New("Got an Error")
 	}
 
-	theAddress := StringAddress(keyByte)
+	completeMessage := &ADMessage {
+		Payload: downloadedMessage.Payload,
+		MessageType: mesType,
+		FromAddress: theAddress,
+	}
 
-	return downloadedMessage.Payload, messageType, theAddress, nil
+	return completeMessage, nil
 }
 
-func ReadSignedMessage(conn net.Conn) (data []byte, mesType string, addr string, returnErr error) {
-	data, _, mesType, addr, returnErr = ReadTotalMessage(conn)
-	return
-}
-
-func ReadAirdispatchMessage(conn net.Conn) ([]byte, error) {
+func readADBytes(conn net.Conn) ([]byte, error) {
 	// This Buffer will Store the Data Temporarily
 	buf := &bytes.Buffer{}
 	started := false	
@@ -97,7 +84,7 @@ func ReadAirdispatchMessage(conn net.Conn) ([]byte, error) {
 			}
 
 			// The first two bytes should contain the standard message prefix.
-			if !bytes.Equal(prefixBuffer[0:2], MESSAGE_PREFIX()) {
+			if !bytes.Equal(prefixBuffer[0:2], ADMessagePrefix) {
 				return nil, errors.New("Message is not for airdispatch...")
 			}
 
@@ -107,8 +94,7 @@ func ReadAirdispatchMessage(conn net.Conn) ([]byte, error) {
 
 			// Added the Ability to Catch 0-Length Messages
 			if length == 0 {
-				err := errors.New("Cannot read a message with no content.")
-				return nil, err
+				return nil, errors.New("Cannot read a message with no content.")
 			}
 		}
 
@@ -133,17 +119,17 @@ func ReadAirdispatchMessage(conn net.Conn) ([]byte, error) {
 	// All of the data is stored in the buffer
 	totalBytes := buf.Bytes()
 
-	if string(totalBytes)[:4] == "ERR:" {
-		// This is not a regular message, but an error message. Ruh roh.
-		return nil, errors.New(string(totalBytes))
-	}
+	// if string(totalBytes)[:4] == "ERR:" {
+	// 	// This is not a regular message, but an error message. Ruh roh.
+	// 	return nil, errors.New(string(totalBytes))
+	// }
 
 	// The data may contain extra 0s, we trim it to the lenght of the message here
 	return totalBytes[0:length], nil
 }
 
-func GenerateSignature(key *ecdsa.PrivateKey, payload []byte) (*airdispatch.Signature, error) {
-	r, s, err := signPayload(key, payload)
+func (a *ADKey) generateSignature(payload []byte) (*airdispatch.Signature, error) {
+	r, s, err := signPayload(a.SignatureKey, payload)
 	if err != nil {
 		return nil, err
 	}
@@ -155,33 +141,32 @@ func GenerateSignature(key *ecdsa.PrivateKey, payload []byte) (*airdispatch.Sign
 	return newSignature, nil
 }
 
-func CreateSignedMessage(key *ecdsa.PrivateKey, data []byte, mesType string) (*airdispatch.SignedMessage, error) {
-	hash := HashSHA(nil, data)
-	newSignature, err := GenerateSignature(key, hash)
+func AddPrefixToData(data []byte) []byte { 
+	var length = int32(len(data))
+	lengthBuf := &bytes.Buffer{}
+	binary.Write(lengthBuf, binary.BigEndian, length)
+	fullBuffer := bytes.Join([][]byte{ADMessagePrefix, lengthBuf.Bytes(), data}, nil)
+	return fullBuffer
+}
+
+func (a *ADKey) CreateADSignedMessage(message *ADMessage) (*airdispatch.SignedMessage, error) {
+	hash := HashSHA(nil, message.Payload)
+	newSignature, err := a.generateSignature(hash)
 	if err != nil {
 		return nil, err
 	}
 
 	newSignedMessage := &airdispatch.SignedMessage {
-		Payload: data,
+		Payload: message.Payload,
 		Signature: newSignature,
-		SigningKey: KeyToBytes(&key.PublicKey),
-		MessageType: &mesType,
+		SigningKey: KeyToBytes(&a.SignatureKey.PublicKey),
+		MessageType: &message.MessageType,
 	}
 	return newSignedMessage, nil
 }
 
-func CreatePrefixedMessage(data []byte) []byte {
-	var prefix = MESSAGE_PREFIX() 
-	var length = int32(len(data))
-	lengthBuf := &bytes.Buffer{}
-	binary.Write(lengthBuf, binary.BigEndian, length)
-	fullBuffer := bytes.Join([][]byte{prefix, lengthBuf.Bytes(), data}, nil)
-	return fullBuffer
-}
-
-func CreateAirdispatchMessage(data []byte, key *ecdsa.PrivateKey, mesType string) ([]byte, error) {
-	newSignedMessage, err := CreateSignedMessage(key, data, mesType)
+func (a *ADKey) CreateADMessage(message *ADMessage) ([]byte, error) {
+	newSignedMessage, err := a.CreateADSignedMessage(message)
 	if err != nil {
 		return nil, err
 	}
@@ -191,11 +176,11 @@ func CreateAirdispatchMessage(data []byte, key *ecdsa.PrivateKey, mesType string
 		return nil, err
 	}
 
-	toSend := CreatePrefixedMessage(signedData)
+	toSend := AddPrefixToData(signedData)
 	return toSend, nil
 }
 
-func CreateArrayedMessage(itemLength uint32, key *ecdsa.PrivateKey) ([]byte, error) {
+func (a *ADKey) CreateArrayedMessage(itemLength uint32) ([]byte, error) {
 	newArray := &airdispatch.ArrayedData{
 		NumberOfMessages: &itemLength,
 	}
@@ -203,10 +188,15 @@ func CreateArrayedMessage(itemLength uint32, key *ecdsa.PrivateKey) ([]byte, err
 	if err != nil {
 		return nil, err
 	}
+
+	newMessage := &ADMessage {
+		Payload: dataArray,
+		MessageType: ARRAY_MESSAGE,
+	}
 	
-	return CreateAirdispatchMessage(dataArray, key, ARRAY_MESSAGE)
+	return a.CreateADMessage(newMessage)
 }
 
-func CreateErrorMessage(error string) []byte {
-	return CreatePrefixedMessage([]byte("ERR:" + error))
+func (a *ADKey) CreateErrorMessage(code string, description string) []byte {
+	return nil
 }

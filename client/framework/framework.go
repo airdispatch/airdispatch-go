@@ -1,4 +1,4 @@
-package framework;
+package framework
 
 import (
 	"code.google.com/p/goprotobuf/proto"
@@ -9,12 +9,16 @@ import (
 	"time"
 )
 
+// This structure is the foundation of the Client-framework package
+// as all of the following methods are defined on it.
 type Client struct {
-	Address string
-	Key *ecdsa.PrivateKey
-	MailServer string
+	Address string 		  // The Airdispatch Address of the User represented by this structure
+	Key *ecdsa.PrivateKey // The ECDSA Keypair of the User represented by this structure
+	MailServer string     // The Mailserver associated with the User represented by this structure
 }
 
+// This function populates the Address portion of the Client structure
+// by providing the ECDSA Private Key
 func (c *Client) Populate(key *ecdsa.PrivateKey) {
 	c.Key = key
 	c.Address = common.StringAddress(&key.PublicKey)

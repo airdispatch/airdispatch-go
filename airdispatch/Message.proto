@@ -105,6 +105,12 @@ message MailData {
 // Protocol Helper Types
 // ---------------------
 
+// ERR - Used to Create Error Messages
+message Error {
+	required string code = 1;
+	optional string description = 2;
+}
+
 message SignedMessage {
 	required bytes payload = 1;
 	optional bytes signing_key = 2;

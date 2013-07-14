@@ -5,6 +5,7 @@ import (
 	"code.google.com/p/goprotobuf/proto"
 )
 
+// A simple message to output an Airdispatch Message to String
 func PrintMessage(mail *airdispatch.Mail) string {
 	output := ""
 	output += ("---- Message from " + *mail.FromAddress + " ----\n")

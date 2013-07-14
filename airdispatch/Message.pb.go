@@ -349,6 +349,30 @@ func (m *MailData_DataType) GetEncryption() string {
 	return ""
 }
 
+type Error struct {
+	Code             *string `protobuf:"bytes,1,req,name=code" json:"code,omitempty"`
+	Description      *string `protobuf:"bytes,2,opt,name=description" json:"description,omitempty"`
+	XXX_unrecognized []byte  `json:"-"`
+}
+
+func (m *Error) Reset()         { *m = Error{} }
+func (m *Error) String() string { return proto.CompactTextString(m) }
+func (*Error) ProtoMessage()    {}
+
+func (m *Error) GetCode() string {
+	if m != nil && m.Code != nil {
+		return *m.Code
+	}
+	return ""
+}
+
+func (m *Error) GetDescription() string {
+	if m != nil && m.Description != nil {
+		return *m.Description
+	}
+	return ""
+}
+
 type SignedMessage struct {
 	Payload           []byte     `protobuf:"bytes,1,req,name=payload" json:"payload,omitempty"`
 	SigningKey        []byte     `protobuf:"bytes,2,opt,name=signing_key" json:"signing_key,omitempty"`

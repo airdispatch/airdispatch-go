@@ -2,7 +2,6 @@ package common
 
 import (
 	"crypto/ecdsa"
-	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/sha256"
 	"crypto/rsa"
@@ -10,41 +9,46 @@ import (
 	"crypto/cipher"
 	"code.google.com/p/go.crypto/ripemd160"
 	"io"
-	"os"
 	"errors"
-	"encoding/gob"
 	"math/big"
 	"bytes"
 	"encoding/hex"
 	"airdispat.ch/airdispatch"
 )
 
-var EllipticCurve elliptic.Curve = elliptic.P256()
-var random io.Reader = rand.Reader
+var random = rand.Reader
 
-func padding(byteArray []byte, length int) []byte {
-	if(len(byteArray) > length) {
-		return nil
-	} else if (len(byteArray) == length) {
-		return byteArray
+// The CreateADKey() function generates an ECDSA Signing key and
+// an RSA keypair.
+func CreateADKey() (key *ADKey, err error) {
+	key = &ADKey{}
+
+	// Create Signing Key
+	key.SignatureKey, err = ecdsa.GenerateKey(ADEllipticCurve, random)
+	if err != nil {
+		return nil, err
 	}
-	diff := length - len(byteArray)
-	pad := make([]byte, diff)
-	return bytes.Join([][]byte{pad, byteArray}, nil)
+
+	key.EncryptionKey, err = rsa.GenerateKey(random, 2048)
+	if err != nil {
+		return nil, err
+	}
+
+	return key, err
 }
 
-func CreateKey() (key *ecdsa.PrivateKey, err error) {
-	return ecdsa.GenerateKey(EllipticCurve, random)
-}
-
+// Encapsulates ECDSA Signature Generation
 func signPayload(key *ecdsa.PrivateKey, payload []byte) (r, s *big.Int, err error) {
 	return ecdsa.Sign(random, key, payload)
 }
 
+// Encapsulates ECDSA Signature Verification
 func verifyPayload(key *ecdsa.PublicKey, payload []byte, r, s *big.Int) bool {
 	return ecdsa.Verify(key, payload, r, s)
 }
 
+// Unwinds the R and S values of the ECDSA keypair from the Airdispatch Signature
+// then passes them to the verifyPayload function.
 func verifySignature(hash []byte, sig *airdispatch.Signature, key *ecdsa.PublicKey) bool {
 	var r, s = new(big.Int), new(big.Int)
 	r.SetBytes(sig.R)
@@ -52,6 +56,8 @@ func verifySignature(hash []byte, sig *airdispatch.Signature, key *ecdsa.PublicK
 	return verifyPayload(key, hash, r, s)
 }
 
+// This function takes an Airdispatch SignedMessage and verifies that the signature
+// was computed correctly
 func VerifySignedMessage(mes *airdispatch.SignedMessage) bool {
 	key, err := BytesToKey(mes.SigningKey)
 	if err != nil {
@@ -62,6 +68,8 @@ func VerifySignedMessage(mes *airdispatch.SignedMessage) bool {
 	return verifySignature(hash, mes.Signature, key)
 }
 
+// This function writes an ECDSA Public Key to a bytestring.
+// This is used to send the public key in the SignedMessage message.
 func KeyToBytes(key *ecdsa.PublicKey) []byte {
 	x := padding(key.X.Bytes(), 32) // 32 Byte Value
 	y := padding(key.Y.Bytes(), 32) // 32 Byte Value
@@ -70,6 +78,8 @@ func KeyToBytes(key *ecdsa.PublicKey) []byte {
 	return total
 }
 
+// This function creates an ECDSA Public KEy from a bytestring.
+// This is used to send the public key in the SignedMessage message.
 func BytesToKey(data []byte) (*ecdsa.PublicKey, error) {
 	if len(data) != 65 {
 		// Key is not the correct number of bytes
@@ -84,111 +94,63 @@ func BytesToKey(data []byte) (*ecdsa.PublicKey, error) {
 	key := &ecdsa.PublicKey{
 		X: x,
 		Y: y,
-		Curve: EllipticCurve,
+		Curve: ADEllipticCurve,
 	}
 	return key, nil
 }
 
+// Encapsulation for the SHA Hasher
 func HashSHA(prepend []byte, payload []byte) []byte {
 	hasher := sha256.New()
 	hasher.Write(payload)
 	return hasher.Sum(prepend)
 }
 
+// Encapsulation for the RIPEMD160 Hasher
 func HashRIP(prepend []byte, payload []byte) []byte {
 	hasher := ripemd160.New()
 	hasher.Write(payload)
 	return hasher.Sum(prepend)
 }
 
+// Quickly Generate an Address Checksum
 func generateChecksum(address []byte) []byte {
 	return HashSHA(nil, HashSHA(nil, address))[0:4]
 }
 
+// Hex decode an Address then verify that it is correct, then
+// pass it to the byte verification function
 func VerifyStringAddress(address string) bool {
-	byteAddress, err := hex.DecodeString(address)
+	byteAddress, err := hex.DecodeString(string(address))
 	if err != nil {
 		return false
 	}
 
-	return VerifyAddress(byteAddress)
+	return verifyAddress(byteAddress)
 }
 
-func VerifyAddress(address []byte) bool {
+// Verify an Airdispatch Address from Bytes by comparing the checksum
+// to the one provided
+func verifyAddress(address []byte) bool {
 	location := len(address) - 4
 	checksum := address[location:]
 	rest := address[:location]
 	return bytes.Equal(generateChecksum(rest), checksum)
 }
 
-func StringAddress(key *ecdsa.PublicKey) string {
-	address := AddressFromKey(key)
+// Creates the Base-16 String representation of the
+// airdispatch key.
+func (a *ADKey) HexEncode() string {
+	address := a.byteAddress()
 	return hex.EncodeToString(address)
 }
 
-func AddressFromKey(key *ecdsa.PublicKey) []byte {
-	toHash := KeyToBytes(key)
+// Creates the AD Address in Bytes
+func (a *ADKey) byteAddress() []byte {
+	toHash := KeyToBytes(&a.SignatureKey.PublicKey)
 	address := HashRIP(nil, HashSHA(nil, toHash))
 	checksum := generateChecksum(address)
 	return bytes.Join([][]byte{address, checksum}, nil)
-}
-
-// Keygen Variables
-type EncodedECDSAKey struct {
-	D, X, Y *big.Int
-}
-
-func LoadKeyFromFile(filename string) (*ecdsa.PrivateKey, error) {
-	// Open the File for Loading
-	file, err := os.Open(filename)
-	if err != nil {
-		return nil, err
-	}
-
-	return GobDecodeKey(file)
-}
-
-func SaveKeyToFile(filename string, key *ecdsa.PrivateKey) error {
-	// Create the File to Store the Keys in
-	file, err := os.Create(filename)
-	if err != nil {
-		return err
-	}
-
-	_, err = GobEncodeKey(key, file)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func GobEncodeKey(key *ecdsa.PrivateKey, buffer io.Writer) (io.Writer, error){
-	saveKey := EncodedECDSAKey{key.D, key.PublicKey.X, key.PublicKey.Y}
-
-	enc := gob.NewEncoder(buffer)
-	err := enc.Encode(saveKey)
-	if err != nil {
-		return nil, err
-	}
-	return buffer, nil
-}
-
-func GobDecodeKey(buffer io.Reader) (*ecdsa.PrivateKey, error) {
-	decodedKey := &EncodedECDSAKey{}
-
-	// Create the decoder
-	dec := gob.NewDecoder(buffer)
-	// Load from the File
-	err := dec.Decode(&decodedKey)
-	if err != nil {
-		return nil, err
-	}
-
-	newPublicKey := ecdsa.PublicKey{EllipticCurve, decodedKey.X, decodedKey.Y}
-	newPrivateKey := ecdsa.PrivateKey{newPublicKey, decodedKey.D}
-
-	return &newPrivateKey, nil
 }
 
 // Message Encryption Methods
@@ -268,4 +230,17 @@ func decryptAES(ciphertext []byte, key []byte) (plaintext []byte, error error) {
 	stream := cipher.NewCFBDecrypter(block, iv)
 	stream.XORKeyStream(ciphertext, ciphertext)
 	return ciphertext, nil
+}
+
+// This function pads a bytestring to the correct length
+// assuming that the bytestring is in big-endian format
+func padding(byteArray []byte, length int) []byte {
+	if(len(byteArray) > length) {
+		return nil
+	} else if (len(byteArray) == length) {
+		return byteArray
+	}
+	diff := length - len(byteArray)
+	pad := make([]byte, diff)
+	return bytes.Join([][]byte{pad, byteArray}, nil)
 }
