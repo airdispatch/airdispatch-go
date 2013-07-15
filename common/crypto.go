@@ -8,6 +8,7 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"code.google.com/p/go.crypto/ripemd160"
+	"code.google.com/p/goprotobuf/proto"
 	"io"
 	"errors"
 	"math/big"
@@ -155,10 +156,44 @@ func (a *ADKey) byteAddress() []byte {
 
 // Message Encryption Methods
 
-func hybridEncryption(rsaKey *rsa.PublicKey, plaintext []byte) (aesKey []byte, ciphertext []byte, error error) {
-	aesBits := 256
+func EncryptPayload(p []byte, publicKey *rsa.PublicKey) ([]byte, error) {
+	key, cipher, err := hybridEncryption(publicKey, p)
+	if err != nil {
+		return nil, err
+	}
 
-	aesKey, err := generateRandomAESKey(aesBits)
+	encryptionMessage := &airdispatch.EncryptedData {
+		Ciphertext: cipher,
+		Key: key,
+	}
+
+	data, err := proto.Marshal(encryptionMessage)
+	if err != nil {
+		return nil, err
+	}
+
+	return data, nil
+}
+
+func (a *ADKey) DecryptPayload(c []byte) ([]byte, error) {
+	encryptionMessage := &airdispatch.EncryptedData{}
+	err := proto.Unmarshal(c, encryptionMessage)
+	if err != nil {
+		return nil, err
+	}
+
+	p, err := hybridDecryption(a.EncryptionKey, encryptionMessage.Key, encryptionMessage.Ciphertext)
+	if err != nil {
+		return nil, err
+	}
+
+	return p, nil
+}
+
+var AESKeySize int = 256
+
+func hybridEncryption(rsaKey *rsa.PublicKey, plaintext []byte) (aesKey []byte, ciphertext []byte, error error) {
+	aesKey, err := generateRandomAESKey(AESKeySize)
 	if err != nil {
 		return nil, nil, err
 	}

@@ -445,5 +445,29 @@ func (m *Signature) GetS() []byte {
 	return nil
 }
 
+type EncryptedData struct {
+	Ciphertext       []byte `protobuf:"bytes,1,req,name=ciphertext" json:"ciphertext,omitempty"`
+	Key              []byte `protobuf:"bytes,2,req,name=key" json:"key,omitempty"`
+	XXX_unrecognized []byte `json:"-"`
+}
+
+func (m *EncryptedData) Reset()         { *m = EncryptedData{} }
+func (m *EncryptedData) String() string { return proto.CompactTextString(m) }
+func (*EncryptedData) ProtoMessage()    {}
+
+func (m *EncryptedData) GetCiphertext() []byte {
+	if m != nil {
+		return m.Ciphertext
+	}
+	return nil
+}
+
+func (m *EncryptedData) GetKey() []byte {
+	if m != nil {
+		return m.Key
+	}
+	return nil
+}
+
 func init() {
 }
