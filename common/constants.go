@@ -30,6 +30,9 @@ var ADRetrievalMine = []byte{0, 2} // The bytes that represent a 'Mine' Retrieva
 var ADRetrievalNormal = []byte{0, 0} // The bytes that represent a 'Normal' Retrieval Type
 var ADRetrievalPublic = []byte{0, 1} // The bytes that represent a 'Public' Retrieval Type
 
+var _privateADRSAPrefix = []byte("AD-RSA")
+var _privateADECDSAPrefix = []byte{3}
+
 // This type is used to determine how to handle an Airdispatch Address.
 type AirdispatchAddressType int
 

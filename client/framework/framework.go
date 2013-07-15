@@ -33,7 +33,7 @@ func (c *Client) SendRegistration(tracker string) error {
 	defer tracker_conn.Close()
 
 	mesType := common.REGISTRATION_MESSAGE
-	byteKey := common.KeyToBytes(&c.Key.SignatureKey.PublicKey)
+	byteKey := common.RSAToBytes(&c.Key.EncryptionKey.PublicKey)
 	
 	currentTime := uint64(time.Now().Unix())
 
@@ -66,7 +66,7 @@ func (c *Client) SendRegistration(tracker string) error {
 // This function downloads public mail from an Address given a list of trackers
 func (c *Client) DownloadPublicMail(trackingServers []string, toCheck string, since uint64) ([]*airdispatch.Mail, error) {
 	// Get the Server where the Public Mail Resides (And Connect to It)
-	recipientServer, err := common.LookupLocation(toCheck, trackingServers, c.Key)
+	recipientServer, _, err := common.LookupLocation(toCheck, trackingServers, c.Key)
 	if err != nil {
 		return nil, err
 	}

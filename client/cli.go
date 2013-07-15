@@ -121,13 +121,14 @@ func main() {
 		// QUERY MESSAGE	
 		case *mode == QUERY:
 			fmt.Println("Sending a Query for " + *acting_address)
-			queriedLocation, err := common.LookupLocation(*acting_address, []string{*tracking_server}, credentials.Key)
+			queriedLocation, rKey, err := common.LookupLocation(*acting_address, []string{*tracking_server}, credentials.Key)
 			if err != nil {
 				fmt.Println("Unable to Lookup Location")
 				fmt.Println(err)
 				return
 			}
 			fmt.Println("Found Location", queriedLocation)
+			fmt.Println("And Public Encryption Key", rKey)
 
 		// SEND MESSAGE
 		case *mode == SEND:

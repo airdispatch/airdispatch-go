@@ -9,6 +9,7 @@ import (
 	"crypto/cipher"
 	"code.google.com/p/go.crypto/ripemd160"
 	"code.google.com/p/goprotobuf/proto"
+	"encoding/binary"
 	"io"
 	"errors"
 	"math/big"
@@ -74,8 +75,7 @@ func VerifySignedMessage(mes *airdispatch.SignedMessage) bool {
 func KeyToBytes(key *ecdsa.PublicKey) []byte {
 	x := padding(key.X.Bytes(), 32) // 32 Byte Value
 	y := padding(key.Y.Bytes(), 32) // 32 Byte Value
-	prefix := []byte{3} // For near-Bitcoin Compatibility
-	total := bytes.Join([][]byte{prefix, x, y}, nil)
+	total := bytes.Join([][]byte{_privateADECDSAPrefix, x, y}, nil)
 	return total
 }
 
@@ -86,7 +86,7 @@ func BytesToKey(data []byte) (*ecdsa.PublicKey, error) {
 		// Key is not the correct number of bytes
 		return nil, errors.New("The key is not the correct length.")
 	}
-	if !bytes.Equal([]byte{3}, data[0:1]) {
+	if !bytes.Equal(_privateADECDSAPrefix, data[0:1]) {
 		// Key does not possess the correct prefix
 		return nil, errors.New("The key does not contain the correct prefix.")
 	}
@@ -98,6 +98,55 @@ func BytesToKey(data []byte) (*ecdsa.PublicKey, error) {
 		Curve: ADEllipticCurve,
 	}
 	return key, nil
+}
+
+func RSAToBytes(key *rsa.PublicKey) []byte {
+	exponentValue := new(bytes.Buffer)
+	binary.Write(exponentValue, binary.BigEndian, int64(key.E))
+
+	exponentLength := new(bytes.Buffer)
+	binary.Write(exponentLength, binary.BigEndian, int32(8))
+
+	modulusLength := new(bytes.Buffer)
+	binary.Write(modulusLength, binary.BigEndian, int32(len(key.N.Bytes())))
+
+	return bytes.Join([][]byte{_privateADRSAPrefix, exponentLength.Bytes(), exponentValue.Bytes(), modulusLength.Bytes(), key.N.Bytes()}, nil)
+}
+
+func BytesToRSA(data []byte) (*rsa.PublicKey, error) {
+	byteBuffer := bytes.NewBuffer(data)
+
+	actualPrefix := make([]byte, len(_privateADRSAPrefix))
+	byteBuffer.Read(actualPrefix)
+
+	if !bytes.Equal(_privateADRSAPrefix, actualPrefix) {
+		return nil, errors.New("RSA Key had the wrong prefix.")
+	}
+
+	var lengthVar int32
+	err := binary.Read(byteBuffer, binary.BigEndian, &lengthVar)
+	if err != nil {
+		return nil, err
+	}
+
+	var exponent int64
+	err = binary.Read(byteBuffer, binary.BigEndian, &exponent)
+	if err != nil {
+		return nil, err
+	}
+
+	err = binary.Read(byteBuffer, binary.BigEndian, &lengthVar)
+	if err != nil {
+		return nil, err
+	}
+
+	modulus := make([]byte, lengthVar)
+	byteBuffer.Read(modulus)
+
+	newMod := new(big.Int).SetBytes(modulus)
+
+	theKey := &rsa.PublicKey {newMod, int(exponent)}
+	return theKey, nil
 }
 
 // Encapsulation for the SHA Hasher

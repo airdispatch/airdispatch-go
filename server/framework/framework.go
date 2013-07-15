@@ -224,7 +224,7 @@ func (s *Server) handleSendRequest(request *airdispatch.SendMailRequest, fromAdd
 
 		for _, v := range(request.ToAddress) {
 			// For every address that the Message is to be sent to, lookup its location and send it an alert
-			loc, err := common.LookupLocation(v, s.TrackerList, s.Key)
+			loc, _, err := common.LookupLocation(v, s.TrackerList, s.Key)
 			if err != nil {
 				s.handleError("Handle Send Request (Lookup Address)", errors.New("Address Lookup Failed"))
 				return
