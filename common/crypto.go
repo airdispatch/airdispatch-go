@@ -66,7 +66,7 @@ func VerifySignedMessage(mes *airdispatch.SignedMessage) bool {
 		return false
 	}
 
-	hash := HashSHA(nil, mes.Payload)
+	hash := HashSHA(mes.Payload)
 	return verifySignature(hash, mes.Signature, key)
 }
 
@@ -150,22 +150,22 @@ func BytesToRSA(data []byte) (*rsa.PublicKey, error) {
 }
 
 // Encapsulation for the SHA Hasher
-func HashSHA(prepend []byte, payload []byte) []byte {
+func HashSHA(payload []byte) []byte {
 	hasher := sha256.New()
 	hasher.Write(payload)
-	return hasher.Sum(prepend)
+	return hasher.Sum(nil)
 }
 
 // Encapsulation for the RIPEMD160 Hasher
-func HashRIP(prepend []byte, payload []byte) []byte {
+func HashRIP(payload []byte) []byte {
 	hasher := ripemd160.New()
 	hasher.Write(payload)
-	return hasher.Sum(prepend)
+	return hasher.Sum(nil)
 }
 
 // Quickly Generate an Address Checksum
 func generateChecksum(address []byte) []byte {
-	return HashSHA(nil, HashSHA(nil, address))[0:4]
+	return HashSHA(HashSHA(address))[0:4]
 }
 
 // Hex decode an Address then verify that it is correct, then
@@ -191,16 +191,25 @@ func verifyAddress(address []byte) bool {
 // Creates the Base-16 String representation of the
 // airdispatch key.
 func (a *ADKey) HexEncode() string {
-	address := a.byteAddress()
+	address := a.byteRepresentation()
 	return hex.EncodeToString(address)
 }
 
 // Creates the AD Address in Bytes
-func (a *ADKey) byteAddress() []byte {
+func (a *ADKey) byteRepresentation() []byte {
 	toHash := KeyToBytes(&a.SignatureKey.PublicKey)
-	address := HashRIP(nil, HashSHA(nil, toHash))
+	return bytesToAddress(toHash)
+}
+
+func bytesToAddress(toHash []byte) []byte {
+	address := HashRIP(HashSHA(toHash))
 	checksum := generateChecksum(address)
 	return bytes.Join([][]byte{address, checksum}, nil)
+}
+
+func hexEncodeAddress(toEncode []byte) string {
+	addr := bytesToAddress(toEncode)
+	return hex.EncodeToString(addr)
 }
 
 // Message Encryption Methods

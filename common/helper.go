@@ -4,7 +4,6 @@ import (
 	"code.google.com/p/goprotobuf/proto"
 	"airdispat.ch/airdispatch"
 	"encoding/binary"
-	"encoding/hex"
 	"errors"
 	"bytes"
 	"net"
@@ -40,7 +39,7 @@ func ReadADMessageFromBytes(theData []byte) (theMessage *ADMessage, returnErr er
 		return nil, errors.New("Message is not signed properly. Discarding.")
 	}
 
-	theAddress := hex.EncodeToString(downloadedMessage.SigningKey)
+	theAddress := hexEncodeAddress(downloadedMessage.SigningKey)
 
 	mesType := downloadedMessage.GetMessageType()
 
@@ -144,7 +143,7 @@ func AddPrefixToData(data []byte) []byte {
 }
 
 func (a *ADKey) CreateADSignedMessage(message *ADMessage) (*airdispatch.SignedMessage, error) {
-	hash := HashSHA(nil, message.Payload)
+	hash := HashSHA(message.Payload)
 	newSignature, err := a.generateSignature(hash)
 	if err != nil {
 		return nil, err
@@ -192,5 +191,27 @@ func (a *ADKey) CreateArrayedMessage(itemLength uint32) ([]byte, error) {
 }
 
 func (a *ADKey) CreateErrorMessage(code string, description string) []byte {
-	return nil
+	newError := &airdispatch.Error {
+		Code: &code,
+		Description: &description,
+	}
+
+	data, err := proto.Marshal(newError)
+	if err != nil {
+		// We're screwed.
+		return nil
+	}
+
+	newMessage := &ADMessage {
+		Payload: data,
+		MessageType: ERROR_MESSAGE,
+	}
+
+	toSend, err := a.CreateADMessage(newMessage)
+	if err != nil {
+		// Still screwed
+		return nil
+	}
+	
+	return toSend
 }

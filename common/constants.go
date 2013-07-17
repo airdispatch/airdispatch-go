@@ -43,6 +43,9 @@ var AirdispatchAddressLegacy AirdispatchAddressType = 2
 // The 'Direct' Airdispatch Address, represented by a public key hash 'at' a mailserver.
 var AirdispatchAddressDirect AirdispatchAddressType = 3
 
+var ADEncryptionNone = "airdispat.ch/crypto/none"
+var ADEncryptionRSA = "airdispat.ch/crypto/rsa2048-aes256"
+
 // This struct represents all the information needed to send and read messages sent
 // to or form this address
 type ADKey struct {

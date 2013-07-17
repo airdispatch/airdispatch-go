@@ -145,7 +145,7 @@ func main() {
 
 			for _, v := range(inbox) {
 				// Print the Message
-				fmt.Println(common.PrintMessage(v))
+				fmt.Println(common.PrintMessage(v, credentials.Key))
 			}
 
 		// CHECK FOR PUBLIC MESSAGES
@@ -158,7 +158,7 @@ func main() {
 			}
 			
 			for _, v := range(allMail) {
-				fmt.Println(common.PrintMessage(v))
+				fmt.Println(common.PrintMessage(v, credentials.Key))
 			}
 
 		// GENERATE KEYS
@@ -170,10 +170,9 @@ func sendMail(address string) {
 
 	// TODO: Add some encryption types
 	// Define the Encoding as None (for now)
-	var enc = "none"
 
 	// Make Shell for Mail to Send
-	mail := &airdispatch.Mail { FromAddress: &credentials.Address, Encryption: &enc, ToAddress: &address }
+	mail := &airdispatch.Mail { FromAddress: &credentials.Address, ToAddress: &address }
 
 	currentTime := uint64(time.Now().Unix())
 	mail.Timestamp = &currentTime
@@ -214,7 +213,27 @@ func sendMail(address string) {
 	theMail, _ := proto.Marshal(mailData)
 
 	// TODO: Encrypt theMail (if necessary)
-	mail.Data = theMail
+	if address == "" {
+		mail.Data = theMail
+		mail.Encryption = &common.ADEncryptionNone
+	} else {
+		_, rKey, err := common.LookupLocation(*acting_address, []string{*tracking_server}, credentials.Key)
+		if err != nil {
+			fmt.Println("Couldn't get key for address.")
+			fmt.Println(err)
+			return
+		}
+
+		cipher, err := common.EncryptPayload(theMail, rKey)
+		if err != nil {
+			fmt.Println("Couldn't encrypt the payload.")
+			fmt.Println(err)
+			return
+		}
+
+		mail.Data = cipher
+		mail.Encryption = &common.ADEncryptionRSA
+	}
 
 	// We need to marshal the mail message and pre-sign it, so the server can send it on our behalf
 	marshalledMail, _ := proto.Marshal(mail)
