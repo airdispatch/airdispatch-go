@@ -44,7 +44,15 @@ func ReadADMessageFromBytes(theData []byte) (theMessage *ADMessage, returnErr er
 	mesType := downloadedMessage.GetMessageType()
 
 	if mesType == "ERR" {
-		return nil, errors.New("Got an Error")
+		theError := downloadedMessage.Payload
+
+		downloadedError := &airdispatch.Error{}
+		err := proto.Unmarshal(theError, downloadedError)
+		if err != nil {
+			return nil, errors.New("Couldn't Unmarshal Error Message")
+		}
+
+		return nil, errors.New("Got Error Code " + *downloadedError.Code + " with description " + *downloadedError.Description)
 	}
 
 	completeMessage := &ADMessage {
