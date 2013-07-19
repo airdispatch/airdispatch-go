@@ -25,7 +25,7 @@ var mode *string = flag.String("mode", "", "specify the mode on which to operate
 // Specific Constants
 var acting_address *string = flag.String("address", "", "specify the address you would like to look up")
 var remote_mailserver *string = flag.String("remote", "localhost:2048", "specify the remote mailserver on which to connect")
-var tracking_server *string = flag.String("tracker", "localhost:2048", "specify the tracking server on which to query")
+var tracking_server *string = flag.String("tracker", "localhost:1024", "specify the tracking server on which to query")
 var mail_location *string = flag.String("location", "", "specify a location for messages for a specific address to be delivered to")
 var key_location *string = flag.String("key", "", "specify a file to save or load the keys")
 
@@ -78,16 +78,10 @@ func main() {
 		}
 
 		// Specify the Remote Mailserver if you are Sending an Alert
-		if *mode != REGISTRATION && *mode != QUERY && *mode != PUBLIC {
+		if *mode != QUERY && *mode != PUBLIC {
 			fmt.Print("Remote Mailserver: ")
 			fmt.Scanln(remote_mailserver)
 		}
-
-		// Specify the Location to Send Messages to if you are Sending a registration
-		if *mode == REGISTRATION {
-			fmt.Print("Location to Send Messages to: ")
-			fmt.Scanln(mail_location)
-		} 
 
 		if *mode != CHECK && *mode != REGISTRATION {
 			// Otherwise, specify the address that you are querying or sending to.
@@ -106,7 +100,6 @@ func main() {
 		return
 	}
 	credentials.Populate(theKey)
-	credentials.MailServer = *mail_location
 	fmt.Println(credentials.Address)
 
 	credentials.MailServer = *remote_mailserver
