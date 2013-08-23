@@ -7,3 +7,5 @@ lib/
 *.pk
 
 test.go
+
+protocols/
