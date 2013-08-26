@@ -1,12 +1,12 @@
 package common
 
 import (
-	"os"
-	"math/big"
-	"io"
-	"encoding/gob"
 	"crypto/ecdsa"
 	"crypto/rsa"
+	"encoding/gob"
+	"io"
+	"math/big"
+	"os"
 )
 
 // Keygen Variables
@@ -16,17 +16,17 @@ type encodedECDSAKey struct {
 
 type encodedRSAKey struct {
 	D, N *big.Int
-	P []*big.Int
-	E int
+	P    []*big.Int
+	E    int
 }
 
 type encodedADKey struct {
 	ECDSA *encodedECDSAKey
-	RSA *encodedRSAKey
+	RSA   *encodedRSAKey
 }
 
 // This function writes a Gob-Encoded ADKey to a buffer
-func (a *ADKey) GobEncodeKey(buffer io.Writer) (io.Writer, error){
+func (a *ADKey) GobEncodeKey(buffer io.Writer) (io.Writer, error) {
 	// Encode Signature Key
 	ecdsaKey := a.SignatureKey
 	eECDSAKey := &encodedECDSAKey{ecdsaKey.D, ecdsaKey.PublicKey.X, ecdsaKey.PublicKey.Y}
@@ -60,21 +60,21 @@ func GobDecodeKey(buffer io.Reader) (*ADKey, error) {
 	// Create the ECDSA Key from the Encoded Values
 	newECDSAPublicKey := ecdsa.PublicKey{ADEllipticCurve, decodedKey.ECDSA.X, decodedKey.ECDSA.Y}
 	newECDSAKey := ecdsa.PrivateKey{
-		PublicKey: newECDSAPublicKey, 
-		D: decodedKey.ECDSA.D,
+		PublicKey: newECDSAPublicKey,
+		D:         decodedKey.ECDSA.D,
 	}
 
 	// Create the RSA Key from the Encoded Values
 	newRSAPublicKey := rsa.PublicKey{decodedKey.RSA.N, decodedKey.RSA.E}
 	newRSAKey := rsa.PrivateKey{
 		PublicKey: newRSAPublicKey,
-		D: decodedKey.RSA.D,
-		Primes: decodedKey.RSA.P,
+		D:         decodedKey.RSA.D,
+		Primes:    decodedKey.RSA.P,
 	}
 
 	// Reconstruct the Whole Key
-	newADKey := &ADKey {
-		SignatureKey: &newECDSAKey,
+	newADKey := &ADKey{
+		SignatureKey:  &newECDSAKey,
 		EncryptionKey: &newRSAKey,
 	}
 

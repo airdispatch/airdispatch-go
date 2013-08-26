@@ -1,13 +1,13 @@
-package common;
+package common
 
 import (
-	"net"
 	"airdispat.ch/airdispatch"
 	"code.google.com/p/goprotobuf/proto"
 	"crypto/rsa"
-	"strings"
 	"errors"
+	"net"
 	"reflect"
+	"strings"
 )
 
 func ConnectToServer(remote string) (net.Conn, error) {
@@ -27,23 +27,23 @@ func ConnectToServer(remote string) (net.Conn, error) {
 // A function that will get the Location of an Address
 func LookupLocation(toAddr string, trackerList []string, key *ADKey) (string, *rsa.PublicKey, error) {
 	switch GetAddressType(toAddr) {
-		case AirdispatchAddressNormal:
-			// Loop Over Every Connected Tracker
-			for _, value := range(trackerList) {
-				location, rKey, err := SendQuery(value, toAddr, key)
-				if err == nil {
-					return location, rKey, nil
-				}
+	case AirdispatchAddressNormal:
+		// Loop Over Every Connected Tracker
+		for _, value := range trackerList {
+			location, rKey, err := SendQuery(value, toAddr, key)
+			if err == nil {
+				return location, rKey, nil
 			}
-		case AirdispatchAddressLegacy:
-			addressParts := strings.Split(toAddr, "@")
-			return SendQuery(addressParts[1], addressParts[0], key)
-		case AirdispatchAddressDirect:
-			addressParts := strings.Split(toAddr, "@@")
-			return addressParts[1], nil, nil
-		default:
-			// If we cannot determine the address type, return nothing
-			return "", nil, errors.New("Could Not Determine the Type of Airdispatch Address")
+		}
+	case AirdispatchAddressLegacy:
+		addressParts := strings.Split(toAddr, "@")
+		return SendQuery(addressParts[1], addressParts[0], key)
+	case AirdispatchAddressDirect:
+		addressParts := strings.Split(toAddr, "@@")
+		return addressParts[1], nil, nil
+	default:
+		// If we cannot determine the address type, return nothing
+		return "", nil, errors.New("Could Not Determine the Type of Airdispatch Address")
 	}
 
 	// If we could not lookup the address, return nothing
@@ -66,7 +66,7 @@ func SendQuery(tracker string, addr string, key *ADKey) (string, *rsa.PublicKey,
 // A function that will send a query message over a connection
 func SendQueryToConnection(conn net.Conn, trackerLocation string, addr string, key *ADKey) (string, *rsa.PublicKey, error) {
 	// Create a new Query Message
-	newQuery := &airdispatch.AddressRequest {
+	newQuery := &airdispatch.AddressRequest{
 		Address: &addr,
 	}
 
@@ -77,8 +77,8 @@ func SendQueryToConnection(conn net.Conn, trackerLocation string, addr string, k
 	}
 
 	// Create the Message to be sent over the wire
-	newMessage := &ADMessage {
-		Payload: queryData,
+	newMessage := &ADMessage{
+		Payload:     queryData,
 		MessageType: QUERY_MESSAGE,
 	}
 
@@ -124,7 +124,7 @@ func VerifyTrackerAddress(tracker string) (string, error) {
 		return "", errors.New("Couldn't fetch TXT Records")
 	}
 
-	for _, v := range(records) {
+	for _, v := range records {
 		if strings.HasPrefix(v, "adtp__cert:") {
 			return strings.TrimPrefix(v, "adtp__cert:"), nil
 		}
@@ -135,12 +135,12 @@ func VerifyTrackerAddress(tracker string) (string, error) {
 
 func GetAddressType(addr string) AirdispatchAddressType {
 	switch strings.Count(addr, "@") {
-		case 0:
-			return AirdispatchAddressNormal
-		case 1:
-			return AirdispatchAddressLegacy
-		case 2:
-			return AirdispatchAddressDirect
+	case 0:
+		return AirdispatchAddressNormal
+	case 1:
+		return AirdispatchAddressLegacy
+	case 2:
+		return AirdispatchAddressDirect
 	}
 	return -1
 }

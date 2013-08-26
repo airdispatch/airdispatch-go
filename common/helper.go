@@ -1,13 +1,13 @@
 package common
 
 import (
-	"code.google.com/p/goprotobuf/proto"
 	"airdispat.ch/airdispatch"
+	"bytes"
+	"code.google.com/p/goprotobuf/proto"
 	"encoding/binary"
 	"errors"
-	"bytes"
-	"net"
 	"io"
+	"net"
 )
 
 func ReadADMessage(conn net.Conn) (allData []byte, theMessage *ADMessage, returnErr error) {
@@ -55,8 +55,8 @@ func ReadADMessageFromBytes(theData []byte) (theMessage *ADMessage, returnErr er
 		return nil, errors.New("Got Error Code " + *downloadedError.Code + " with description " + *downloadedError.Description)
 	}
 
-	completeMessage := &ADMessage {
-		Payload: downloadedMessage.Payload,
+	completeMessage := &ADMessage{
+		Payload:     downloadedMessage.Payload,
 		MessageType: mesType,
 		FromAddress: theAddress,
 	}
@@ -67,7 +67,7 @@ func ReadADMessageFromBytes(theData []byte) (theMessage *ADMessage, returnErr er
 func readADBytes(conn net.Conn) ([]byte, error) {
 	// This Buffer will Store the Data Temporarily
 	buf := &bytes.Buffer{}
-	started := false	
+	started := false
 	var length int32
 
 	for {
@@ -135,14 +135,14 @@ func (a *ADKey) generateSignature(payload []byte) (*airdispatch.Signature, error
 		return nil, err
 	}
 
-	newSignature := &airdispatch.Signature {
+	newSignature := &airdispatch.Signature{
 		R: r.Bytes(),
 		S: s.Bytes(),
 	}
 	return newSignature, nil
 }
 
-func AddPrefixToData(data []byte) []byte { 
+func AddPrefixToData(data []byte) []byte {
 	var length = int32(len(data))
 	lengthBuf := &bytes.Buffer{}
 	binary.Write(lengthBuf, binary.BigEndian, length)
@@ -157,10 +157,10 @@ func (a *ADKey) CreateADSignedMessage(message *ADMessage) (*airdispatch.SignedMe
 		return nil, err
 	}
 
-	newSignedMessage := &airdispatch.SignedMessage {
-		Payload: message.Payload,
-		Signature: newSignature,
-		SigningKey: KeyToBytes(&a.SignatureKey.PublicKey),
+	newSignedMessage := &airdispatch.SignedMessage{
+		Payload:     message.Payload,
+		Signature:   newSignature,
+		SigningKey:  KeyToBytes(&a.SignatureKey.PublicKey),
 		MessageType: &message.MessageType,
 	}
 	return newSignedMessage, nil
@@ -190,17 +190,17 @@ func (a *ADKey) CreateArrayedMessage(itemLength uint32) ([]byte, error) {
 		return nil, err
 	}
 
-	newMessage := &ADMessage {
-		Payload: dataArray,
+	newMessage := &ADMessage{
+		Payload:     dataArray,
 		MessageType: ARRAY_MESSAGE,
 	}
-	
+
 	return a.CreateADMessage(newMessage)
 }
 
 func (a *ADKey) CreateErrorMessage(code string, description string) []byte {
-	newError := &airdispatch.Error {
-		Code: &code,
+	newError := &airdispatch.Error{
+		Code:        &code,
 		Description: &description,
 	}
 
@@ -210,8 +210,8 @@ func (a *ADKey) CreateErrorMessage(code string, description string) []byte {
 		return nil
 	}
 
-	newMessage := &ADMessage {
-		Payload: data,
+	newMessage := &ADMessage{
+		Payload:     data,
 		MessageType: ERROR_MESSAGE,
 	}
 
@@ -220,6 +220,6 @@ func (a *ADKey) CreateErrorMessage(code string, description string) []byte {
 		// Still screwed
 		return nil
 	}
-	
+
 	return toSend
 }

@@ -1,21 +1,21 @@
 package common
 
 import (
-	"crypto/ecdsa"
-	"crypto/rand"
-	"crypto/sha256"
-	"crypto/rsa"
-	"crypto/aes"
-	"crypto/cipher"
+	"airdispat.ch/airdispatch"
+	"bytes"
 	"code.google.com/p/go.crypto/ripemd160"
 	"code.google.com/p/goprotobuf/proto"
+	"crypto/aes"
+	"crypto/cipher"
+	"crypto/ecdsa"
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/sha256"
 	"encoding/binary"
-	"io"
-	"errors"
-	"math/big"
-	"bytes"
 	"encoding/hex"
-	"airdispat.ch/airdispatch"
+	"errors"
+	"io"
+	"math/big"
 )
 
 var random = rand.Reader
@@ -93,8 +93,8 @@ func BytesToKey(data []byte) (*ecdsa.PublicKey, error) {
 	x := new(big.Int).SetBytes(data[1:33])
 	y := new(big.Int).SetBytes(data[33:65])
 	key := &ecdsa.PublicKey{
-		X: x,
-		Y: y,
+		X:     x,
+		Y:     y,
 		Curve: ADEllipticCurve,
 	}
 	return key, nil
@@ -145,7 +145,7 @@ func BytesToRSA(data []byte) (*rsa.PublicKey, error) {
 
 	newMod := new(big.Int).SetBytes(modulus)
 
-	theKey := &rsa.PublicKey {newMod, int(exponent)}
+	theKey := &rsa.PublicKey{newMod, int(exponent)}
 	return theKey, nil
 }
 
@@ -220,9 +220,9 @@ func EncryptPayload(p []byte, publicKey *rsa.PublicKey) ([]byte, error) {
 		return nil, err
 	}
 
-	encryptionMessage := &airdispatch.EncryptedData {
+	encryptionMessage := &airdispatch.EncryptedData{
 		Ciphertext: cipher,
-		Key: key,
+		Key:        key,
 	}
 
 	data, err := proto.Marshal(encryptionMessage)
@@ -279,7 +279,7 @@ func hybridDecryption(rsaKey *rsa.PrivateKey, encryptedAesKey []byte, ciphertext
 }
 
 func generateRandomAESKey(nbits int) ([]byte, error) {
-	b := make([]byte, (nbits/8))
+	b := make([]byte, (nbits / 8))
 	n, err := io.ReadFull(random, b)
 
 	if n != len(b) || err != nil {
@@ -296,7 +296,7 @@ func encryptAES(plaintext []byte, key []byte) (ciphertext []byte, error error) {
 	}
 
 	// Create IV
-	ciphertext = make([]byte, aes.BlockSize + len(plaintext))
+	ciphertext = make([]byte, aes.BlockSize+len(plaintext))
 	iv := ciphertext[:aes.BlockSize]
 	if _, err := io.ReadFull(random, iv); err != nil {
 		return nil, err
@@ -328,9 +328,9 @@ func decryptAES(ciphertext []byte, key []byte) (plaintext []byte, error error) {
 // This function pads a bytestring to the correct length
 // assuming that the bytestring is in big-endian format
 func padding(byteArray []byte, length int) []byte {
-	if(len(byteArray) > length) {
+	if len(byteArray) > length {
 		return nil
-	} else if (len(byteArray) == length) {
+	} else if len(byteArray) == length {
 		return byteArray
 	}
 	diff := length - len(byteArray)

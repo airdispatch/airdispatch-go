@@ -1,4 +1,4 @@
-package common;
+package common
 
 import (
 	"airdispat.ch/airdispatch"
@@ -9,7 +9,7 @@ import (
 func PrintMessage(mail *airdispatch.Mail, key *ADKey) string {
 	output := ""
 	output += ("---- Message from " + *mail.FromAddress + " ----\n")
-	output += ("Encryption Type: " + *mail.Encryption + "\n") 
+	output += ("Encryption Type: " + *mail.Encryption + "\n")
 
 	mailData := &airdispatch.MailData{}
 	toUnmarshal := mail.Data
@@ -27,7 +27,7 @@ func PrintMessage(mail *airdispatch.Mail, key *ADKey) string {
 
 	proto.Unmarshal(toUnmarshal, mailData)
 
-	for _, value := range(mailData.Payload) {
+	for _, value := range mailData.Payload {
 		output += ("### " + *value.TypeName + "\n")
 		output += (string(value.Payload) + "\n")
 	}
