@@ -248,7 +248,7 @@ func sendMail(address string) {
 	// We need to marshal the mail message and pre-sign it, so the server can send it on our behalf
 	marshalledMail, _ := proto.Marshal(mail)
 
-	newMessage := &common.ADMessage{marshalledMail, common.MAIL_MESSAGE, ""}
+	newMessage := &common.ADMessagePrimative{marshalledMail, common.MAIL_MESSAGE, ""}
 
 	signedMessage, _ := credentials.Key.CreateADSignedMessage(newMessage)
 	toSave, _ := proto.Marshal(signedMessage)

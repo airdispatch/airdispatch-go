@@ -90,7 +90,7 @@ func (t *Tracker) handleClient(conn net.Conn) {
 	defer conn.Close()
 
 	// Read in the Message Sent from the Client
-	_, newMessage, err := common.ReadADMessage(conn)
+	_, newMessage, err := common.ReadADMessagePrimative(conn)
 	if err != nil {
 		t.handleError("Handle Client (Reading in Message)", err)
 		return
@@ -174,9 +174,9 @@ func (t *Tracker) handleQuery(theAddress string, req *airdispatch.AddressRequest
 		return
 	}
 
-	newMessage := &common.ADMessage{data, common.QUERY_RESPONSE_MESSAGE, ""}
+	newMessage := &common.ADMessagePrimative{data, common.QUERY_RESPONSE_MESSAGE, ""}
 
-	bytesToSend, err := t.Key.CreateADMessage(newMessage)
+	bytesToSend, err := t.Key.CreateADMessagePrimative(newMessage)
 	if err != nil {
 		t.handleError("Send Alert (Create AD Message)", err)
 		return

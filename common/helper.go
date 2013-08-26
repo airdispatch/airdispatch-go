@@ -10,14 +10,14 @@ import (
 	"net"
 )
 
-func ReadADMessage(conn net.Conn) (allData []byte, theMessage *ADMessage, returnErr error) {
+func ReadADMessage(conn net.Conn) (allData []byte, theMessage *ADMessagePrimative, returnErr error) {
 	// Read in the Sent Message
 	totalBytes, err := readADBytes(conn)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	theMessage, err = ReadADMessageFromBytes(totalBytes)
+	theMessage, err = ReadADMessagePrimativeFromBytes(totalBytes)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -26,7 +26,7 @@ func ReadADMessage(conn net.Conn) (allData []byte, theMessage *ADMessage, return
 	return totalBytes, theMessage, nil
 }
 
-func ReadADMessageFromBytes(theData []byte) (theMessage *ADMessage, returnErr error) {
+func ReadADMessageFromBytes(theData []byte) (theMessage *ADMessagePrimative, returnErr error) {
 	// Get the Signed Message
 	downloadedMessage := &airdispatch.SignedMessage{}
 	err := proto.Unmarshal(theData, downloadedMessage)
@@ -55,7 +55,7 @@ func ReadADMessageFromBytes(theData []byte) (theMessage *ADMessage, returnErr er
 		return nil, errors.New("Got Error Code " + *downloadedError.Code + " with description " + *downloadedError.Description)
 	}
 
-	completeMessage := &ADMessage{
+	completeMessage := &ADMessagePrimative{
 		Payload:     downloadedMessage.Payload,
 		MessageType: mesType,
 		FromAddress: theAddress,
@@ -150,7 +150,7 @@ func AddPrefixToData(data []byte) []byte {
 	return fullBuffer
 }
 
-func (a *ADKey) CreateADSignedMessage(message *ADMessage) (*airdispatch.SignedMessage, error) {
+func (a *ADKey) CreateADSignedMessage(message *ADMessagePrimative) (*airdispatch.SignedMessage, error) {
 	hash := HashSHA(message.Payload)
 	newSignature, err := a.generateSignature(hash)
 	if err != nil {
@@ -166,7 +166,7 @@ func (a *ADKey) CreateADSignedMessage(message *ADMessage) (*airdispatch.SignedMe
 	return newSignedMessage, nil
 }
 
-func (a *ADKey) CreateADMessage(message *ADMessage) ([]byte, error) {
+func (a *ADKey) CreateADMessage(message *ADMessagePrimative) ([]byte, error) {
 	newSignedMessage, err := a.CreateADSignedMessage(message)
 	if err != nil {
 		return nil, err
@@ -190,12 +190,12 @@ func (a *ADKey) CreateArrayedMessage(itemLength uint32) ([]byte, error) {
 		return nil, err
 	}
 
-	newMessage := &ADMessage{
+	newMessage := &ADMessagePrimative{
 		Payload:     dataArray,
 		MessageType: ARRAY_MESSAGE,
 	}
 
-	return a.CreateADMessage(newMessage)
+	return a.CreateADMessagePrimative(newMessage)
 }
 
 func (a *ADKey) CreateErrorMessage(code string, description string) []byte {
@@ -210,12 +210,12 @@ func (a *ADKey) CreateErrorMessage(code string, description string) []byte {
 		return nil
 	}
 
-	newMessage := &ADMessage{
+	newMessage := &ADMessagePrimative{
 		Payload:     data,
 		MessageType: ERROR_MESSAGE,
 	}
 
-	toSend, err := a.CreateADMessage(newMessage)
+	toSend, err := a.CreateADMessagePrimative(newMessage)
 	if err != nil {
 		// Still screwed
 		return nil

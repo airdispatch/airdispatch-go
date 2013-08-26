@@ -55,8 +55,14 @@ type ADKey struct {
 	EncryptionKey *rsa.PrivateKey
 }
 
-type ADMessage struct {
+type ADMessagePrimative struct {
 	Payload     []byte
+	MessageType string
+	FromAddress string
+}
+
+type ADMessage struct {
+	Payload     map[string][]byte
 	MessageType string
 	FromAddress string
 }

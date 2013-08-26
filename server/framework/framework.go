@@ -90,7 +90,7 @@ func (s *Server) handleClient(conn net.Conn) {
 	defer conn.Close()
 
 	// Read in the Message
-	totalBytes, newMessage, err := common.ReadADMessage(conn)
+	totalBytes, newMessage, err := common.ReadADMessagePrimative(conn)
 	if err != nil {
 		s.handleError("Handle Client (Reading Signed Message)", err)
 		return
@@ -255,9 +255,9 @@ func (s *Server) SendAlert(location string, message_id string, toAddr string) {
 	alertData, _ := proto.Marshal(newAlert)
 
 	// Create the Message to Send
-	newMessage := &common.ADMessage{alertData, common.ALERT_MESSAGE, ""}
+	newMessage := &common.ADMessagePrimative{alertData, common.ALERT_MESSAGE, ""}
 
-	bytesToSend, err := s.Key.CreateADMessage(newMessage)
+	bytesToSend, err := s.Key.CreateADMessagePrimative(newMessage)
 	if err != nil {
 		s.handleError("Send Alert (Create AD Message)", err)
 		return

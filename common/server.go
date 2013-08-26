@@ -77,37 +77,37 @@ func SendQueryToConnection(conn net.Conn, trackerLocation string, addr string, k
 	}
 
 	// Create the Message to be sent over the wire
-	newMessage := &ADMessage{
+	newMessage := &ADMessagePrimative{
 		Payload:     queryData,
 		MessageType: QUERY_MESSAGE,
 	}
 
-	totalBytes, err := key.CreateADMessage(newMessage)
+	totalBytes, err := key.CreateADMessagePrimative(newMessage)
 	if err != nil {
 		return "", nil, err
 	}
 
 	// Send the message and wait for a response
 	conn.Write(totalBytes)
-	_, readMessage, err := ReadADMessage(conn)
+	_, reADMessagePrimative, err := ReadADMessagePrimative(conn)
 	if err != nil {
 		return "", nil, err
 	}
 
 	expectedAddress, err := VerifyTrackerAddress(trackerLocation)
 	if err == nil {
-		if expectedAddress != readMessage.FromAddress {
+		if expectedAddress != reADMessagePrimative.FromAddress {
 			return "", nil, errors.New("Tracker DNS did not have the correct Address")
 		}
 	}
 
-	if readMessage.MessageType != QUERY_RESPONSE_MESSAGE {
+	if reADMessagePrimative.MessageType != QUERY_RESPONSE_MESSAGE {
 		return "", nil, errors.New("Tracker Did Not Return Correct Message Type")
 	}
 
 	// Unmarshal the Response
 	newQueryResponse := &airdispatch.AddressResponse{}
-	proto.Unmarshal(readMessage.Payload, newQueryResponse)
+	proto.Unmarshal(reADMessagePrimative.Payload, newQueryResponse)
 
 	rKey, err := BytesToRSA(newQueryResponse.PublicKey)
 	if err != nil {
