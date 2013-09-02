@@ -82,14 +82,14 @@ func SendQueryToConnection(conn net.Conn, trackerLocation string, addr string, k
 		MessageType: QUERY_MESSAGE,
 	}
 
-	totalBytes, err := key.CreateADMessagePrimative(newMessage)
+	totalBytes, err := key.CreateADMessage(newMessage)
 	if err != nil {
 		return "", nil, err
 	}
 
 	// Send the message and wait for a response
 	conn.Write(totalBytes)
-	_, reADMessagePrimative, err := ReadADMessagePrimative(conn)
+	_, reADMessagePrimative, err := ReadADMessage(conn)
 	if err != nil {
 		return "", nil, err
 	}

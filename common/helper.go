@@ -17,7 +17,7 @@ func ReadADMessage(conn net.Conn) (allData []byte, theMessage *ADMessagePrimativ
 		return nil, nil, err
 	}
 
-	theMessage, err = ReadADMessagePrimativeFromBytes(totalBytes)
+	theMessage, err = ReadADMessageFromBytes(totalBytes)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -195,7 +195,7 @@ func (a *ADKey) CreateArrayedMessage(itemLength uint32) ([]byte, error) {
 		MessageType: ARRAY_MESSAGE,
 	}
 
-	return a.CreateADMessagePrimative(newMessage)
+	return a.CreateADMessage(newMessage)
 }
 
 func (a *ADKey) CreateErrorMessage(code string, description string) []byte {
@@ -215,7 +215,7 @@ func (a *ADKey) CreateErrorMessage(code string, description string) []byte {
 		MessageType: ERROR_MESSAGE,
 	}
 
-	toSend, err := a.CreateADMessagePrimative(newMessage)
+	toSend, err := a.CreateADMessage(newMessage)
 	if err != nil {
 		// Still screwed
 		return nil

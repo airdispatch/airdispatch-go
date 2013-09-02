@@ -60,9 +60,3 @@ type ADMessagePrimative struct {
 	MessageType string
 	FromAddress string
 }
-
-type ADMessage struct {
-	Payload     map[string][]byte
-	MessageType string
-	FromAddress string
-}
