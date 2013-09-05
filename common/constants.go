@@ -4,6 +4,8 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rsa"
+	"errors"
+	"time"
 )
 
 var ADEllipticCurve elliptic.Curve = elliptic.P256()
@@ -55,8 +57,18 @@ type ADKey struct {
 	EncryptionKey *rsa.PrivateKey
 }
 
-type ADMessagePrimative struct {
-	Payload     []byte
-	MessageType string
-	FromAddress string
+// ERRORS
+var ADSigningError = errors.New("ADSigningError: Message is not properly signed.")
+var ADUnmarshallingError = errors.New("ADUnmarshallingError: Message could not be unmarshalled.")
+var ADTimeoutError = errors.New("ADTimeoutError: Operation was not able to be completed in the timeout period")
+
+var ADUnexpectedMessageTypeError = errors.New("ADUnexpectedMessageTypeError: Received a different type of message than expected.")
+
+var ADTrackerVerificationError = errors.New("ADTrackerVerificationError: Could not verify the tracker is who you should be talking to.")
+var ADTrackerListQueryError = errors.New("ADTrackerListQueryError: The address queried for could not be located in the tracker list provided.")
+
+var ADTimeoutSeconds time.Duration = 30
+
+func ADReceivedError(code string, description string) error {
+	return errors.New("ADReceivedError: " + code + " - " + description)
 }
