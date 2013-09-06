@@ -67,6 +67,8 @@ var ADUnexpectedMessageTypeError = errors.New("ADUnexpectedMessageTypeError: Rec
 var ADTrackerVerificationError = errors.New("ADTrackerVerificationError: Could not verify the tracker is who you should be talking to.")
 var ADTrackerListQueryError = errors.New("ADTrackerListQueryError: The address queried for could not be located in the tracker list provided.")
 
+var ADDecryptionError = errors.New("ADDecryptionError: The payload of the Mail cannot be decrypted because the ADKey was not passed in correctly.")
+
 var ADTimeoutSeconds time.Duration = 30
 
 func ADReceivedError(code string, description string) error {

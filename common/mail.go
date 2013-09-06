@@ -9,8 +9,9 @@ import (
 type ADMail struct {
 	payload map[string]*ADComponent
 
-	encryptedPayload []byte
-	encryptionType   string
+	byteload       []byte
+	encryptionType string
+	encrypted      bool
 
 	FromAddress *ADAddress
 	ToAddress   *ADAddress
@@ -35,12 +36,7 @@ func (a *ADMail) ToBytes() []byte {
 	return nil
 }
 
-func (a *ADMail) marshalComponents() []byte {
-
-	return nil
-}
-
-func CreateADMailFromADMessage(message *ADMessage) (*ADMail, error) {
+func CreateADMailFromADMessage(message *ADMessage, key *ADKey) (*ADMail, error) {
 	if message.MessageType != MAIL_MESSAGE {
 		return nil, errors.New("Cannot translate an ADMessage with incorrect message type to ADMail.")
 	}
@@ -63,9 +59,78 @@ func CreateADMailFromADMessage(message *ADMessage) (*ADMail, error) {
 	}
 
 	output.Timestamp = theMessage.GetTimestamp()
-	output.encryptedPayload = theMessage.GetData()
+	output.byteload = theMessage.GetData()
+	output.encryptionType = theMessage.GetEncryption()
+	output.encrypted = !(theMessage.GetEncryption() == ADEncryptionNone)
+
+	if output.encrypted && key == nil {
+		return nil, ADDecryptionError
+	}
+
+	output.decryptPayload(key)
+	output.unmarshalComponents()
 
 	return output, nil
+}
+
+func (a *ADMail) decryptPayload(key *ADKey) bool {
+	if !a.encrypted {
+		return false
+	}
+
+	var err error
+	a.byteload, err = key.DecryptPayload(a.byteload)
+	if err != nil {
+		return false
+	}
+
+	a.encrypted = false
+	return true
+}
+
+func (a *ADMail) encryptPayload(address *ADAddress) bool {
+	if a.encrypted {
+		return false
+	}
+
+	var err error
+	a.byteload, err = EncryptPayload(a.byteload, address.encryptionKey)
+	if err != nil {
+		return false
+	}
+
+	a.encrypted = true
+	return true
+}
+
+func (a *ADMail) unmarshalComponents() error {
+	if a.encrypted {
+		return ADDecryptionError
+	}
+
+	theData := &airdispatch.MailData{}
+	err := proto.Unmarshal(a.byteload, theData)
+	if err != nil {
+		return ADUnmarshallingError
+	}
+
+	componentMap := make(map[string]*ADComponent)
+	for _, v := range theData.GetPayload() {
+		if v.GetEncryption() != "" {
+			return ADUnmarshallingError
+		}
+
+		c := CreateADComponent(v.GetTypeName(), v.GetPayload())
+		componentMap[c.DataTypeValue()] = c
+	}
+
+	a.payload = componentMap
+
+	return nil
+}
+
+func (a *ADMail) marshalComponents() []byte {
+	return nil
 }
 
 func CreateADMail(fromAddress *ADAddress, toAddress *ADAddress, timestamp uint64, payload []*ADComponent) *ADMail {
@@ -84,6 +149,10 @@ func CreateADMail(fromAddress *ADAddress, toAddress *ADAddress, timestamp uint64
 
 	return output
 }
+
+// ----------
+// AD COMPONENT
+// ----------
 
 type ADComponent struct {
 	data_type      string
@@ -104,10 +173,6 @@ func (a *ADComponent) DataTypeValue() string {
 
 func CreateADComponent(name string, data []byte) *ADComponent {
 	return &ADComponent{name, data}
-}
-
-func CreateADComponentFromBytes(theBytes []byte) *ADComponent {
-	return CreateADComponent("Test", []byte("Test"))
 }
 
 func (a *ADComponent) ToPrimative() *airdispatch.MailData_DataType {
