@@ -133,6 +133,22 @@ func (a *ADMail) marshalComponents() []byte {
 	return nil
 }
 
+// A simple message to output an Airdispatch Message to String
+func (a *ADMail) PrintMessage() string {
+	output := ""
+	output += ("---- Message from " + a.FromAddress.ToString() + " ----\n")
+	output += ("Encryption Type: " + a.encryptionType + "\n")
+
+	for _, value := range a.payload {
+		output += ("### " + value.DataTypeValue() + "\n")
+		output += (value.StringValue() + "\n")
+	}
+
+	output += ("---- END ----")
+
+	return output
+}
+
 func CreateADMail(fromAddress *ADAddress, toAddress *ADAddress, timestamp uint64, payload []*ADComponent) *ADMail {
 	output := &ADMail{}
 
@@ -152,7 +168,7 @@ func CreateADMail(fromAddress *ADAddress, toAddress *ADAddress, timestamp uint64
 
 // ----------
 // AD COMPONENT
-// ----------
+// ----------e
 
 type ADComponent struct {
 	data_type      string
