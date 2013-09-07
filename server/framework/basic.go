@@ -1,10 +1,11 @@
 package framework
 
 import (
+	"airdispat.ch/common"
 	"fmt"
 )
 
-type BasicServer struct{
+type BasicServer struct {
 	ServerDelegate
 }
 
@@ -13,7 +14,7 @@ func (BasicServer) HandleError(err *ServerError) {
 	// os.Exit(1)
 }
 
-func (BasicServer) AllowSendConnection(fromAddr string) bool {
+func (BasicServer) AllowSendConnection(fromAddr *common.ADAddress) bool {
 	return true
 }
 

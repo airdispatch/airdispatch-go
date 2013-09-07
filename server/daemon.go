@@ -1,16 +1,15 @@
 package main
 
 import (
-	"airdispat.ch/server/framework"
-	"flag"
-	"strings"
-	"time"
 	"airdispat.ch/common"
-	"airdispat.ch/airdispatch"
+	"airdispat.ch/server/framework"
 	"crypto/ecdsa"
 	"encoding/hex"
-	"os"
+	"flag"
 	"fmt"
+	"os"
+	"strings"
+	"time"
 )
 
 // Configuration Varables
@@ -25,12 +24,11 @@ func getHostname() string {
 }
 
 type PostOffice map[string]Mailbox
-type Mailbox map[string] Mail
+type Mailbox map[string]Mail
 type Mail struct {
-	From string
-	Location string
-	approved []string
-	data []byte
+	approved     []string
+	mail         *common.ADMail // Each Mail Structure will either store a Mail Object (if it is outgoing) or an Alert Object (if it is incoming)
+	alert        *common.ADAlert
 	receivedTime time.Time
 }
 
@@ -59,7 +57,9 @@ func main() {
 
 	// Populate the Trackers List
 	connectedTrackers = strings.Split(*trackers, ",")
-	if (*trackers == "") { connectedTrackers = make([]string, 0) }
+	if *trackers == "" {
+		connectedTrackers = make([]string, 0)
+	}
 
 	// Create a Signing Key for the Server
 	loadedKey, err := common.LoadKeyFromFile(*key_file)
@@ -89,9 +89,9 @@ func main() {
 	handler := &myServer{}
 	theServer := framework.Server{
 		LocationName: *me,
-		Key: loadedKey,
-		TrackerList: connectedTrackers,
-		Delegate: handler,
+		Key:          loadedKey,
+		TrackerList:  common.CreateADTrackerListWithStrings(connectedTrackers...),
+		Delegate:     handler,
 	}
 	serverErr := theServer.StartServer(*port)
 	if serverErr != nil {
@@ -101,60 +101,61 @@ func main() {
 
 }
 
-type myServer struct{
+type myServer struct {
 	framework.BasicServer
 }
 
 // Function that Handles an Alert of a Message
-func (myServer) SaveIncomingAlert(alert *airdispatch.Alert, alertData []byte, fromAddr string) {
+// INCOMING
+func (myServer) SaveIncomingAlert(alert *common.ADAlert) {
 	// Get the recipient address of the message
-	toAddr := *alert.ToAddress
+	toAddr := alert.ToAddress
 
 	// Form a ReceivedMessage Record for the database
 	theMessage := Mail{
-		Location: *alert.Location,
-		From: fromAddr,
-		data: alertData,
+		alert:        alert,
 		receivedTime: time.Now(),
 	}
 
 	// Attempt to Get the Mailbox of the User
-	_, ok := mailboxes[toAddr]
+	_, ok := mailboxes[toAddr.ToString()]
 	if !ok {
 		// TODO: Catch if the user is registered with the server or not
 		// If it cannot, make a mailbox
-		mailboxes[toAddr] = make(Mailbox)
+		mailboxes[toAddr.ToString()] = make(Mailbox)
 	}
 
 	// Store the Record in the User's Mailbox
-	mailboxes[toAddr][*alert.MessageId] = theMessage
+	mailboxes[toAddr.ToString()][alert.MessageID] = theMessage
 }
 
-func (myServer) SavePublicMail(theMail []byte, fromAddr string) {
+// OUTGOING
+func (myServer) SavePublicMail(theMail *common.ADMail) {
 	// Populate the Record to Store the Data
-	storedData := Mail {
-		data: theMail,
+	storedData := Mail{
+		mail:         theMail,
 		receivedTime: time.Now(),
 	}
 
 	// Get the notice box of the From Address
-	_, ok := notices[fromAddr]
+	_, ok := notices[theMail.FromAddress.ToString()]
 	if !ok {
-		notices[fromAddr] = make(Mailbox)
+		notices[theMail.FromAddress.ToString()] = make(Mailbox)
 	}
 
 	// Store the Public Message in the Box
-	notices[fromAddr][GetMessageId(theMail)] = storedData
+	notices[theMail.FromAddress.ToString()][GetMessageId(theMail)] = storedData
 }
 
-func (myServer) SavePrivateMail(theMail []byte, toAddress []string) (id string) {
+// OUTGOING
+func (myServer) SavePrivateMail(theMail *common.ADMail, approved []string) (id string) {
 	// Get a hash of the Message
 	hash := GetMessageId(theMail)
 
 	// Create a Record to Store the Message in the Outgoing Mail Box
-	storedData := Mail {
-		approved: toAddress,
-		data: theMail,
+	storedData := Mail{
+		approved:     approved,
+		mail:         theMail,
 		receivedTime: time.Now(),
 	}
 
@@ -164,11 +165,12 @@ func (myServer) SavePrivateMail(theMail []byte, toAddress []string) (id string) 
 	return hash
 }
 
-func GetMessageId(theMail []byte) string {
-	return hex.EncodeToString(common.HashSHA(theMail))
+func GetMessageId(theMail *common.ADMail) string {
+	// RETURN TO LOOK AT THIS.
+	return hex.EncodeToString(common.HashSHA(theMail.ToBytes()))
 }
 
-func (myServer) RetrieveMessageForUser(id string, addr string) ([]byte) {
+func (myServer) RetrieveMessageForUser(id string, addr *common.ADAddress) *common.ADMail {
 	// TODO: Allow this type of DATA to retrieve multiple messages... Maybe?
 	// Get the Outgoing Message with that ID
 	message, _ := storedMessages[id]
@@ -178,37 +180,52 @@ func (myServer) RetrieveMessageForUser(id string, addr string) ([]byte) {
 		return nil
 	}
 
-	return message.data
+	return message.mail
 }
 
-func (m myServer) RetrieveInbox(addr string, since uint64) [][]byte {
-	return m.retrieveData(addr, since, mailboxes)
-}
-
-func (m myServer) RetrievePublic(fromAddr string, since uint64) [][]byte {
-	return m.retrieveData(fromAddr, since, notices)
-}
-
-func (myServer) retrieveData(fromAddr string, since uint64, theBox PostOffice) [][]byte {
+func (m myServer) RetrieveInbox(addr *common.ADAddress, since uint64) []*common.ADAlert {
 	// Get the `TimeSince` field
 	timeSince := time.Unix(int64(since), 0)
 
 	// Get the public notices box for that address
-	boxes, ok := theBox[fromAddr]
+	boxes, ok := mailboxes[addr.ToString()]
 	if !ok {
-		// If it does not exist, alert the user
-		// conn.Write(common.CreateErrorMessage("no public messages for that id"))
+		// If it does not exist, return nothing
 		return nil
 	}
 
 	// Make an array of messages to tack onto
-	output := make([][]byte, 0)
+	output := make([]*common.ADAlert, 0)
 
 	// Loop through the messages
-	for _, v := range(boxes) {
+	for _, v := range boxes {
 		// Append the notice to the output if it was sent after the 'TimeSince'
-		if (v.receivedTime.After(timeSince)) {
-			output = append(output, v.data)
+		if v.receivedTime.After(timeSince) {
+			output = append(output, v.alert)
+		}
+	}
+	return output
+}
+
+func (m myServer) RetrievePublic(fromAddr *common.ADAddress, since uint64) []*common.ADMail {
+	// Get the `TimeSince` field
+	timeSince := time.Unix(int64(since), 0)
+
+	// Get the public notices box for that address
+	boxes, ok := notices[fromAddr.ToString()]
+	if !ok {
+		// If it does not exist, return nothing
+		return nil
+	}
+
+	// Make an array of messages to tack onto
+	output := make([]*common.ADMail, 0)
+
+	// Loop through the messages
+	for _, v := range boxes {
+		// Append the notice to the output if it was sent after the 'TimeSince'
+		if v.receivedTime.After(timeSince) {
+			output = append(output, v.mail)
 		}
 	}
 	return output
