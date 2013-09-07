@@ -19,7 +19,11 @@ func (a *ADKey) SignBytes(payload []byte) (*airdispatch.Signature, error) {
 	return newSignature, nil
 }
 
-func (a *ADKey) CreateArrayedMessage(itemLength uint32) (*ADMessage, error) {
+func CreateArrayedMessage(itemLength uint32) (*ADMessage, error) {
+	if itemLength < 1 {
+		return nil, ADIncorrectParameterError
+	}
+
 	newArray := &airdispatch.ArrayedData{
 		NumberOfMessages: &itemLength,
 	}
@@ -36,7 +40,7 @@ func (a *ADKey) CreateArrayedMessage(itemLength uint32) (*ADMessage, error) {
 	return newMessage, nil
 }
 
-func (a *ADKey) CreateErrorMessage(code string, description string) *ADMessage {
+func CreateErrorMessage(code string, description string) *ADMessage {
 	newError := &airdispatch.Error{
 		Code:        &code,
 		Description: &description,

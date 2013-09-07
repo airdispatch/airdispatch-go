@@ -62,6 +62,17 @@ func (a *ADAddress) GetLocation(k *ADKey, t *ADTrackerList) (string, error) {
 	return a.location, nil
 }
 
+func (a *ADAddress) GetEncryptionKey(k *ADKey, t *ADTrackerList) (*rsa.PublicKey, error) {
+	if a.encryptionKey == nil {
+		_, err := a.GetLocation(k, t)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return a.encryptionKey, nil
+}
+
 func (a *ADAddress) HasLocation() bool {
 	return (a.location != "")
 }

@@ -71,6 +71,20 @@ func CreateADMessageFromBytes(theBytes []byte) (*ADMessage, error) {
 	return output, nil
 }
 
+func (a *ADMessage) SendToAddress(addr *ADAddress, key *ADKey, trackerList *ADTrackerList) error {
+	_, err := a.SendToAddressWithResponse(addr, key, trackerList)
+	return err
+}
+
+func (a *ADMessage) SendToAddressWithResponse(addr *ADAddress, key *ADKey, trackerList *ADTrackerList) (*ADMessage, error) {
+	loc, err := addr.GetLocation(key, trackerList)
+	if err != nil {
+		return nil, err
+	}
+
+	return a.SendToServerWithResponse(loc, key)
+}
+
 func (a *ADMessage) SendToServer(location string, key *ADKey) error {
 	_, err := a.SendToServerWithResponse(location, key)
 	return err

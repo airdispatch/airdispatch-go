@@ -69,6 +69,8 @@ var ADTrackerListQueryError = errors.New("ADTrackerListQueryError: The address q
 
 var ADDecryptionError = errors.New("ADDecryptionError: The payload of the Mail cannot be decrypted because the ADKey was not passed in correctly.")
 
+var ADIncorrectParameterError = errors.New("ADIncorrectParameterError: One of the parameters of this function is out of bounds.")
+
 var ADTimeoutSeconds time.Duration = 30
 
 func ADReceivedError(code string, description string) error {

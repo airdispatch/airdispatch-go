@@ -36,6 +36,10 @@ func (a *ADMail) ToBytes() []byte {
 	return nil
 }
 
+func (a *ADMail) GetMessage() *ADMessage {
+	return nil
+}
+
 func CreateADMailFromADMessage(message *ADMessage, key *ADKey) (*ADMail, error) {
 	if message.MessageType != MAIL_MESSAGE {
 		return nil, errors.New("Cannot translate an ADMessage with incorrect message type to ADMail.")
@@ -64,11 +68,11 @@ func CreateADMailFromADMessage(message *ADMessage, key *ADKey) (*ADMail, error) 
 	output.encrypted = !(theMessage.GetEncryption() == ADEncryptionNone)
 
 	if output.encrypted && key == nil {
-		return nil, ADDecryptionError
+		return output, nil
 	}
 
 	output.decryptPayload(key)
-	output.unmarshalComponents()
+	output.Unmarshal()
 
 	return output, nil
 }
@@ -88,13 +92,17 @@ func (a *ADMail) decryptPayload(key *ADKey) bool {
 	return true
 }
 
-func (a *ADMail) encryptPayload(address *ADAddress) bool {
+func (a *ADMail) encryptPayload(address *ADAddress, key *ADKey, trackerList *ADTrackerList) bool {
 	if a.encrypted {
 		return false
 	}
 
-	var err error
-	a.byteload, err = EncryptPayload(a.byteload, address.encryptionKey)
+	encryptionKey, err := address.GetEncryptionKey(key, trackerList)
+	if err != nil {
+		return false
+	}
+
+	a.byteload, err = EncryptPayload(a.byteload, encryptionKey)
 	if err != nil {
 		return false
 	}
@@ -103,7 +111,7 @@ func (a *ADMail) encryptPayload(address *ADAddress) bool {
 	return true
 }
 
-func (a *ADMail) unmarshalComponents() error {
+func (a *ADMail) Unmarshal() error {
 	if a.encrypted {
 		return ADDecryptionError
 	}
@@ -129,7 +137,7 @@ func (a *ADMail) unmarshalComponents() error {
 	return nil
 }
 
-func (a *ADMail) marshallComponents(address *ADAddress) (*ADMessage, error) {
+func (a *ADMail) Marshal(address *ADAddress, key *ADKey, trackerList *ADTrackerList) (*ADMessage, error) {
 	// DOES NOT ENCRYPT THE PAYLOAD
 	innerComponents := make([]*airdispatch.MailData_DataType, len(a.payload))
 	incrementer := 0
@@ -149,7 +157,7 @@ func (a *ADMail) marshallComponents(address *ADAddress) (*ADMessage, error) {
 	}
 
 	if a.encryptionType != ADEncryptionNone {
-		a.encryptPayload(address)
+		a.encryptPayload(address, key, trackerList)
 		a.encrypted = true
 	}
 
