@@ -129,8 +129,36 @@ func (a *ADMail) unmarshalComponents() error {
 	return nil
 }
 
-func (a *ADMail) marshalComponents() []byte {
-	return nil
+func (a *ADMail) marshallComponents(address *ADAddress) (*ADMessage, error) {
+	// DOES NOT ENCRYPT THE PAYLOAD
+	innerComponents := make([]*airdispatch.MailData_DataType, len(a.payload))
+	incrementer := 0
+	for _, v := range a.payload {
+		innerComponents[incrementer] = v.ToPrimative()
+		incrementer++
+	}
+
+	dataComponents := &airdispatch.MailData{
+		Payload: innerComponents,
+	}
+
+	var err error
+	a.byteload, err = proto.Marshal(dataComponents)
+	if err != nil {
+		return nil, err
+	}
+
+	if a.encryptionType != ADEncryptionNone {
+		a.encryptPayload(address)
+		a.encrypted = true
+	}
+
+	newMessage := &ADMessage{}
+	newMessage.FromAddress = a.FromAddress
+	newMessage.MessageType = MAIL_MESSAGE
+	newMessage.Payload = a.byteload
+
+	return newMessage, nil
 }
 
 // A simple message to output an Airdispatch Message to String
