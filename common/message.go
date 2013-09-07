@@ -55,7 +55,7 @@ func CreateADMessageFromBytes(theBytes []byte) (*ADMessage, error) {
 		downloadedError := &airdispatch.Error{}
 		err := proto.Unmarshal(theError, downloadedError)
 		if err != nil {
-			return nil, ADUnmarshallingError
+			return nil, err
 		}
 
 		return nil, ADReceivedError(*downloadedError.Code, *downloadedError.Description)
@@ -217,4 +217,23 @@ func ConnectToServer(remote string) (net.Conn, error) {
 		return nil, err
 	}
 	return conn, nil
+}
+
+type ADAlert struct {
+	*ADMessage
+	ToAddress *ADAddress
+	Location  string
+	MessageID string
+}
+
+func CreateADAlertFromADMessage(message *ADMessage) (*ADAlert, error) {
+	theAlert := &airdispatch.Alert{}
+	err := proto.Unmarshal(message.Payload, theAlert)
+	if err != nil {
+		return nil, err
+	}
+
+	output := &ADAlert{message, CreateADAddress(theAlert.GetToAddress()), theAlert.GetLocation(), theAlert.GetMessageId()}
+
+	return output, nil
 }
