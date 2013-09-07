@@ -116,6 +116,18 @@ func CreateADTrackerList(trackers ...*ADTracker) *ADTrackerList {
 	return output
 }
 
+func CreateADTrackerListWithStrings(trackers ...string) *ADTrackerList {
+	output := &ADTrackerList{}
+	trackerList := make([]*ADTracker, len(trackers))
+
+	for i, v := range trackers {
+		trackerList[i] = CreateADTracker(v)
+	}
+
+	output.trackers = trackerList
+	return output
+}
+
 func (a *ADTrackerList) Query(address *ADAddress, key *ADKey) (*ADQueryResponse, error) {
 	data := make(chan *ADQueryResponse)
 	errChan := make(chan error)
