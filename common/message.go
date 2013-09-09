@@ -243,6 +243,42 @@ func CreateADAlertFromADMessage(message *ADMessage) (*ADAlert, error) {
 	return output, nil
 }
 
-func (a *ADAlert) GetMail() (*ADMail, error) {
-	return nil, nil
+func CreateADAlertBasic(messageId string, location string) *ADAlert {
+	return &ADAlert{
+		MessageID: messageId,
+		Location:  location,
+	}
+}
+
+func (a *ADAlert) GetMail(key *ADKey) (*ADMail, error) { // Now, get the contents of that message
+	getMessage := &airdispatch.RetrieveData{
+		RetrievalType: ADRetrievalNormal,
+		MessageId:     &a.MessageID,
+	}
+
+	getData, err := proto.Marshal(getMessage)
+	if err != nil {
+		return nil, err
+	}
+
+	newMessage := &ADMessage{
+		Payload:     getData,
+		MessageType: RETRIEVAL_MESSAGE,
+	}
+
+	response, err := newMessage.SendToServerWithResponse(a.Location, key)
+	if err != nil {
+		return nil, err
+	}
+
+	if response.MessageType != MAIL_MESSAGE {
+		return nil, ADUnexpectedMessageTypeError
+	}
+
+	theMail, err := CreateADMailFromADMessage(response, key)
+	if err != nil {
+		return nil, err
+	}
+
+	return theMail, nil
 }
