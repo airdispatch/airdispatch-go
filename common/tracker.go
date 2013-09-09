@@ -33,7 +33,6 @@ func (a *ADTracker) IsResponding() bool {
 }
 
 func (a *ADTracker) QueryForAddress(address *ADAddress, key *ADKey) (*ADQueryResponse, error) {
-
 	// Create a new Query Message
 	newQuery := address.getAddressRequest()
 
@@ -82,6 +81,40 @@ func (a *ADTracker) QueryForAddress(address *ADAddress, key *ADKey) (*ADQueryRes
 	}
 
 	return output, nil
+}
+
+func (a *ADTracker) RegisterAddress(key *ADKey, mailserver string) error {
+	mesType := REGISTRATION_MESSAGE
+	byteKey := RSAToBytes(&key.EncryptionKey.PublicKey)
+
+	currentTime := uint64(time.Now().Unix())
+	address := key.HexEncode()
+
+	// Create the Registration Message
+	newRegistration := &airdispatch.AddressRegistration{
+		Address:   &address,
+		PublicKey: byteKey,
+		Location:  &mailserver,
+		Timestamp: &currentTime,
+	}
+
+	// Create the Signed Message
+	regData, err := proto.Marshal(newRegistration)
+	if err != nil {
+		return err
+	}
+
+	newMessage := &ADMessage{
+		Payload:     regData,
+		MessageType: mesType,
+	}
+
+	_, err = newMessage.SendToServerWithResponse(a.tracker_url, key)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func VerifyTrackerAddress(tracker string) (string, error) {
@@ -165,6 +198,14 @@ func (a *ADTrackerList) Query(address *ADAddress, key *ADKey) (*ADQueryResponse,
 		}
 	}
 	return nil, ADTrackerListQueryError
+}
+
+// This is non-deterministic... Yes. That isn't the correct word. Sorry.
+func (a *ADTrackerList) Register(key *ADKey, mailserver string) error {
+	for _, tracker := range a.trackers {
+		go tracker.RegisterAddress(key, mailserver)
+	}
+	return nil
 }
 
 // NECESSARY TYPES

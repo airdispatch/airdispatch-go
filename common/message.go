@@ -112,13 +112,16 @@ func (a *ADMessage) SendToServerWithResponse(location string, key *ADKey) (*ADMe
 }
 
 func (a *ADMessage) SendToConnection(conn net.Conn, key *ADKey) error {
+	// Hash the Message
 	hash := HashSHA(a.Payload)
 
+	// Sign the Bytes
 	newSignature, err := key.SignBytes(hash)
 	if err != nil {
 		return err
 	}
 
+	// Create Signed Message Object
 	newSignedMessage := &airdispatch.SignedMessage{
 		Payload:     a.Payload,
 		Signature:   newSignature,
@@ -126,11 +129,13 @@ func (a *ADMessage) SendToConnection(conn net.Conn, key *ADKey) error {
 		MessageType: &a.MessageType,
 	}
 
+	// Marshal the Object
 	signedData, err := proto.Marshal(newSignedMessage)
 	if err != nil {
 		return err
 	}
 
+	// Prefix the Data with the correct bytes
 	var length = int32(len(signedData))
 	lengthBuf := &bytes.Buffer{}
 	binary.Write(lengthBuf, binary.BigEndian, length)
@@ -236,4 +241,8 @@ func CreateADAlertFromADMessage(message *ADMessage) (*ADAlert, error) {
 	output := &ADAlert{message, CreateADAddress(theAlert.GetToAddress()), theAlert.GetLocation(), theAlert.GetMessageId()}
 
 	return output, nil
+}
+
+func (a *ADAlert) GetMail() (*ADMail, error) {
+	return nil, nil
 }
