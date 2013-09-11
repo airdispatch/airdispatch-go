@@ -157,7 +157,11 @@ func (a *ADMail) Marshal(address *ADAddress, key *ADKey, trackerList *ADTrackerL
 	newMessage.MessageType = MAIL_MESSAGE
 
 	stringFrom := a.FromAddress.ToString()
-	stringTo := address.ToString()
+
+	stringTo := ""
+	if !address.IsPublic() {
+		stringTo = address.ToString()
+	}
 
 	dataMail := &airdispatch.Mail{}
 	dataMail.Data = a.byteload

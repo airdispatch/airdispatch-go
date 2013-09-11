@@ -222,7 +222,7 @@ func sendMail(address *common.ADAddress, trackers *common.ADTrackerList) {
 	mail := common.CreateADMail(credentials.Key.ToAddress(), address, uint64(time.Now().Unix()), allTypes, common.ADEncryptionNone)
 
 	// TODO: Encrypt theMail (if necessary)
-	if address != nil {
+	if !address.IsPublic() {
 		mail.EncryptionType = common.ADEncryptionRSA
 	}
 

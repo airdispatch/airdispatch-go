@@ -16,8 +16,14 @@ type ADAddress struct {
 	signingKey    *ecdsa.PublicKey
 }
 
+var ADPublicAddress *ADAddress = &ADAddress{}
+
 func CreateADAddress(address string) *ADAddress {
 	output := &ADAddress{}
+
+	if address == "" {
+		return ADPublicAddress
+	}
 
 	switch strings.Count(address, "@") {
 	case 2: //AirdispatchAddressDirect:
@@ -79,6 +85,10 @@ func (a *ADAddress) HasLocation() bool {
 
 func (a *ADAddress) ToString() string {
 	return a.address
+}
+
+func (a *ADAddress) IsPublic() bool {
+	return (a == ADPublicAddress)
 }
 
 func (a *ADAddress) getAddressRequest() *airdispatch.AddressRequest {
