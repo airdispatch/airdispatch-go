@@ -176,7 +176,8 @@ func (myServer) RetrieveMessageForUser(id string, addr *common.ADAddress) *commo
 	message, _ := storedMessages[id]
 
 	// Check that the Sending Address is one of the Approved Recipients
-	if !common.SliceContains(message.approved, addr) {
+	if !common.SliceContains(message.approved, addr.ToString()) {
+		fmt.Println("Couldn't authenticate user.")
 		return nil
 	}
 

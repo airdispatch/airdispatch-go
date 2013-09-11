@@ -143,7 +143,7 @@ func (s *Server) handleRetrieval(retrievalMessage *common.ADMessage, conn net.Co
 	switch {
 	// Receieved a Normal Retrieval Message (Lookup the Message ID)
 	case bytes.Equal(c, common.ADRetrievalNormal):
-		mail := s.Delegate.RetrieveMessageForUser(retrieval.GetMessageId(), common.CreateADAddress(retrieval.GetFromAddress()))
+		mail := s.Delegate.RetrieveMessageForUser(retrieval.GetMessageId(), retrievalMessage.FromAddress)
 
 		if mail == nil {
 			// If there is no message stored with that ID, then send back an error
