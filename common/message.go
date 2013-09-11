@@ -112,7 +112,7 @@ func (a *ADMessage) SendToServerWithResponse(location string, key *ADKey) (*ADMe
 }
 
 func (a *ADMessage) SendToConnection(conn net.Conn, key *ADKey) error {
-	fullBuffer, err := a.MarshalToBytes(key)
+	fullBuffer, err := a.MarshalToBytes(key, true)
 	if err != nil {
 		return err
 	}
@@ -121,7 +121,7 @@ func (a *ADMessage) SendToConnection(conn net.Conn, key *ADKey) error {
 	return nil
 }
 
-func (a *ADMessage) MarshalToBytes(key *ADKey) ([]byte, error) {
+func (a *ADMessage) MarshalToBytes(key *ADKey, prefixed bool) ([]byte, error) {
 	// Hash the Message
 	hash := HashSHA(a.Payload)
 
@@ -145,11 +145,16 @@ func (a *ADMessage) MarshalToBytes(key *ADKey) ([]byte, error) {
 		return nil, err
 	}
 
-	// Prefix the Data with the correct bytes
-	var length = int32(len(signedData))
-	lengthBuf := &bytes.Buffer{}
-	binary.Write(lengthBuf, binary.BigEndian, length)
-	fullBuffer := bytes.Join([][]byte{ADMessagePrefix, lengthBuf.Bytes(), signedData}, nil)
+	var fullBuffer []byte
+	if prefixed {
+		// Prefix the Data with the correct bytes
+		var length = int32(len(signedData))
+		lengthBuf := &bytes.Buffer{}
+		binary.Write(lengthBuf, binary.BigEndian, length)
+		fullBuffer = bytes.Join([][]byte{ADMessagePrefix, lengthBuf.Bytes(), signedData}, nil)
+	} else {
+		fullBuffer = signedData
+	}
 
 	return fullBuffer, nil
 }

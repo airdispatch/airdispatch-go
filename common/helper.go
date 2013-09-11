@@ -6,19 +6,6 @@ import (
 	"reflect"
 )
 
-func (a *ADKey) SignBytes(payload []byte) (*airdispatch.Signature, error) {
-	r, s, err := signPayload(a.SignatureKey, payload)
-	if err != nil {
-		return nil, err
-	}
-
-	newSignature := &airdispatch.Signature{
-		R: r.Bytes(),
-		S: s.Bytes(),
-	}
-	return newSignature, nil
-}
-
 func CreateArrayedMessage(itemLength uint32) (*ADMessage, error) {
 	if itemLength < 1 {
 		return nil, ADIncorrectParameterError

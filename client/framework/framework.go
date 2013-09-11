@@ -151,7 +151,7 @@ func (c *Client) SendMail(toAddress *common.ADAddress, theMail *common.ADMail, t
 		return err
 	}
 
-	signedBytes, err := theMessage.MarshalToBytes(c.Key)
+	signedBytes, err := theMessage.MarshalToBytes(c.Key, false)
 	if err != nil {
 		return err
 	}

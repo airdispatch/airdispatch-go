@@ -70,6 +70,19 @@ func VerifySignedMessage(mes *airdispatch.SignedMessage) bool {
 	return verifySignature(hash, mes.Signature, key)
 }
 
+func (a *ADKey) SignBytes(payload []byte) (*airdispatch.Signature, error) {
+	r, s, err := signPayload(a.SignatureKey, payload)
+	if err != nil {
+		return nil, err
+	}
+
+	newSignature := &airdispatch.Signature{
+		R: r.Bytes(),
+		S: s.Bytes(),
+	}
+	return newSignature, nil
+}
+
 // This function writes an ECDSA Public Key to a bytestring.
 // This is used to send the public key in the SignedMessage message.
 func KeyToBytes(key *ecdsa.PublicKey) []byte {
