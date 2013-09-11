@@ -9,7 +9,6 @@ import (
 // This structure is the foundation of the Client-framework package
 // as all of the following methods are defined on it.
 type Client struct {
-	Address    string        // The Airdispatch Address of the User represented by this structure
 	Key        *common.ADKey // The ECDSA Keypair of the User represented by this structure
 	MailServer string        // The Mailserver associated with the User represented by this structure
 }
@@ -18,7 +17,6 @@ type Client struct {
 // by providing the ADKey
 func (c *Client) Populate(key *common.ADKey) {
 	c.Key = key
-	c.Address = key.HexEncode()
 }
 
 // This function is used to Register a Client with a Tracker
@@ -146,11 +144,21 @@ func (c *Client) DownloadSpecificMessageFromServer(messageId string, server stri
 }
 
 // This function sends mail to addresses
-func (c *Client) SendMail(toAddresses []*common.ADAddress, theMail *common.ADMail) error {
+func (c *Client) SendMail(toAddress *common.ADAddress, theMail *common.ADMail, trackerList *common.ADTrackerList) error {
 	// Load the Send Request with the MailMessage
+	theMessage, err := theMail.Marshal(toAddress, c.Key, trackerList)
+	if err != nil {
+		return err
+	}
+
+	signedBytes, err := theMessage.MarshalToBytes(c.Key)
+	if err != nil {
+		return err
+	}
+
 	sendRequest := &airdispatch.SendMailRequest{
-		ToAddress:     mapAddressesToStrings(toAddresses),
-		StoredMessage: theMail.ToBytes(),
+		ToAddress:     []string{toAddress.ToString()},
+		StoredMessage: signedBytes,
 	}
 
 	// Convert the Structure into Bytes

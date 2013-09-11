@@ -167,7 +167,7 @@ func (myServer) SavePrivateMail(theMail *common.ADMail, approved []string) (id s
 
 func GetMessageId(theMail *common.ADMail) string {
 	// RETURN TO LOOK AT THIS.
-	return hex.EncodeToString(common.HashSHA(theMail.ToBytes()))
+	return hex.EncodeToString(theMail.HashContents())
 }
 
 func (myServer) RetrieveMessageForUser(id string, addr *common.ADAddress) *common.ADMail {

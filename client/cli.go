@@ -3,11 +3,9 @@
 package main
 
 import (
-	"airdispat.ch/airdispatch"
 	"airdispat.ch/client/framework"
 	"airdispat.ch/common"
 	"bufio"
-	"code.google.com/p/goprotobuf/proto"
 	"flag"
 	"fmt"
 	"os"
@@ -106,9 +104,10 @@ func main() {
 		return
 	}
 	credentials.Populate(theKey)
-	fmt.Println(credentials.Address)
+	fmt.Println(credentials.Key.HexEncode())
 
 	credentials.MailServer = *remote_mailserver
+	theTrackerList := common.CreateADTrackerList(common.CreateADTracker(*tracking_server))
 
 	// Determine what to do based on the mode of the Client
 	switch {
@@ -120,18 +119,28 @@ func main() {
 	// QUERY MESSAGE
 	case *mode == QUERY:
 		fmt.Println("Sending a Query for " + *acting_address)
-		queriedLocation, rKey, err := common.LookupLocation(*acting_address, []string{*tracking_server}, credentials.Key)
+		theAddress := common.CreateADAddress(*acting_address)
+		location, err := theAddress.GetLocation(credentials.Key, theTrackerList)
 		if err != nil {
 			fmt.Println("Unable to Lookup Location")
 			fmt.Println(err)
 			return
 		}
-		fmt.Println("Found Location", queriedLocation)
-		fmt.Println("And Public Encryption Key", rKey)
+
+		fmt.Println("Found Location", location)
+
+		encryptionKey, err := theAddress.GetEncryptionKey(credentials.Key, theTrackerList)
+		if err != nil {
+			fmt.Println("Unable to Get Encryption Key")
+			fmt.Println(err)
+			return
+		}
+
+		fmt.Println("And Public Encryption Key", encryptionKey)
 
 	// SEND MESSAGE
 	case *mode == SEND:
-		sendMail(*acting_address)
+		sendMail(common.CreateADAddress(*acting_address), theTrackerList)
 
 	// CHECK MESSAGE
 	case *mode == CHECK:
@@ -144,12 +153,14 @@ func main() {
 
 		for _, v := range inbox {
 			// Print the Message
-			fmt.Println(common.PrintMessage(v, credentials.Key))
+			v.DecryptPayload(credentials.Key)
+			fmt.Println(v.PrintMessage())
 		}
 
 	// CHECK FOR PUBLIC MESSAGES
 	case *mode == PUBLIC:
-		allMail, err := credentials.DownloadPublicMail([]string{*tracking_server}, *acting_address, 0)
+		theAddress := common.CreateADAddress(*acting_address)
+		allMail, err := credentials.DownloadPublicMail(theTrackerList, theAddress, 0)
 		if err != nil {
 			fmt.Println("Unable to Download Public Mail")
 			fmt.Println(err)
@@ -157,7 +168,8 @@ func main() {
 		}
 
 		for _, v := range allMail {
-			fmt.Println(common.PrintMessage(v, credentials.Key))
+			v.DecryptPayload(credentials.Key)
+			fmt.Println(v.PrintMessage())
 		}
 
 	case *mode == DOWNLOAD:
@@ -168,40 +180,30 @@ func main() {
 			return
 		}
 
-		fmt.Println(common.PrintMessage(theMail, credentials.Key))
+		theMail.DecryptPayload(credentials.Key)
+		fmt.Println(theMail.PrintMessage())
 
 	}
 }
 
-func sendMail(address string) {
+func sendMail(address *common.ADAddress, trackers *common.ADTrackerList) {
 	fmt.Println("Time to define the data!")
 
-	// TODO: Add some encryption types
-	// Define the Encoding as None (for now)
-
-	// Make Shell for Mail to Send
-	mail := &airdispatch.Mail{FromAddress: &credentials.Address, ToAddress: &address}
-
-	currentTime := uint64(time.Now().Unix())
-	mail.Timestamp = &currentTime
-
-	mailData := &airdispatch.MailData{}
-
 	// Create an Array of Mail Data Types for us to append to
-	allTypes := make([]*airdispatch.MailData_DataType, 0)
+	allTypes := make([]*common.ADComponent, 0)
 
 	// TODO: Find a way to do this non-interactively (if at all possible)
 	// Loop Forever
 	for {
 		stdin := bufio.NewReader(os.Stdin)
 		// Define variables to read into
-		var typename string
+		var typeName string
 		var data string
 
 		fmt.Print("Data Type (or done to stop): ")
-		typename, _ = ReadLine(stdin)
+		typeName, _ = ReadLine(stdin)
 		// Quit if we must stop
-		if typename == "done" {
+		if typeName == "done" {
 			break
 		}
 
@@ -209,51 +211,22 @@ func sendMail(address string) {
 		data, _ = ReadLine(stdin)
 
 		// Fill out the Data Type Structure
-		newData := &airdispatch.MailData_DataType{
-			TypeName: &typename,
-			Payload:  []byte(data),
-		}
+		newData := common.CreateADComponent(typeName, []byte(data))
 
 		// Append the New type to the Type Array
 		allTypes = append(allTypes, newData)
 	}
 
 	// Load the array into the Mail
-	mailData.Payload = allTypes
-	theMail, _ := proto.Marshal(mailData)
+
+	mail := common.CreateADMail(credentials.Key.ToAddress(), address, uint64(time.Now().Unix()), allTypes, common.ADEncryptionNone)
 
 	// TODO: Encrypt theMail (if necessary)
-	if address == "" {
-		mail.Data = theMail
-		mail.Encryption = &common.ADEncryptionNone
-	} else {
-		_, rKey, err := common.LookupLocation(*acting_address, []string{*tracking_server}, credentials.Key)
-		if err != nil {
-			fmt.Println("Couldn't get key for address.")
-			fmt.Println(err)
-			return
-		}
-
-		cipher, err := common.EncryptPayload(theMail, rKey)
-		if err != nil {
-			fmt.Println("Couldn't encrypt the payload.")
-			fmt.Println(err)
-			return
-		}
-
-		mail.Data = cipher
-		mail.Encryption = &common.ADEncryptionRSA
+	if address != nil {
+		mail.EncryptionType = common.ADEncryptionRSA
 	}
 
-	// We need to marshal the mail message and pre-sign it, so the server can send it on our behalf
-	marshalledMail, _ := proto.Marshal(mail)
-
-	newMessage := &common.ADMessagePrimative{marshalledMail, common.MAIL_MESSAGE, ""}
-
-	signedMessage, _ := credentials.Key.CreateADSignedMessage(newMessage)
-	toSave, _ := proto.Marshal(signedMessage)
-
-	credentials.SendMail([]string{address}, toSave)
+	credentials.SendMail(address, mail, trackers)
 }
 
 // Taken from http://stackoverflow.com/questions/6141604/go-readline-string
