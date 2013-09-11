@@ -95,3 +95,7 @@ func (a *ADAddress) getAddressRequest() *airdispatch.AddressRequest {
 		return newQuery
 	}
 }
+
+func (a *ADKey) ToAddress() *ADAddress {
+	return CreateADAddress(a.HexEncode())
+}
