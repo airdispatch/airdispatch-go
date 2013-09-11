@@ -42,7 +42,7 @@ func CreateADMailFromADMessage(message *ADMessage, key *ADKey) (*ADMail, error) 
 	theMessage := &airdispatch.Mail{}
 	err := proto.Unmarshal(message.Payload, theMessage)
 	if err != nil {
-		return nil, ADUnmarshallingError
+		return nil, err
 	}
 
 	output.FromAddress = message.FromAddress
@@ -155,7 +155,24 @@ func (a *ADMail) Marshal(address *ADAddress, key *ADKey, trackerList *ADTrackerL
 	newMessage := &ADMessage{}
 	newMessage.FromAddress = a.FromAddress
 	newMessage.MessageType = MAIL_MESSAGE
-	newMessage.Payload = a.byteload
+
+	stringFrom := a.FromAddress.ToString()
+	stringTo := address.ToString()
+
+	dataMail := &airdispatch.Mail{}
+	dataMail.Data = a.byteload
+	dataMail.Encryption = &a.EncryptionType
+	dataMail.FromAddress = &stringFrom
+	dataMail.Timestamp = &a.Timestamp
+	dataMail.ToAddress = &stringTo
+
+	dataMailPayload, err := proto.Marshal(dataMail)
+	if err != nil {
+		return nil, err
+	}
+	newMessage.Payload = dataMailPayload
+
+	// TODO Actually Marshal the Mail Message
 
 	return newMessage, nil
 }
