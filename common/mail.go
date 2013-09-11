@@ -32,14 +32,6 @@ func (a *ADMail) GetADComponentForType(typeName string) (*ADComponent, error) {
 	return v, nil
 }
 
-func (a *ADMail) ToBytes() []byte {
-	return nil
-}
-
-func (a *ADMail) GetMessage() *ADMessage {
-	return nil
-}
-
 func CreateADMailFromADMessage(message *ADMessage, key *ADKey) (*ADMail, error) {
 	if message.MessageType != MAIL_MESSAGE {
 		return nil, errors.New("Cannot translate an ADMessage with incorrect message type to ADMail.")
@@ -71,13 +63,13 @@ func CreateADMailFromADMessage(message *ADMessage, key *ADKey) (*ADMail, error) 
 		return output, nil
 	}
 
-	output.decryptPayload(key)
+	output.DecryptPayload(key)
 	output.Unmarshal()
 
 	return output, nil
 }
 
-func (a *ADMail) decryptPayload(key *ADKey) bool {
+func (a *ADMail) DecryptPayload(key *ADKey) bool {
 	if !a.encrypted {
 		return false
 	}
@@ -92,7 +84,7 @@ func (a *ADMail) decryptPayload(key *ADKey) bool {
 	return true
 }
 
-func (a *ADMail) encryptPayload(address *ADAddress, key *ADKey, trackerList *ADTrackerList) bool {
+func (a *ADMail) EncryptPayload(address *ADAddress, key *ADKey, trackerList *ADTrackerList) bool {
 	if a.encrypted {
 		return false
 	}
@@ -138,7 +130,6 @@ func (a *ADMail) Unmarshal() error {
 }
 
 func (a *ADMail) Marshal(address *ADAddress, key *ADKey, trackerList *ADTrackerList) (*ADMessage, error) {
-	// DOES NOT ENCRYPT THE PAYLOAD
 	innerComponents := make([]*airdispatch.MailData_DataType, len(a.payload))
 	incrementer := 0
 	for _, v := range a.payload {
@@ -157,7 +148,7 @@ func (a *ADMail) Marshal(address *ADAddress, key *ADKey, trackerList *ADTrackerL
 	}
 
 	if a.encryptionType != ADEncryptionNone {
-		a.encryptPayload(address, key, trackerList)
+		a.EncryptPayload(address, key, trackerList)
 		a.encrypted = true
 	}
 
@@ -167,6 +158,13 @@ func (a *ADMail) Marshal(address *ADAddress, key *ADKey, trackerList *ADTrackerL
 	newMessage.Payload = a.byteload
 
 	return newMessage, nil
+}
+
+func (a *ADMail) HashContents() []byte {
+	if a.byteload != nil {
+		return HashSHA(a.byteload)
+	}
+	return nil
 }
 
 // A simple message to output an Airdispatch Message to String

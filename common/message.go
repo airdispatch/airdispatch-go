@@ -112,13 +112,23 @@ func (a *ADMessage) SendToServerWithResponse(location string, key *ADKey) (*ADMe
 }
 
 func (a *ADMessage) SendToConnection(conn net.Conn, key *ADKey) error {
+	fullBuffer, err := a.MarshalToBytes(key)
+	if err != nil {
+		return err
+	}
+
+	conn.Write(fullBuffer)
+	return nil
+}
+
+func (a *ADMessage) MarshalToBytes(key *ADKey) ([]byte, error) {
 	// Hash the Message
 	hash := HashSHA(a.Payload)
 
 	// Sign the Bytes
 	newSignature, err := key.SignBytes(hash)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// Create Signed Message Object
@@ -132,7 +142,7 @@ func (a *ADMessage) SendToConnection(conn net.Conn, key *ADKey) error {
 	// Marshal the Object
 	signedData, err := proto.Marshal(newSignedMessage)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// Prefix the Data with the correct bytes
@@ -141,8 +151,7 @@ func (a *ADMessage) SendToConnection(conn net.Conn, key *ADKey) error {
 	binary.Write(lengthBuf, binary.BigEndian, length)
 	fullBuffer := bytes.Join([][]byte{ADMessagePrefix, lengthBuf.Bytes(), signedData}, nil)
 
-	conn.Write(fullBuffer)
-	return nil
+	return fullBuffer, nil
 }
 
 func readBytesFromConnection(conn net.Conn) ([]byte, error) {
