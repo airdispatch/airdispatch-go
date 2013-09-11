@@ -14,9 +14,12 @@ type ADAddress struct {
 	tracker       *ADTracker
 	encryptionKey *rsa.PublicKey
 	signingKey    *ecdsa.PublicKey
+	public        bool
 }
 
-var ADPublicAddress *ADAddress = &ADAddress{}
+var ADPublicAddress *ADAddress = &ADAddress{
+	public: true,
+}
 
 func CreateADAddress(address string) *ADAddress {
 	output := &ADAddress{}
@@ -45,7 +48,7 @@ func CreateADAddress(address string) *ADAddress {
 
 func (a *ADAddress) GetLocation(k *ADKey, t *ADTrackerList) (string, error) {
 	if a.location == "" {
-		if a.address == "" {
+		if a.address == "" && a != ADPublicAddress {
 			location, err := a.tracker.QueryForAddress(a, k)
 			if err != nil {
 				return "", err
@@ -54,6 +57,8 @@ func (a *ADAddress) GetLocation(k *ADKey, t *ADTrackerList) (string, error) {
 			a.location = location.Location
 			a.encryptionKey = location.PublicKey
 			a.address = location.EncodedAddress
+		} else if a == ADPublicAddress {
+			return "", nil
 		} else {
 			location, err := t.Query(a, k)
 			if err != nil {

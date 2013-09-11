@@ -158,10 +158,9 @@ func (t *Tracker) handleQuery(theAddress *common.ADAddress, req *airdispatch.Add
 	}
 
 	// Create a Formatted Message
-	stringAddr := theAddress.ToString()
 	response := &airdispatch.AddressResponse{
 		ServerLocation: &info.Location,
-		Address:        &stringAddr,
+		Address:        req.Address,
 	}
 
 	// If the requester does not want the public key, we should not provide it
