@@ -186,7 +186,7 @@ func (s *Server) handleRetrieval(retrievalMessage *common.ADMessage, conn net.Co
 
 	// Received a Mine Retrieval Message (Return all Messages that are Stored - Since the Date Provided)
 	case bytes.Equal(c, common.ADRetrievalMine):
-		output := s.Delegate.RetrieveInbox(common.CreateADAddress(retrieval.GetFromAddress()), retrieval.GetSinceDate())
+		output := s.Delegate.RetrieveInbox(retrievalMessage.FromAddress, retrieval.GetSinceDate())
 
 		if len(output) == 0 {
 			common.CreateErrorMessage("400", "no inbox messages for that address").SendToConnection(conn, s.Key)
