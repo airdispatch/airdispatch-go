@@ -10,7 +10,7 @@ type ADMail struct {
 	payload map[string]*ADComponent
 
 	byteload       []byte
-	encryptionType string
+	EncryptionType string
 	encrypted      bool
 
 	FromAddress *ADAddress
@@ -56,7 +56,7 @@ func CreateADMailFromADMessage(message *ADMessage, key *ADKey) (*ADMail, error) 
 
 	output.Timestamp = theMessage.GetTimestamp()
 	output.byteload = theMessage.GetData()
-	output.encryptionType = theMessage.GetEncryption()
+	output.EncryptionType = theMessage.GetEncryption()
 	output.encrypted = !(theMessage.GetEncryption() == ADEncryptionNone)
 
 	if output.encrypted && key == nil {
@@ -147,7 +147,7 @@ func (a *ADMail) Marshal(address *ADAddress, key *ADKey, trackerList *ADTrackerL
 		return nil, err
 	}
 
-	if a.encryptionType != ADEncryptionNone {
+	if a.EncryptionType != ADEncryptionNone {
 		a.EncryptPayload(address, key, trackerList)
 		a.encrypted = true
 	}
@@ -171,7 +171,7 @@ func (a *ADMail) HashContents() []byte {
 func (a *ADMail) PrintMessage() string {
 	output := ""
 	output += ("---- Message from " + a.FromAddress.ToString() + " ----\n")
-	output += ("Encryption Type: " + a.encryptionType + "\n")
+	output += ("Encryption Type: " + a.EncryptionType + "\n")
 
 	for _, value := range a.payload {
 		output += ("### " + value.DataTypeValue() + "\n")
@@ -183,12 +183,13 @@ func (a *ADMail) PrintMessage() string {
 	return output
 }
 
-func CreateADMail(fromAddress *ADAddress, toAddress *ADAddress, timestamp uint64, payload []*ADComponent) *ADMail {
+func CreateADMail(fromAddress *ADAddress, toAddress *ADAddress, timestamp uint64, payload []*ADComponent, encryption string) *ADMail {
 	output := &ADMail{}
 
 	output.FromAddress = fromAddress
 	output.ToAddress = toAddress
 	output.Timestamp = timestamp
+	output.EncryptionType = encryption
 
 	componentMap := make(map[string]*ADComponent)
 	for _, v := range payload {
