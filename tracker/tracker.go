@@ -1,10 +1,10 @@
 package main
 
 import (
-	"fmt"
-	"airdispat.ch/tracker/framework"
 	"airdispat.ch/common"
+	"airdispat.ch/tracker/framework"
 	"flag"
+	"fmt"
 )
 
 var port = flag.String("port", "2048", "select the port on which to run the tracking server")
@@ -40,8 +40,8 @@ func main() {
 	}
 	fmt.Println("Loaded Address", loadedKey.HexEncode())
 
-	theTracker := &framework.Tracker {
-		Key: loadedKey,
+	theTracker := &framework.Tracker{
+		Key:      loadedKey,
 		Delegate: &myTracker{},
 	}
 	theTracker.StartServer(*port)
@@ -53,13 +53,13 @@ type myTracker struct {
 
 func (myTracker) SaveTrackerRecord(data *framework.TrackerRecord) {
 	// Store the RegisterdAddress in the Database
-	storedAddresses[data.Address] = data
+	storedAddresses[data.Address.ToString()] = data
 }
 
 func (myTracker) GetRecordByUsername(username string) *framework.TrackerRecord {
 	// TODO: We should really use a database, this is _very_ inefficient.
 	// Lookup the Address (by username) in the Database
-	for _, v := range(storedAddresses) {
+	for _, v := range storedAddresses {
 		if v.Username == username {
 			return v
 		}

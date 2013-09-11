@@ -1,10 +1,11 @@
 package framework
 
 import (
+	"airdispat.ch/common"
 	"fmt"
 )
 
-type BasicTracker struct{
+type BasicTracker struct {
 	TrackerDelegate
 }
 
@@ -13,7 +14,7 @@ func (BasicTracker) HandleError(err *TrackerError) {
 	// os.Exit(1)
 }
 
-func (BasicTracker) AllowConnection(fromAddr string) bool {
+func (BasicTracker) AllowConnection(fromAddr *common.ADAddress) bool {
 	return true
 }
 
