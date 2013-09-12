@@ -13,6 +13,8 @@ type ADMail struct {
 	EncryptionType string
 	encrypted      bool
 
+	presigned []byte
+
 	FromAddress *ADAddress
 	ToAddress   *ADAddress
 	Timestamp   uint64
@@ -46,6 +48,8 @@ func CreateADMailFromADMessage(message *ADMessage, key *ADKey) (*ADMail, error) 
 	}
 
 	output.FromAddress = message.FromAddress
+
+	output.presigned = message.presigned
 
 	// TODO: Verify Addresses Match
 
@@ -130,7 +134,7 @@ func (a *ADMail) Unmarshal() error {
 }
 
 func (a *ADMail) Marshal(address *ADAddress, key *ADKey, trackerList *ADTrackerList) (*ADMessage, error) {
-	if a.byteload == nil {
+	if a.presigned == nil {
 		innerComponents := make([]*airdispatch.MailData_DataType, len(a.payload))
 		incrementer := 0
 		for _, v := range a.payload {
@@ -179,6 +183,7 @@ func (a *ADMail) Marshal(address *ADAddress, key *ADKey, trackerList *ADTrackerL
 		return nil, err
 	}
 	newMessage.Payload = dataMailPayload
+	newMessage.presigned = a.presigned
 
 	// TODO Actually Marshal the Mail Message
 

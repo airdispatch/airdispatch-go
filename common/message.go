@@ -14,6 +14,7 @@ type ADMessage struct {
 	Payload     []byte
 	MessageType string
 	FromAddress *ADAddress
+	presigned   []byte
 }
 
 func CreateADMessageFromConnection(conn net.Conn) (*ADMessage, error) {
@@ -67,6 +68,7 @@ func CreateADMessageFromBytes(theBytes []byte) (*ADMessage, error) {
 	output.Payload = downloadedMessage.GetPayload()
 
 	output.FromAddress = CreateADAddress(theAddress)
+	output.presigned = theBytes
 
 	return output, nil
 }
@@ -112,9 +114,14 @@ func (a *ADMessage) SendToServerWithResponse(location string, key *ADKey) (*ADMe
 }
 
 func (a *ADMessage) SendToConnection(conn net.Conn, key *ADKey) error {
-	fullBuffer, err := a.MarshalToBytes(key, true)
-	if err != nil {
-		return err
+	var fullBuffer []byte = prefixBytes(a.presigned)
+	var err error
+
+	if a.presigned == nil {
+		fullBuffer, err = a.MarshalToBytes(key, true)
+		if err != nil {
+			return err
+		}
 	}
 
 	conn.Write(fullBuffer)
@@ -148,15 +155,24 @@ func (a *ADMessage) MarshalToBytes(key *ADKey, prefixed bool) ([]byte, error) {
 	var fullBuffer []byte
 	if prefixed {
 		// Prefix the Data with the correct bytes
-		var length = int32(len(signedData))
-		lengthBuf := &bytes.Buffer{}
-		binary.Write(lengthBuf, binary.BigEndian, length)
-		fullBuffer = bytes.Join([][]byte{ADMessagePrefix, lengthBuf.Bytes(), signedData}, nil)
+		fullBuffer = prefixBytes(signedData)
 	} else {
 		fullBuffer = signedData
 	}
 
 	return fullBuffer, nil
+}
+
+func prefixBytes(data []byte) []byte {
+	if data == nil {
+		return nil
+	}
+
+	var length = int32(len(data))
+	lengthBuf := &bytes.Buffer{}
+	binary.Write(lengthBuf, binary.BigEndian, length)
+	fullBuffer := bytes.Join([][]byte{ADMessagePrefix, lengthBuf.Bytes(), data}, nil)
+	return fullBuffer
 }
 
 func readBytesFromConnection(conn net.Conn) ([]byte, error) {
