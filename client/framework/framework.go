@@ -96,10 +96,10 @@ func (c *Client) getMessagesWithRetrieval(serverMessage *airdispatch.RetrieveDat
 		outputMessages := []*common.ADMail{}
 
 		// Find the number of messsages
-		mesNumber := theArray.NumberOfMessages
+		mesNumber := theArray.GetNumberOfMessages()
 
 		// Loop over this number
-		for i := uint32(0); i < *mesNumber; i++ {
+		for i := uint32(0); i < mesNumber; i++ {
 			// Get the message and unmarshal it
 			retrievedMessage, err := common.CreateADMessageFromConnection(mailServer)
 			if err != nil {

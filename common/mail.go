@@ -130,26 +130,31 @@ func (a *ADMail) Unmarshal() error {
 }
 
 func (a *ADMail) Marshal(address *ADAddress, key *ADKey, trackerList *ADTrackerList) (*ADMessage, error) {
-	innerComponents := make([]*airdispatch.MailData_DataType, len(a.payload))
-	incrementer := 0
-	for _, v := range a.payload {
-		innerComponents[incrementer] = v.ToPrimative()
-		incrementer++
-	}
+	if a.byteload == nil {
+		innerComponents := make([]*airdispatch.MailData_DataType, len(a.payload))
+		incrementer := 0
+		for _, v := range a.payload {
+			innerComponents[incrementer] = v.ToPrimative()
+			incrementer++
+		}
 
-	dataComponents := &airdispatch.MailData{
-		Payload: innerComponents,
-	}
+		dataComponents := &airdispatch.MailData{
+			Payload: innerComponents,
+		}
 
-	var err error
-	a.byteload, err = proto.Marshal(dataComponents)
-	if err != nil {
-		return nil, err
-	}
+		var err error
+		a.byteload, err = proto.Marshal(dataComponents)
+		if err != nil {
+			return nil, err
+		}
 
-	if a.EncryptionType != ADEncryptionNone {
-		a.EncryptPayload(address, key, trackerList)
-		a.encrypted = true
+		if a.EncryptionType != ADEncryptionNone {
+			a.EncryptPayload(address, key, trackerList)
+			fmt.Println(a.byteload)
+		}
+		if a.EncryptionType != ADEncryptionNone && !a.encrypted {
+			return nil, ADIncorrectParameterError
+		}
 	}
 
 	newMessage := &ADMessage{}
