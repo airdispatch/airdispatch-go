@@ -150,7 +150,6 @@ func (a *ADMail) Marshal(address *ADAddress, key *ADKey, trackerList *ADTrackerL
 
 		if a.EncryptionType != ADEncryptionNone {
 			a.EncryptPayload(address, key, trackerList)
-			fmt.Println(a.byteload)
 		}
 		if a.EncryptionType != ADEncryptionNone && !a.encrypted {
 			return nil, ADIncorrectParameterError
