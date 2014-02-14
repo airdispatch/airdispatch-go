@@ -1,0 +1,27 @@
+package wire;
+
+// The Data message is related to arbitrary files that can 
+// be shared (as attachments).
+message Data {
+	required bytes  hash   = 1;
+	required uint64 length = 2;
+	optional string name   = 3;
+}
+
+
+// Contains AirDispatch Mail Messages - the basic unit of 
+// user-to-user messaging in AirDispatch.
+message Mail {
+	message Component {
+		required string type = 1;
+		required bytes  data = 2;
+	}
+	repeated Component components = 1;
+}
+
+// The Error is returned whenever a server request results
+// in an error.
+message Error {
+	required uint32 code        = 1;
+	optional string description = 2;
+}

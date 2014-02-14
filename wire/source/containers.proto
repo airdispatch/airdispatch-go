@@ -1,0 +1,45 @@
+package wire;
+
+// This message Header is required for all AirDispatch Messages for Authenticity
+message Header {
+	required bytes  from_addr = 1; // From Address Fingerprint
+	required bytes  to_addr   = 2; // To Address Fingerprint
+	required uint64 timestamp = 3;
+}
+
+// SignedMessage Contains a signed chunk of data, and that message signature
+message SignedMessage {
+	message Signature {
+		required bytes r = 1;
+		required bytes s = 2;
+	}
+	
+	required bytes     data         = 1; // The data bytes are generally from a container message.
+	required Signature signature    = 2;
+
+	optional bytes     signing_key  = 3; // Future-proof messages with Signing_Key and Signing_Func
+	optional bytes     signing_func = 4; // fields in case of changes.
+}
+
+// EncryptedMessage Contains an encrypted chunk of data, and the keys used to 
+// generate the encrypted data
+message EncryptedMessage {
+	required bytes data     = 1; // The data bytes are generally from a signed message.
+	required bytes to_addr  = 2; // To Address is required for Federated Servers to Distinguish which decryption key to use.
+	required bytes key      = 3;
+
+	optional bytes enc_func = 4;
+}
+
+// Container has data from a message, and the standard AirDispatch
+// message header. It also contains the type of Message.
+message Container {
+	required Header header = 1;
+	required bytes  data   = 2;
+	required string type   = 3;
+}
+
+// Receiver Validations
+// 1) Signature matches Signed Data
+// 2) To_Addr on EncryptedMessage matches To_Addr in Header
+// 3) SigningKey fingerprint matches From_Addr in Header

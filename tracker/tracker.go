@@ -1,74 +1,90 @@
-package main
+// The Tracker package provides an AirDispatch Routing Object
+// that translates Addresses to Server Locations using several
+// trusted routers.
+package tracker
 
-import (
-	"airdispat.ch/common"
-	"airdispat.ch/tracker/framework"
-	"flag"
-	"fmt"
-)
+func CreateADAddress(address string) *ADAddress {
+	output := &ADAddress{}
 
-var port = flag.String("port", "2048", "select the port on which to run the tracking server")
-var key_file = flag.String("key", "", "the file that will save or load your keys")
+	if address == "" {
+		return ADPublicAddress
+	}
 
-var storedAddresses map[string]*framework.TrackerRecord
+	switch strings.Count(address, "@") {
+	case 2: //AirdispatchAddressDirect:
+		addressParts := strings.Split(address, "@@")
+		output.address = addressParts[0]
+		output.location = addressParts[1]
+	case 1: //AirdispatchAddressLegacy:
+		addressParts := strings.Split(address, "@")
+		output.username = addressParts[0]
+		output.tracker = CreateADTracker(addressParts[1])
+	case 0: //AirdispatchAddressNormal:
+		output.address = address
+	default:
+		return nil
+	}
 
-func main() {
-	flag.Parse()
+	return output
+}
 
-	// Initialize the Database of Addresses
-	storedAddresses = make(map[string]*framework.TrackerRecord)
-
-	loadedKey, err := common.LoadKeyFromFile(*key_file)
-
-	if err != nil {
-
-		loadedKey, err = common.CreateADKey()
-		if err != nil {
-			fmt.Println("Unable to Create Tracker Key")
-			return
-		}
-
-		if *key_file != "" {
-
-			err = loadedKey.SaveKeyToFile(*key_file)
+func (a *ADAddress) GetLocation(k *ADKey, t *ADTrackerList) (string, error) {
+	if a.location == "" {
+		if a.address == "" && a != ADPublicAddress {
+			location, err := a.tracker.QueryForAddress(a, k)
 			if err != nil {
-				fmt.Println("Unable to Save Tracker Key")
-				return
+				return "", err
 			}
-		}
 
-	}
-	fmt.Println("Loaded Address", loadedKey.HexEncode())
+			a.location = location.Location
+			a.encryptionKey = location.PublicKey
+			a.address = location.EncodedAddress
+		} else if a == ADPublicAddress {
+			return "", nil
+		} else {
+			location, err := t.Query(a, k)
+			if err != nil {
+				return "", err
+			}
 
-	theTracker := &framework.Tracker{
-		Key:      loadedKey,
-		Delegate: &myTracker{},
-	}
-	theTracker.StartServer(*port)
-}
-
-type myTracker struct {
-	framework.BasicTracker
-}
-
-func (myTracker) SaveTrackerRecord(data *framework.TrackerRecord) {
-	// Store the RegisterdAddress in the Database
-	storedAddresses[data.Address.ToString()] = data
-}
-
-func (myTracker) GetRecordByUsername(username string) *framework.TrackerRecord {
-	// TODO: We should really use a database, this is _very_ inefficient.
-	// Lookup the Address (by username) in the Database
-	for _, v := range storedAddresses {
-		if v.Username == username {
-			return v
+			a.location = location.Location
+			a.encryptionKey = location.PublicKey
+			a.address = location.EncodedAddress
 		}
 	}
-	return nil
+	return a.location, nil
 }
 
-func (myTracker) GetRecordByAddress(address string) *framework.TrackerRecord {
-	// Lookup the Address (by address) in the Database
-	info, _ := storedAddresses[address]
-	return info
+func (a *ADAddress) GetEncryptionKey(k *ADKey, t *ADTrackerList) (*rsa.PublicKey, error) {
+	if a.encryptionKey == nil {
+		_, err := a.GetLocation(k, t)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return a.encryptionKey, nil
+}
+
+func (a *ADAddress) HasLocation() bool {
+	return (a.location != "")
+}
+
+func (a *Address) getAddressRequest() *airdispatch.AddressRequest {
+	if a.address == "" {
+		newQuery := &airdispatch.AddressRequest{
+			Username: &a.username,
+		}
+		return newQuery
+
+	} else {
+		newQuery := &airdispatch.AddressRequest{
+			Address: &a.address,
+		}
+		return newQuery
+	}
+}
+
+func (a *ADKey) ToAddress() *Address {
+	return CreateADAddress(a.HexEncode())
 }
