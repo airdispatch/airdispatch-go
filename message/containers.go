@@ -103,26 +103,13 @@ type EncryptedMessage struct {
 
 // This Function sends an Encrypted Message to a Server via a Router
 func (e *EncryptedMessage) Send() error {
-	// The first step to sending the message is marshalling it to bytes.
-	toData := &wire.EncryptedMessage{
-		Data:    e.Data,
-		ToAddr:  e.To.Fingerprint,
-		Key:     e.EncryptionKey,
-		EncFunc: e.EncryptionType,
-	}
-	bytes, err := proto.Marshal(toData)
-	if err != nil {
-		return err
-	}
-
 	conn, err := ConnectToServer(e.To.Location)
 	if err != nil {
 		return err
 	}
 	defer conn.Close()
 
-	conn.Write(wire.PrefixBytes(bytes))
-	return nil
+	return e.SendMessageToConnection(conn)
 }
 
 // This function Decrypts an EncryptedMessage into a SignedMessage

@@ -2,6 +2,7 @@ package message
 
 import (
 	"airdispat.ch/wire"
+	"code.google.com/p/goprotobuf/proto"
 	"net"
 )
 
@@ -31,4 +32,21 @@ func ReadMessageFromConnection(conn net.Conn) (*EncryptedMessage, error) {
 	}
 
 	return theMessage, nil
+}
+
+func (e *EncryptedMessage) SendMessageToConnection(conn net.Conn) error {
+	// The first step to sending the message is marshalling it to bytes.
+	toData := &wire.EncryptedMessage{
+		Data:    e.Data,
+		ToAddr:  e.To.Fingerprint,
+		Key:     e.EncryptionKey,
+		EncFunc: e.EncryptionType,
+	}
+	bytes, err := proto.Marshal(toData)
+	if err != nil {
+		return err
+	}
+
+	conn.Write(wire.PrefixBytes(bytes))
+	return nil
 }
