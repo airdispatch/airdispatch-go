@@ -3,6 +3,7 @@ package identity
 import (
 	"crypto/ecdsa"
 	"crypto/rsa"
+	"encoding/hex"
 )
 
 // The address structure provides abstractions on
@@ -29,10 +30,10 @@ var Public *Address = &Address{
 // The string representation of an Address is just
 // the Fingerprint of that address.
 func (a *Address) String() string {
-	return a.Fingerprint
+	return hex.EncodeToString(a.Fingerprint)
 }
 
 // Compares the Address to the `Public Address`.
 func (a *Address) IsPublic() bool {
-	return (a == ADPublicAddress)
+	return (a == Public)
 }

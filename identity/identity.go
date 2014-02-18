@@ -5,6 +5,8 @@
 package identity
 
 import (
+	"airdispat.ch/crypto"
+	"airdispat.ch/wire"
 	"crypto/ecdsa"
 	"crypto/rsa"
 )
@@ -19,4 +21,36 @@ type Identity struct {
 	Address       *Address
 	EncryptionKey *rsa.PrivateKey
 	SigningKey    *ecdsa.PrivateKey
+}
+
+// This creates a new random, AirDispatch Identity
+func CreateIdentity() (id *Identity, err error) {
+	key := &Identity{}
+
+	// Create Signing Key
+	key.SigningKey, err = ecdsa.GenerateKey(crypto.EllipticCurve, crypto.Random)
+	if err != nil {
+		return nil, err
+	}
+
+	key.EncryptionKey, err = rsa.GenerateKey(crypto.Random, 2048)
+	if err != nil {
+		return nil, err
+	}
+
+	return key, err
+}
+
+// This function signs a series of bytes
+func (a *Identity) SignBytes(payload []byte) (*wire.Signature, error) {
+	r, s, err := crypto.SignPayload(a.SigningKey, payload)
+	if err != nil {
+		return nil, err
+	}
+
+	newSignature := &wire.Signature{
+		R: r.Bytes(),
+		S: s.Bytes(),
+	}
+	return newSignature, nil
 }
