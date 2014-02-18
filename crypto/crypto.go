@@ -1,10 +1,8 @@
 package crypto
 
 import (
-	// "airdispat.ch/wire"
 	"bytes"
 	"code.google.com/p/go.crypto/ripemd160"
-	// "code.google.com/p/goprotobuf/proto"
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/ecdsa"
