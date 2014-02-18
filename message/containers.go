@@ -15,11 +15,60 @@ type Message interface {
 	ToBytes() []byte
 }
 
+func SignMessage(m Message, id identity.Identity) (*SignedMessage, error) {
+	messageType := m.Type()
+
+	toData := &wire.Container{
+		Header: m.Header().ToWire(),
+		Data:   m.ToBytes(),
+		Type:   &messageType,
+	}
+	toSign, err := proto.Marshal(toData)
+	if err != nil {
+		return nil, err
+	}
+
+	r, s, err := crypto.SignPayload(id.SigningKey, toSign)
+	if err != nil {
+		return nil, err
+	}
+
+	newSignature := &wire.Signature{
+		R: r.Bytes(),
+		S: s.Bytes(),
+	}
+
+	newSignedMessage := &SignedMessage{
+		Data:        toSign,
+		Signature:   newSignature,
+		SigningFunc: crypto.SigningECDSA,
+		SigningKey:  crypto.KeyToBytes(&id.SigningKey.PublicKey),
+	}
+	return newSignedMessage, nil
+}
+
 // Common AirDispatch Header
 type Header struct {
 	From      *identity.Address
 	To        *identity.Address
 	Timestamp int64
+}
+
+func CreateHeaderFromWire(w *wire.Header) Header {
+	return Header{
+		From:      identity.CreateAddressFromBytes(w.GetFromAddr()),
+		To:        identity.CreateAddressFromBytes(w.GetToAddr()),
+		Timestamp: int64(w.GetTimestamp()),
+	}
+}
+
+func (h Header) ToWire() *wire.Header {
+	time := uint64(h.Timestamp)
+	return &wire.Header{
+		FromAddr:  h.From.Fingerprint,
+		ToAddr:    h.To.Fingerprint,
+		Timestamp: &time,
+	}
 }
 
 // Container Message for Signed Data
@@ -28,6 +77,20 @@ type SignedMessage struct {
 	Signature   *wire.Signature
 	SigningKey  []byte
 	SigningFunc []byte
+}
+
+func (s *SignedMessage) ReconstructMessage() (data []byte, messageType string, header Header, err error) {
+	var unmarshaller *wire.Container
+	err = proto.Unmarshal(s.Data, unmarshaller)
+	if err != nil {
+		return
+	}
+
+	messageType = unmarshaller.GetType()
+	data = unmarshaller.GetData()
+	header = CreateHeaderFromWire(unmarshaller.GetHeader())
+
+	return
 }
 
 // Encrypt a signed message for an Address Fingerprint (String)
