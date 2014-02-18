@@ -1,4 +1,4 @@
-package framework
+package server
 
 import (
 	"airdispat.ch/common"
