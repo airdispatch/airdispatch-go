@@ -54,3 +54,7 @@ func (a *Identity) SignBytes(payload []byte) (*wire.Signature, error) {
 	}
 	return newSignature, nil
 }
+
+func (a *Identity) SetLocation(newLocation string) {
+	a.Address.Location = newLocation
+}
