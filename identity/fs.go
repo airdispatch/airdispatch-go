@@ -1,6 +1,7 @@
-package common
+package identity
 
 import (
+	"airdispat.ch/crypto"
 	"crypto/ecdsa"
 	"crypto/rsa"
 	"encoding/gob"
@@ -26,9 +27,9 @@ type encodedADKey struct {
 }
 
 // This function writes a Gob-Encoded ADKey to a buffer
-func (a *ADKey) GobEncodeKey(buffer io.Writer) (io.Writer, error) {
+func (a *Identity) GobEncodeKey(buffer io.Writer) (io.Writer, error) {
 	// Encode Signature Key
-	ecdsaKey := a.SignatureKey
+	ecdsaKey := a.SigningKey
 	eECDSAKey := &encodedECDSAKey{ecdsaKey.D, ecdsaKey.PublicKey.X, ecdsaKey.PublicKey.Y}
 
 	// Encode Encryption Keys
@@ -46,7 +47,7 @@ func (a *ADKey) GobEncodeKey(buffer io.Writer) (io.Writer, error) {
 }
 
 // This function loads a Gob-Encoded ADKey from a buffer
-func GobDecodeKey(buffer io.Reader) (*ADKey, error) {
+func GobDecodeKey(buffer io.Reader) (*Identity, error) {
 	decodedKey := &encodedADKey{}
 
 	// Create the decoder
@@ -58,7 +59,7 @@ func GobDecodeKey(buffer io.Reader) (*ADKey, error) {
 	}
 
 	// Create the ECDSA Key from the Encoded Values
-	newECDSAPublicKey := ecdsa.PublicKey{ADEllipticCurve, decodedKey.ECDSA.X, decodedKey.ECDSA.Y}
+	newECDSAPublicKey := ecdsa.PublicKey{crypto.EllipticCurve, decodedKey.ECDSA.X, decodedKey.ECDSA.Y}
 	newECDSAKey := ecdsa.PrivateKey{
 		PublicKey: newECDSAPublicKey,
 		D:         decodedKey.ECDSA.D,
@@ -73,8 +74,8 @@ func GobDecodeKey(buffer io.Reader) (*ADKey, error) {
 	}
 
 	// Reconstruct the Whole Key
-	newADKey := &ADKey{
-		SignatureKey:  &newECDSAKey,
+	newADKey := &Identity{
+		SigningKey:    &newECDSAKey,
 		EncryptionKey: &newRSAKey,
 	}
 
@@ -82,7 +83,7 @@ func GobDecodeKey(buffer io.Reader) (*ADKey, error) {
 }
 
 // This function Loads an Airdispatch Key from a File
-func LoadKeyFromFile(filename string) (*ADKey, error) {
+func LoadKeyFromFile(filename string) (*Identity, error) {
 	// Open the File for Loading
 	file, err := os.Open(filename)
 	if err != nil {
@@ -93,7 +94,7 @@ func LoadKeyFromFile(filename string) (*ADKey, error) {
 }
 
 // This function Saves an Airdispatch Key to a File
-func (a *ADKey) SaveKeyToFile(filename string) error {
+func (a *Identity) SaveKeyToFile(filename string) error {
 	// Create the File to Store the Keys in
 	file, err := os.Create(filename)
 	if err != nil {
