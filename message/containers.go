@@ -7,7 +7,6 @@ import (
 	"airdispat.ch/wire"
 	"code.google.com/p/goprotobuf/proto"
 	"math/big"
-	"net"
 )
 
 type Message interface {
@@ -98,12 +97,32 @@ func (sm *SignedMessage) Verify() bool {
 type EncryptedMessage struct {
 	Data           []byte
 	EncryptionKey  []byte
-	EncryptionType string
+	EncryptionType []byte
 	To             *identity.Address
 }
 
 // This Function sends an Encrypted Message to a Server via a Router
 func (e *EncryptedMessage) Send() error {
+	// The first step to sending the message is marshalling it to bytes.
+	toData := &wire.EncryptedMessage{
+		Data:    e.Data,
+		ToAddr:  e.To.Fingerprint,
+		Key:     e.EncryptionKey,
+		EncFunc: e.EncryptionType,
+	}
+	bytes, err := proto.Marshal(toData)
+	if err != nil {
+		return err
+	}
+
+	conn, err := ConnectToServer(e.To.Location)
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+
+	conn.Write(prefixBytes(bytes))
+	return nil
 }
 
 // This function Decrypts an EncryptedMessage into a SignedMessage
@@ -132,3 +151,7 @@ func (e *EncryptedMessage) Decrypt(id identity.Identity) (*SignedMessage, error)
 	// Return the signed message
 	return sm, nil
 }
+
+// TODO: Read Message From Connection
+// TODO: Read Message From Bytes
+// TODO: `Sign` Message
