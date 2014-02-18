@@ -19,6 +19,7 @@ type Address struct {
 	SigningKey *ecdsa.PublicKey
 
 	public bool
+	cached bool
 }
 
 // The Public variable has an address that can represent
@@ -36,4 +37,15 @@ func (a *Address) String() string {
 // Compares the Address to the `Public Address`.
 func (a *Address) IsPublic() bool {
 	return (a == Public)
+}
+
+func (a *Address) HasLocation() bool {
+	return a.cached
+}
+
+func CreateAddressFromBytes(b []byte) *Address {
+	return &Address{
+		Fingerprint: b,
+		cached:      false,
+	}
 }
