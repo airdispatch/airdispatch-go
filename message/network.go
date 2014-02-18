@@ -19,6 +19,16 @@ func ConnectToServer(remote string) (net.Conn, error) {
 	return conn, nil
 }
 
+func ReadMessageFromConnection(conn net.Conn) (*EncryptedMessage, error) {
+	totalBytes, err := wire.ReadBytes(conn)
+	if err != nil {
+		return nil, err
 	}
 
+	theMessage, err := CreateEncryptedMessageFromBytes(totalBytes)
+	if err != nil {
+		return nil, err
+	}
+
+	return theMessage, nil
 }

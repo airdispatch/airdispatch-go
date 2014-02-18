@@ -121,7 +121,7 @@ func (e *EncryptedMessage) Send() error {
 	}
 	defer conn.Close()
 
-	conn.Write(prefixBytes(bytes))
+	conn.Write(wire.PrefixBytes(bytes))
 	return nil
 }
 
@@ -152,6 +152,20 @@ func (e *EncryptedMessage) Decrypt(id identity.Identity) (*SignedMessage, error)
 	return sm, nil
 }
 
-// TODO: Read Message From Connection
-// TODO: Read Message From Bytes
+func CreateEncryptedMessageFromBytes(theBytes []byte) (*EncryptedMessage, error) {
+	downloadedMessage := &wire.EncryptedMessage{}
+	err := proto.Unmarshal(theBytes, downloadedMessage)
+	if err != nil {
+		return nil, err
+	}
+
+	output := &EncryptedMessage{}
+
+	output.Data = downloadedMessage.GetData()
+	output.EncryptionKey = downloadedMessage.GetKey()
+	output.EncryptionType = downloadedMessage.GetEncFunc()
+	output.To = identity.CreateAddressFromBytes(downloadedMessage.GetToAddr())
+	return output, nil
+}
+
 // TODO: `Sign` Message
