@@ -1,10 +1,33 @@
 package server
 
 import (
+	"airdispat.ch/identity"
 	"airdispat.ch/message"
 	"airdispat.ch/wire"
 	"code.google.com/p/goprotobuf/proto"
 )
+
+func CreateMessageDescription(name string, location string, from *identity.Address, to *identity.Address) *MessageDescription {
+	return &MessageDescription{
+		Name:     name,
+		Location: location,
+		h:        message.CreateHeader(from, to),
+	}
+}
+
+func CreateTransferMessage(name string, from *identity.Address, to *identity.Address) *TransferMessage {
+	return &TransferMessage{
+		Name: name,
+		h:    message.CreateHeader(from, to),
+	}
+}
+
+func CreateTransferMessageList(since uint64, from *identity.Address, to *identity.Address) *TransferMessageList {
+	return &TransferMessageList{
+		Since: since,
+		h:     message.CreateHeader(from, to),
+	}
+}
 
 type MessageDescription struct {
 	Name     string
@@ -96,6 +119,9 @@ type MessageList struct {
 }
 
 func (m *MessageList) AddMessageDescription(md *MessageDescription) {
+	if m.Content == nil {
+		m.Content = make([]*MessageDescription, 0)
+	}
 	m.Content = append(m.Content, md)
 }
 

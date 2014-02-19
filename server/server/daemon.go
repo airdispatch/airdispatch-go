@@ -1,41 +1,47 @@
 package main
 
 import (
+	"airdispat.ch/identity"
+	"airdispat.ch/message"
 	"airdispat.ch/server"
-	"crypto/ecdsa"
-	"encoding/hex"
 	"flag"
 	"fmt"
+	"net"
 	"os"
-	"strings"
 	"time"
 )
 
 // Configuration Varables
 var port = flag.String("port", "2048", "select the port on which to run the mail server")
-var trackers = flag.String("trackers", "", "prepopulate the list of trackers that this server will query by using a comma seperated list of values")
-var me = flag.String("me", getHostname(), "the location of the server that it should broadcast to the world")
+
+// var trackers = flag.String("trackers", "", "prepopulate the list of trackers that this server will query by using a comma seperated list of values")
+
+var me = flag.String("me", getServerLocation(), "the location of the server that it should broadcast to the world")
 var key_file = flag.String("key", "", "the file to store keys")
 
-func getHostname() string {
+func getServerLocation() string {
 	s, _ := os.Hostname()
-	return s
+	ips, _ := net.LookupHost(s)
+	return ips[0]
 }
 
+// Postoffice Stores Many User's Mailboxes
 type PostOffice map[string]Mailbox
-type Mailbox map[string]Mail
-type Mail struct {
-	approved     []string
-	mail         *common.ADMail // Each Mail Structure will either store a Mail Object (if it is outgoing) or an Alert Object (if it is incoming)
-	alert        *common.ADAlert
-	receivedTime time.Time
+type Mailbox struct {
+	Incoming []*server.MessageDescription
+	Outgoing map[string]ServerMail
+	Public   []ServerMail
+	Identity *identity.Identity
+}
+
+type ServerMail struct {
+	*message.Mail
+	Name     string
+	SentTime time.Time
 }
 
 // Set up the Mailboxes of Users (to store incoming mail)
 var mailboxes PostOffice
-
-// Set up the outgoing public notes
-var notices PostOffice
 
 // Set up the outgoing messages boxes
 var storedMessages Mailbox
@@ -43,7 +49,7 @@ var storedMessages Mailbox
 // Variables that store information about the server
 var connectedTrackers []string
 var serverLocation string
-var serverKey *ecdsa.PrivateKey
+var serverKey *identity.Identity
 
 func main() {
 	// Parse the configuration Command Line Falgs
@@ -51,181 +57,115 @@ func main() {
 
 	// Initialize Incoming and Outgoing Mailboxes
 	mailboxes = make(PostOffice)
-	notices = make(PostOffice)
-	storedMessages = make(Mailbox)
 
 	// Populate the Trackers List
-	connectedTrackers = strings.Split(*trackers, ",")
-	if *trackers == "" {
-		connectedTrackers = make([]string, 0)
-	}
+	// connectedTrackers = strings.Split(*trackers, ",")
+	// if *trackers == "" {
+	// 	connectedTrackers = make([]string, 0)
+	// }
 
 	// Create a Signing Key for the Server
-	loadedKey, err := common.LoadKeyFromFile(*key_file)
-
+	loadedKey, err := identity.LoadKeyFromFile(*key_file)
 	if err != nil {
 
-		loadedKey, err = common.CreateADKey()
+		loadedKey, err = identity.CreateIdentity()
 		if err != nil {
-			fmt.Println("Unable to Create Tracker Key")
+			fmt.Println("Unable to Create Mailserver Key")
 			return
 		}
 
 		if *key_file != "" {
-
 			err = loadedKey.SaveKeyToFile(*key_file)
 			if err != nil {
-				fmt.Println("Unable to Save Tracker Key")
+				fmt.Println("Unable to Save Mailserver Key")
 				return
 			}
 		}
 
 	}
-	fmt.Println("Loaded Address", loadedKey.HexEncode())
+	fmt.Println("Loaded Address", loadedKey.Address.String())
 
 	// Find the location of this server
 	serverLocation = *me
 	handler := &myServer{}
-	theServer := framework.Server{
+	theServer := server.Server{
 		LocationName: *me,
 		Key:          loadedKey,
-		TrackerList:  common.CreateADTrackerListWithStrings(connectedTrackers...),
-		Delegate:     handler,
+		// TrackerList:  common.CreateADTrackerListWithStrings(connectedTrackers...),
+		Delegate: handler,
 	}
 	serverErr := theServer.StartServer(*port)
 	if serverErr != nil {
 		fmt.Println("Unable to Start Server")
 		fmt.Println(err)
 	}
-
 }
 
 type myServer struct {
-	framework.BasicServer
+	server.BasicServer
 }
 
 // Function that Handles an Alert of a Message
 // INCOMING
-func (myServer) SaveIncomingAlert(alert *common.ADAlert) {
+func (myServer) SaveMessageDescription(alert *server.MessageDescription) {
 	// Get the recipient address of the message
-	toAddr := alert.ToAddress
-
-	// Form a ReceivedMessage Record for the database
-	theMessage := Mail{
-		alert:        alert,
-		receivedTime: time.Now(),
-	}
+	toAddr := alert.Header().To
 
 	// Attempt to Get the Mailbox of the User
-	_, ok := mailboxes[toAddr.ToString()]
+	v, ok := mailboxes[toAddr.String()]
 	if !ok {
 		// TODO: Catch if the user is registered with the server or not
 		// If it cannot, make a mailbox
-		mailboxes[toAddr.ToString()] = make(Mailbox)
+		v = Mailbox{
+			Incoming: make([]*server.MessageDescription, 0),
+			Outgoing: make(map[string]ServerMail),
+		}
 	}
 
 	// Store the Record in the User's Mailbox
-	mailboxes[toAddr.ToString()][alert.MessageID] = theMessage
+	v.Incoming = append(v.Incoming, alert)
+	mailboxes[toAddr.String()] = v
 }
 
-// OUTGOING
-func (myServer) SavePublicMail(theMail *common.ADMail) {
-	// Populate the Record to Store the Data
-	storedData := Mail{
-		mail:         theMail,
-		receivedTime: time.Now(),
-	}
-
-	// Get the notice box of the From Address
-	_, ok := notices[theMail.FromAddress.ToString()]
+func (myServer) IdentityForUser(addr *identity.Address) *identity.Identity {
+	o, ok := mailboxes[addr.String()]
 	if !ok {
-		notices[theMail.FromAddress.ToString()] = make(Mailbox)
+		return nil
 	}
-
-	// Store the Public Message in the Box
-	notices[theMail.FromAddress.ToString()][GetMessageId(theMail)] = storedData
+	return o.Identity
 }
 
-// OUTGOING
-func (myServer) SavePrivateMail(theMail *common.ADMail, approved []string) (id string) {
-	// Get a hash of the Message
-	hash := GetMessageId(theMail)
-
-	// Create a Record to Store the Message in the Outgoing Mail Box
-	storedData := Mail{
-		approved:     approved,
-		mail:         theMail,
-		receivedTime: time.Now(),
-	}
-
-	// Store the Message in the Database
-	storedMessages[hash] = storedData
-
-	return hash
-}
-
-func GetMessageId(theMail *common.ADMail) string {
-	// RETURN TO LOOK AT THIS.
-	return hex.EncodeToString(theMail.HashContents())
-}
-
-func (myServer) RetrieveMessageForUser(id string, addr *common.ADAddress) *common.ADMail {
-	// TODO: Allow this type of DATA to retrieve multiple messages... Maybe?
-	// Get the Outgoing Message with that ID
-	message, _ := storedMessages[id]
-
-	// Check that the Sending Address is one of the Approved Recipients
-	if !common.SliceContains(message.approved, addr.ToString()) {
-		fmt.Println("Couldn't authenticate user.")
+func (myServer) RetrieveMessageForUser(name string, author *identity.Address, forAddr *identity.Address) *message.Mail {
+	box, ok := mailboxes[author.String()]
+	if !ok {
 		return nil
 	}
 
-	return message.mail
+	mail, ok := box.Outgoing[name]
+	if !ok {
+		return nil
+	}
+
+	return mail.Mail
 }
 
-func (m myServer) RetrieveInbox(addr *common.ADAddress, since uint64) []*common.ADAlert {
+func (m myServer) RetrieveMessageListForUser(since uint64, author *identity.Address, forAddr *identity.Address) *server.MessageList {
 	// Get the `TimeSince` field
 	timeSince := time.Unix(int64(since), 0)
+	output := &server.MessageList{}
 
 	// Get the public notices box for that address
-	boxes, ok := mailboxes[addr.ToString()]
+	box, ok := mailboxes[author.String()]
 	if !ok {
 		// If it does not exist, return nothing
 		return nil
 	}
 
-	// Make an array of messages to tack onto
-	output := make([]*common.ADAlert, 0)
-
 	// Loop through the messages
-	for _, v := range boxes {
+	for _, v := range box.Public {
 		// Append the notice to the output if it was sent after the 'TimeSince'
-		if v.receivedTime.After(timeSince) {
-			output = append(output, v.alert)
-		}
-	}
-	return output
-}
-
-func (m myServer) RetrievePublic(fromAddr *common.ADAddress, since uint64) []*common.ADMail {
-	// Get the `TimeSince` field
-	timeSince := time.Unix(int64(since), 0)
-
-	// Get the public notices box for that address
-	boxes, ok := notices[fromAddr.ToString()]
-	if !ok {
-		// If it does not exist, return nothing
-		return nil
-	}
-
-	// Make an array of messages to tack onto
-	output := make([]*common.ADMail, 0)
-
-	// Loop through the messages
-	for _, v := range boxes {
-		// Append the notice to the output if it was sent after the 'TimeSince'
-		if v.receivedTime.After(timeSince) {
-			output = append(output, v.mail)
+		if v.SentTime.After(timeSince) {
+			output.AddMessageDescription(server.CreateMessageDescription(v.Name, *me, author, forAddr))
 		}
 	}
 	return output

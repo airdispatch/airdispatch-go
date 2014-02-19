@@ -24,8 +24,8 @@ type ServerDelegate interface {
 
 	IdentityForUser(addr *identity.Address) *identity.Identity
 
-	RetrieveMessageForUser(id string, addr *identity.Address) (message *message.EncryptedMessage)
-	RetrieveMessageListForUser(since uint64, fromAddr *identity.Address) (messages *message.EncryptedMessage)
+	RetrieveMessageForUser(id string, author *identity.Address, forAddr *identity.Address) (message *message.Mail)
+	RetrieveMessageListForUser(since uint64, author *identity.Address, forAddr *identity.Address) (messages *MessageList)
 }
 
 // The server structure tahat holds all of the necessary instance variables
@@ -139,14 +139,18 @@ func (s *Server) handleTransferMessage(desc []byte, h message.Header, conn net.C
 	if err != nil {
 		return
 	}
+	fromIdentity := s.Delegate.IdentityForUser(txMessage.h.To)
+	if fromIdentity == nil {
+		return
+	}
 
-	mail := s.Delegate.RetrieveMessageForUser(txMessage.Name, txMessage.h.From)
+	mail := s.Delegate.RetrieveMessageForUser(txMessage.Name, txMessage.h.To, txMessage.h.From)
 	if mail == nil {
 		// If there is no message stored with that ID, then send back an error
 		// common.CreateErrorMessage("400", "no message for that id and user").SendToConnection(conn, s.Key)
 		return
 	}
-	mail.SendMessageToConnection(conn)
+	message.SignAndSendToConnection(mail, fromIdentity, txMessage.h.From, conn)
 }
 
 func (s *Server) handleTransferMessageList(desc []byte, h message.Header, conn net.Conn) {
@@ -155,29 +159,14 @@ func (s *Server) handleTransferMessageList(desc []byte, h message.Header, conn n
 		return
 	}
 
-	mail := s.Delegate.RetrieveMessageListForUser(txMessage.Since, txMessage.h.To)
-	if mail == nil {
+	fromIdentity := s.Delegate.IdentityForUser(txMessage.h.To)
+	if fromIdentity == nil {
 		return
 	}
 
-	mail.SendMessageToConnection(conn)
+	mail := s.Delegate.RetrieveMessageListForUser(txMessage.Since, txMessage.h.To, txMessage.h.From)
+	if mail == nil {
+		return
+	}
+	message.SignAndSendToConnection(mail, fromIdentity, txMessage.h.From, conn)
 }
-
-// A function that delivers an alert to a location
-// func (s *Server) SendAlert(message_id string, toAddr *common.ADAddress) {
-// 	// Populate the Alert message
-// 	stringAddr := toAddr.ToString()
-// 	newAlert := &airdispatch.Alert{
-// 		ToAddress: &stringAddr,
-// 		Location:  &s.LocationName,
-// 		MessageId: &message_id,
-// 	}
-// 	alertData, _ := proto.Marshal(newAlert)
-
-// 	// Create the Message to Send
-// 	newMessage := &common.ADMessage{}
-// 	newMessage.MessageType = common.ALERT_MESSAGE
-// 	newMessage.Payload = alertData
-
-// 	newMessage.SendToAddress(toAddr, s.Key, s.TrackerList)
-// }
