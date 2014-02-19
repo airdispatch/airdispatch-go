@@ -146,7 +146,7 @@ func verifyAddress(address []byte) bool {
 	return bytes.Equal(generateChecksum(rest), checksum)
 }
 
-func bytesToAddress(toHash []byte) []byte {
+func BytesToAddress(toHash []byte) []byte {
 	address := HashRIP(HashSHA(toHash))
 	checksum := generateChecksum(address)
 	return bytes.Join([][]byte{address, checksum}, nil)

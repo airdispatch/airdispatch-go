@@ -37,6 +37,7 @@ func CreateIdentity() (id *Identity, err error) {
 	if err != nil {
 		return nil, err
 	}
+	key.populateAddress()
 
 	return key, err
 }
@@ -57,4 +58,12 @@ func (a *Identity) SignBytes(payload []byte) (*wire.Signature, error) {
 
 func (a *Identity) SetLocation(newLocation string) {
 	a.Address.Location = newLocation
+}
+
+func (a *Identity) populateAddress() {
+	a.Address = &Address{
+		EncryptionKey: &a.EncryptionKey.PublicKey,
+		SigningKey:    &a.SigningKey.PublicKey,
+	}
+	a.Address.generateFingerprint()
 }

@@ -1,6 +1,7 @@
 package identity
 
 import (
+	"airdispat.ch/crypto"
 	"crypto/ecdsa"
 	"crypto/rsa"
 	"encoding/hex"
@@ -26,6 +27,11 @@ type Address struct {
 // sending a message to the public.
 var Public *Address = &Address{
 	public: true,
+}
+
+func (a *Address) generateFingerprint() {
+	by := crypto.KeyToBytes(a.SigningKey)
+	a.Fingerprint = crypto.BytesToAddress(by)
 }
 
 // The string representation of an Address is just
