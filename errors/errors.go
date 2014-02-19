@@ -1,7 +1,7 @@
 package errors
 
 import (
-	"airdispat.ch/message"
+	"errors"
 )
 
 type Error struct {
