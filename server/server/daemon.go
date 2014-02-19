@@ -1,8 +1,7 @@
 package main
 
 import (
-	"airdispat.ch/common"
-	"airdispat.ch/server/framework"
+	"airdispat.ch/server"
 	"crypto/ecdsa"
 	"encoding/hex"
 	"flag"
