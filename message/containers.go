@@ -7,12 +7,42 @@ import (
 	"airdispat.ch/wire"
 	"code.google.com/p/goprotobuf/proto"
 	"math/big"
+	"net"
+	"time"
 )
 
 type Message interface {
 	Header() Header
 	Type() string
 	ToBytes() []byte
+}
+
+func SignAndSend(m Message, from *identity.Identity, to *identity.Address) error {
+	signed, err := SignMessage(m, from)
+	if err != nil {
+		return err
+	}
+
+	encrypted, err := signed.EncryptWithKey(to)
+	if err != nil {
+		return err
+	}
+
+	return encrypted.Send()
+}
+
+func SignAndSendToConnection(m Message, from *identity.Identity, to *identity.Address, conn net.Conn) error {
+	signed, err := SignMessage(m, from)
+	if err != nil {
+		return err
+	}
+
+	encrypted, err := signed.EncryptWithKey(to)
+	if err != nil {
+		return err
+	}
+
+	return encrypted.SendMessageToConnection(conn)
 }
 
 func SignMessage(m Message, id *identity.Identity) (*SignedMessage, error) {
@@ -52,6 +82,14 @@ type Header struct {
 	From      *identity.Address
 	To        *identity.Address
 	Timestamp int64
+}
+
+func CreateHeader(from *identity.Address, to *identity.Address) Header {
+	return Header{
+		From:      from,
+		To:        to,
+		Timestamp: time.Now().Unix(),
+	}
 }
 
 func CreateHeaderFromWire(w *wire.Header) Header {
