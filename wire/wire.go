@@ -4,7 +4,6 @@
 package wire
 
 import (
-	// "code.google.com/p/goprotobuf/proto"
 	"bytes"
 	"encoding/binary"
 	"errors"
@@ -17,12 +16,13 @@ var Prefix []byte = []byte("AD")
 // Airdispatch message. The names of each constant should make the message
 // that they each represent self-apparent.
 const (
-	MessageDescriptionCode = "MDE"
-	TranferMessageCode     = "XFM"
-	TranferMessageListCode = "XFL"
-	MailCode               = "MAI"
-	DataCode               = "DAT"
-	ErrorCode              = "ERR"
+	MessageDescriptionCode  = "MDE"
+	MessageListCode         = "MLI"
+	TransferMessageCode     = "XFM"
+	TransferMessageListCode = "XFL"
+	MailCode                = "MAI"
+	DataCode                = "DAT"
+	ErrorCode               = "ERR"
 )
 
 func PrefixBytes(data []byte) []byte {
