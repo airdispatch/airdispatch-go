@@ -15,7 +15,7 @@ type Message interface {
 	ToBytes() []byte
 }
 
-func SignMessage(m Message, id identity.Identity) (*SignedMessage, error) {
+func SignMessage(m Message, id *identity.Identity) (*SignedMessage, error) {
 	messageType := m.Type()
 
 	toData := &wire.Container{
@@ -176,7 +176,7 @@ func (e *EncryptedMessage) Send() error {
 }
 
 // This function Decrypts an EncryptedMessage into a SignedMessage
-func (e *EncryptedMessage) Decrypt(id identity.Identity) (*SignedMessage, error) {
+func (e *EncryptedMessage) Decrypt(id *identity.Identity) (*SignedMessage, error) {
 	// Decrypt the data from the cipher.
 	p, err := crypto.HybridDecryption(id.EncryptionKey, e.EncryptionKey, e.Data)
 	if err != nil {
