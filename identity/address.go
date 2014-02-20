@@ -49,9 +49,21 @@ func (a *Address) HasLocation() bool {
 	return a.cached
 }
 
+func (a *Address) EqualsBytes(addr []byte) bool {
+	return hex.EncodeToString(addr) == a.String()
+}
+
 func CreateAddressFromBytes(b []byte) *Address {
 	return &Address{
 		Fingerprint: b,
 		cached:      false,
 	}
+}
+
+func CreateAddressFromString(addr string) *Address {
+	by, err := hex.DecodeString(addr)
+	if err != nil {
+		return nil
+	}
+	return CreateAddressFromBytes(by)
 }
