@@ -1,13 +1,26 @@
 package message
 
 import (
+	"airdispat.ch/identity"
 	"airdispat.ch/wire"
 	"code.google.com/p/goprotobuf/proto"
+	"time"
 )
 
 type Mail struct {
 	h          Header
 	Components ComponentList
+}
+
+func CreateMail(from *identity.Address, to *identity.Address) *Mail {
+	return &Mail{
+		h: Header{
+			From:      from,
+			To:        to,
+			Timestamp: time.Now().Unix(),
+		},
+		Components: make(ComponentList, 0),
+	}
 }
 
 func (m *Mail) ToBytes() []byte {
@@ -72,4 +85,18 @@ func (c ComponentList) GetStringComponent(name string) string {
 type Component struct {
 	Name string
 	Data []byte
+}
+
+func CreateComponent(name string, data []byte) Component {
+	return Component{
+		Name: name,
+		Data: data,
+	}
+}
+
+func CreateStringComponent(name string, data string) Component {
+	return Component{
+		Name: name,
+		Data: []byte(data),
+	}
 }
