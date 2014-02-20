@@ -108,7 +108,10 @@ func (s *Server) handleClient(conn net.Conn) {
 
 	data, mesType, h, err := signedMessage.ReconstructMessage()
 
-	if newMessage.To.String() != h.To.String() { //|| signedMessage.SigningKey != h.From.String() {
+	if newMessage.To.String() != h.To.String() ||
+		h.From.EqualsBytes(signedMessage.SigningKey) ||
+		h.Timestamp < time.Now().Unix()-600 ||
+		h.Timestamp > time.Now().Unix() {
 		s.handleError("Verifying Message Structure", errors.New("Unable to Verify Message Structure"))
 		return
 	}
