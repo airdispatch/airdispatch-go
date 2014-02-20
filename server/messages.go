@@ -37,7 +37,7 @@ type MessageDescription struct {
 }
 
 func CreateMessageDescriptionFromBytes(by []byte, h message.Header) (*MessageDescription, error) {
-	var fromData *wire.MessageDescription
+	fromData := &wire.MessageDescription{}
 	err := proto.Unmarshal(by, fromData)
 	if err != nil {
 		return nil, err
@@ -81,7 +81,7 @@ type TransferMessage struct {
 }
 
 func CreateTransferMessageFromBytes(by []byte, h message.Header) (*TransferMessage, error) {
-	var fromData *wire.TransferMessage
+	fromData := &wire.TransferMessage{}
 	err := proto.Unmarshal(by, fromData)
 	if err != nil {
 		return nil, err
@@ -155,7 +155,7 @@ type TransferMessageList struct {
 }
 
 func CreateTransferMessageListFromBytes(by []byte, h message.Header) (*TransferMessageList, error) {
-	var fromData *wire.TransferMessageList
+	fromData := &wire.TransferMessageList{}
 	err := proto.Unmarshal(by, fromData)
 	if err != nil {
 		return nil, err

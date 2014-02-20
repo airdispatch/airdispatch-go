@@ -90,9 +90,13 @@ func (s *Server) handleClient(conn net.Conn) {
 		return
 	}
 
-	var decryptor = s.Key
+	decryptor := s.Key
 	if newMessage.To.String() != s.Key.Address.String() {
 		decryptor = s.Delegate.IdentityForUser(newMessage.To)
+	}
+	if decryptor == nil {
+		s.handleError("Decrypt Message", errors.New("Unable to find decryption key for message."))
+		return
 	}
 
 	signedMessage, err := newMessage.Decrypt(decryptor)

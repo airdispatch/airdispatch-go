@@ -58,7 +58,7 @@ func SignMessage(m Message, id *identity.Identity) (*SignedMessage, error) {
 		return nil, err
 	}
 
-	r, s, err := crypto.SignPayload(id.SigningKey, toSign)
+	r, s, err := crypto.SignPayload(id.SigningKey, crypto.HashSHA(toSign))
 	if err != nil {
 		return nil, err
 	}
@@ -118,7 +118,7 @@ type SignedMessage struct {
 }
 
 func (s *SignedMessage) ReconstructMessage() (data []byte, messageType string, header Header, err error) {
-	var unmarshaller *wire.Container
+	unmarshaller := &wire.Container{}
 	err = proto.Unmarshal(s.Data, unmarshaller)
 	if err != nil {
 		return
@@ -222,7 +222,7 @@ func (e *EncryptedMessage) Decrypt(id *identity.Identity) (*SignedMessage, error
 	}
 
 	// Unmarshal the wire data
-	var x *wire.SignedMessage
+	x := &wire.SignedMessage{}
 	err = proto.Unmarshal(p, x)
 	if err != nil {
 		return nil, err
