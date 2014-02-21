@@ -148,16 +148,21 @@ func (s *Server) handleTransferMessage(desc []byte, h message.Header, conn net.C
 	}
 	fromIdentity := s.Delegate.IdentityForUser(txMessage.h.To)
 	if fromIdentity == nil {
+		s.handleError("Loading Identity for User.", errors.New("User doesn't live here."))
 		return
 	}
 
 	mail := s.Delegate.RetrieveMessageForUser(txMessage.Name, txMessage.h.To, txMessage.h.From)
 	if mail == nil {
+		s.handleError("Loading message from Server", errors.New("Couldn't find message"))
 		// If there is no message stored with that ID, then send back an error
 		// common.CreateErrorMessage("400", "no message for that id and user").SendToConnection(conn, s.Key)
 		return
 	}
-	message.SignAndSendToConnection(mail, fromIdentity, txMessage.h.From, conn)
+	err = message.SignAndSendToConnection(mail, fromIdentity, txMessage.h.From, conn)
+	if err != nil {
+		s.handleError("Sign and Send Mail", err)
+	}
 }
 
 func (s *Server) handleTransferMessageList(desc []byte, h message.Header, conn net.Conn) {
@@ -168,12 +173,17 @@ func (s *Server) handleTransferMessageList(desc []byte, h message.Header, conn n
 
 	fromIdentity := s.Delegate.IdentityForUser(txMessage.h.To)
 	if fromIdentity == nil {
+		s.handleError("Loading Identity for User.", errors.New("User doesn't live here."))
 		return
 	}
 
 	mail := s.Delegate.RetrieveMessageListForUser(txMessage.Since, txMessage.h.To, txMessage.h.From)
 	if mail == nil {
+		s.handleError("Loading message from Server", errors.New("Couldn't find message"))
 		return
 	}
-	message.SignAndSendToConnection(mail, fromIdentity, txMessage.h.From, conn)
+	err = message.SignAndSendToConnection(mail, fromIdentity, txMessage.h.From, conn)
+	if err != nil {
+		s.handleError("Sign and Send Mail List", err)
+	}
 }

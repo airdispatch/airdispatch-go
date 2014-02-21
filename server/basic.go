@@ -41,7 +41,7 @@ func init() {
 }
 
 func (BasicServer) HandleError(err *ServerError) {
-	log.Fatalln(FgRed + "Error Occurred At: " + err.Location + " - " + err.Error.Error() + Reset)
+	log.Println(FgRed + "Error Occurred At: " + err.Location + " - " + err.Error.Error() + Reset)
 	// os.Exit(1)
 }
 
