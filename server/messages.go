@@ -5,6 +5,7 @@ import (
 	"airdispat.ch/message"
 	"airdispat.ch/wire"
 	"code.google.com/p/goprotobuf/proto"
+	"time"
 )
 
 func CreateMessageDescription(name string, location string, from *identity.Address, to *identity.Address) *MessageDescription {
@@ -73,6 +74,17 @@ func (m *MessageDescription) Type() string {
 
 func (m *MessageDescription) Header() message.Header {
 	return m.h
+}
+
+func (m *MessageDescription) GenerateTransferRequest() *TransferMessage {
+	return &TransferMessage{
+		Name: m.Name,
+		h: message.Header{
+			From:      m.h.To,
+			To:        m.h.From,
+			Timestamp: time.Now().Unix(),
+		},
+	}
 }
 
 type TransferMessage struct {
