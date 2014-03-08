@@ -5,16 +5,15 @@ import (
 	"airdispat.ch/message"
 	"airdispat.ch/server"
 	"flag"
-	"fmt"
+	"math/rand"
 	"net"
 	"os"
+	"strconv"
 	"time"
 )
 
 // Configuration Varables
 var port = flag.String("port", "2048", "select the port on which to run the mail server")
-
-// var trackers = flag.String("trackers", "", "prepopulate the list of trackers that this server will query by using a comma seperated list of values")
 
 var me = flag.String("me", getServerLocation(), "the location of the server that it should broadcast to the world")
 var key_file = flag.String("key", "", "the file to store keys")
@@ -22,11 +21,31 @@ var key_file = flag.String("key", "", "the file to store keys")
 func getServerLocation() string {
 	s, _ := os.Hostname()
 	ips, _ := net.LookupHost(s)
-	return ips[0]
+	return ips[0] + ":" + *port
 }
 
 // Postoffice Stores Many User's Mailboxes
-type PostOffice map[string]Mailbox
+type PostOffice map[string]*Mailbox
+
+func (p PostOffice) StoreOutgoingMessageForUser(user string, m *message.Mail) ServerMail {
+	box, ok := p[user]
+	if !ok {
+		box = &Mailbox{
+			Incoming: make([]*server.MessageDescription, 0),
+			Outgoing: make(map[string]ServerMail),
+		}
+	}
+
+	s := ServerMail{
+		Mail:     m,
+		Name:     strconv.Itoa(rand.Int()),
+		SentTime: time.Now(),
+	}
+	box.Outgoing[s.Name] = s
+	p[user] = box
+	return s
+}
+
 type Mailbox struct {
 	Incoming []*server.MessageDescription
 	Outgoing map[string]ServerMail
@@ -52,53 +71,53 @@ var serverLocation string
 var serverKey *identity.Identity
 
 func main() {
+	rand.Seed(time.Now().Unix())
 	// Parse the configuration Command Line Falgs
 	flag.Parse()
 
 	// Initialize Incoming and Outgoing Mailboxes
 	mailboxes = make(PostOffice)
 
-	// Populate the Trackers List
-	// connectedTrackers = strings.Split(*trackers, ",")
-	// if *trackers == "" {
-	// 	connectedTrackers = make([]string, 0)
-	// }
-
 	// Create a Signing Key for the Server
+	handler := &myServer{}
 	loadedKey, err := identity.LoadKeyFromFile(*key_file)
 	if err != nil {
 
 		loadedKey, err = identity.CreateIdentity()
 		if err != nil {
-			fmt.Println("Unable to Create Mailserver Key")
+			handler.HandleError(&server.ServerError{"Creating Mailserver Key", err})
 			return
 		}
 
 		if *key_file != "" {
 			err = loadedKey.SaveKeyToFile(*key_file)
 			if err != nil {
-				fmt.Println("Unable to Save Mailserver Key")
+				handler.HandleError(&server.ServerError{"Saving Mailserver Key", err})
 				return
 			}
 		}
 
 	}
-	fmt.Println("Loaded Address", loadedKey.Address.String())
+	serverKey = loadedKey
+	handler.LogMessage("Loaded Address", loadedKey.Address.String())
 
 	// Find the location of this server
 	serverLocation = *me
-	handler := &myServer{}
 	theServer := server.Server{
 		LocationName: *me,
-		Key:          loadedKey,
-		// TrackerList:  common.CreateADTrackerListWithStrings(connectedTrackers...),
-		Delegate: handler,
+		Key:          serverKey,
+		Delegate:     handler,
 	}
-	serverErr := theServer.StartServer(*port)
-	if serverErr != nil {
-		fmt.Println("Unable to Start Server")
-		fmt.Println(err)
+
+	StartServer(theServer, handler)
+}
+
+func StartServer(theServer server.Server, handler *myServer) {
+	err := theServer.StartServer(*port)
+	if err != nil {
+		handler.HandleError(&server.ServerError{"Saving Mailserver Key", err})
 	}
+	os.Exit(1)
 }
 
 type myServer struct {
@@ -116,7 +135,7 @@ func (myServer) SaveMessageDescription(alert *server.MessageDescription) {
 	if !ok {
 		// TODO: Catch if the user is registered with the server or not
 		// If it cannot, make a mailbox
-		v = Mailbox{
+		v = &Mailbox{
 			Incoming: make([]*server.MessageDescription, 0),
 			Outgoing: make(map[string]ServerMail),
 		}
@@ -130,7 +149,20 @@ func (myServer) SaveMessageDescription(alert *server.MessageDescription) {
 func (myServer) IdentityForUser(addr *identity.Address) *identity.Identity {
 	o, ok := mailboxes[addr.String()]
 	if !ok {
-		return nil
+		id, err := identity.LoadKeyFromFile("keys2.pk")
+		mailboxes[id.Address.String()] = &Mailbox{
+			Incoming: make([]*server.MessageDescription, 0),
+			Outgoing: make(map[string]ServerMail),
+			Identity: id,
+		}
+		if err != nil {
+			return nil
+		}
+		return id
+	} else {
+		if o.Identity == nil {
+			o.Identity = serverKey
+		}
 	}
 	return o.Identity
 }
