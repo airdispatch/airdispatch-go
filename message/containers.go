@@ -6,6 +6,7 @@ import (
 	"airdispat.ch/routing"
 	"airdispat.ch/wire"
 	"code.google.com/p/goprotobuf/proto"
+	"errors"
 	"math/big"
 	"net"
 	"time"
@@ -64,15 +65,15 @@ func SignMessage(m Message, id *identity.Identity) (*SignedMessage, error) {
 	}
 
 	newSignature := &wire.Signature{
-		R: r.Bytes(),
-		S: s.Bytes(),
+		R:          r.Bytes(),
+		S:          s.Bytes(),
+		SigningKey: crypto.KeyToBytes(&id.SigningKey.PublicKey),
 	}
 
 	newSignedMessage := &SignedMessage{
 		Data:        toSign,
-		Signature:   newSignature,
+		Signature:   []*wire.Signature{newSignature},
 		SigningFunc: crypto.SigningECDSA,
-		SigningKey:  crypto.KeyToBytes(&id.SigningKey.PublicKey),
 	}
 	return newSignedMessage, nil
 }
@@ -112,9 +113,24 @@ func (h Header) ToWire() *wire.Header {
 // Container Message for Signed Data
 type SignedMessage struct {
 	Data        []byte
-	Signature   *wire.Signature
-	SigningKey  []byte
+	Signature   []*wire.Signature
 	SigningFunc []byte
+}
+
+func (s *SignedMessage) AddSignature(id *identity.Identity) error {
+	rInt, sInt, err := crypto.SignPayload(id.SigningKey, crypto.HashSHA(s.Data))
+	if err != nil {
+		return err
+	}
+
+	newSignature := &wire.Signature{
+		R:          rInt.Bytes(),
+		S:          sInt.Bytes(),
+		SigningKey: crypto.KeyToBytes(&id.SigningKey.PublicKey),
+	}
+
+	s.Signature = append(s.Signature, newSignature)
+	return nil
 }
 
 func (s *SignedMessage) ReconstructMessage() (data []byte, messageType string, header Header, err error) {
@@ -127,6 +143,12 @@ func (s *SignedMessage) ReconstructMessage() (data []byte, messageType string, h
 	messageType = unmarshaller.GetType()
 	data = unmarshaller.GetData()
 	header = CreateHeaderFromWire(unmarshaller.GetHeader())
+	header.From = identity.CreateAddressFromBytes(s.Signature[0].SigningKey)
+
+	if header.Timestamp < time.Now().Unix()-600 ||
+		header.Timestamp > time.Now().Unix() {
+		err = errors.New("Unable to verify message timestamp.")
+	}
 
 	return
 }
@@ -147,7 +169,6 @@ func (s *SignedMessage) EncryptWithKey(addr *identity.Address) (*EncryptedMessag
 	toData := &wire.SignedMessage{
 		Data:        s.Data,
 		Signature:   s.Signature,
-		SigningKey:  s.SigningKey,
 		SigningFunc: s.SigningFunc,
 	}
 	// Marshal it to bytes
@@ -172,6 +193,30 @@ func (s *SignedMessage) EncryptWithKey(addr *identity.Address) (*EncryptedMessag
 	return encryptionMessage, nil
 }
 
+func (s *SignedMessage) UnencryptedMessage(addr *identity.Address) (*EncryptedMessage, error) {
+	// Create a SignedMessage Wire Object
+	toData := &wire.SignedMessage{
+		Data:        s.Data,
+		Signature:   s.Signature,
+		SigningFunc: s.SigningFunc,
+	}
+	// Marshal it to bytes
+	bytes, err := proto.Marshal(toData)
+	if err != nil {
+		return nil, err
+	}
+
+	// Save all of this to an EncryptedMessage
+	encryptionMessage := &EncryptedMessage{
+		Data:           bytes,
+		EncryptionKey:  nil,
+		EncryptionType: nil,
+		To:             addr,
+	}
+	return encryptionMessage, nil
+
+}
+
 // Verify that a signed message is genuine
 //
 // Unwinds the R and S values of the ECDSA keypair from the Airdispatch Signature
@@ -180,19 +225,25 @@ func (sm *SignedMessage) Verify() bool {
 	// Hash the data
 	hash := crypto.HashSHA(sm.Data)
 
-	// Create an ECDSA Key from the Bytes
-	key, err := crypto.BytesToKey(sm.SigningKey)
-	if err != nil {
-		return false
+	for _, signature := range sm.Signature {
+		// Create an ECDSA Key from the Bytes
+		key, err := crypto.BytesToKey(signature.SigningKey)
+		if err != nil {
+			return false
+		}
+
+		// Reconstruct the Signature
+		var r, s *big.Int = new(big.Int), new(big.Int)
+		r.SetBytes(signature.GetR())
+		s.SetBytes(signature.GetS())
+
+		if !crypto.VerifyPayload(key, hash, r, s) {
+			return false
+		}
 	}
 
-	// Reconstruct the Signature
-	var r, s *big.Int = new(big.Int), new(big.Int)
-	r.SetBytes(sm.Signature.GetR())
-	s.SetBytes(sm.Signature.GetS())
-
 	// Verify the bytes
-	return crypto.VerifyPayload(key, hash, r, s)
+	return true
 }
 
 type EncryptedMessage struct {
@@ -215,6 +266,10 @@ func (e *EncryptedMessage) Send() error {
 
 // This function Decrypts an EncryptedMessage into a SignedMessage
 func (e *EncryptedMessage) Decrypt(id *identity.Identity) (*SignedMessage, error) {
+	if e.EncryptionType == nil {
+		return e.UnencryptedMessage()
+	}
+
 	// Decrypt the data from the cipher.
 	p, err := crypto.HybridDecryption(id.EncryptionKey, e.EncryptionKey, e.Data)
 	if err != nil {
@@ -232,7 +287,29 @@ func (e *EncryptedMessage) Decrypt(id *identity.Identity) (*SignedMessage, error
 	sm := &SignedMessage{
 		Data:        x.GetData(),
 		Signature:   x.GetSignature(),
-		SigningKey:  x.GetSigningKey(),
+		SigningFunc: x.GetSigningFunc(),
+	}
+
+	// Return the signed message
+	return sm, nil
+}
+
+func (e *EncryptedMessage) UnencryptedMessage() (*SignedMessage, error) {
+	if e.EncryptionType != nil {
+		return nil, errors.New("Unable to decrypt message without key.")
+	}
+
+	// Unmarshal the wire data
+	x := &wire.SignedMessage{}
+	err := proto.Unmarshal(e.Data, x)
+	if err != nil {
+		return nil, err
+	}
+
+	// Create a signedmessage
+	sm := &SignedMessage{
+		Data:        x.GetData(),
+		Signature:   x.GetSignature(),
 		SigningFunc: x.GetSigningFunc(),
 	}
 
