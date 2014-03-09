@@ -31,9 +31,8 @@ type ServerDelegate interface {
 // The server structure tahat holds all of the necessary instance variables
 type Server struct {
 	LocationName string
-	// TrackerList  *common.ADTrackerList
-	Key      *identity.Identity
-	Delegate ServerDelegate
+	Key          *identity.Identity
+	Delegate     ServerDelegate
 }
 
 // Function that starts the server on a specific port

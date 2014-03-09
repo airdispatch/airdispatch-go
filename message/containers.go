@@ -5,6 +5,7 @@ import (
 	"airdispat.ch/identity"
 	"airdispat.ch/routing"
 	"airdispat.ch/wire"
+	"bytes"
 	"code.google.com/p/goprotobuf/proto"
 	"errors"
 	"math/big"
@@ -54,6 +55,11 @@ func SignMessage(m Message, id *identity.Identity) (*SignedMessage, error) {
 		Data:   m.ToBytes(),
 		Type:   &messageType,
 	}
+
+	if toData.Data == nil {
+		return nil, errors.New("Unable to marshal message to bytes.")
+	}
+
 	toSign, err := proto.Marshal(toData)
 	if err != nil {
 		return nil, err
@@ -103,9 +109,16 @@ func CreateHeaderFromWire(w *wire.Header) Header {
 
 func (h Header) ToWire() *wire.Header {
 	time := uint64(h.Timestamp)
+
+	// Public Messages are Allowed
+	toAddr := []byte{0}
+	if h.To != nil {
+		toAddr = h.To.Fingerprint
+	}
+
 	return &wire.Header{
 		FromAddr:  h.From.Fingerprint,
-		ToAddr:    h.To.Fingerprint,
+		ToAddr:    toAddr,
 		Timestamp: &time,
 	}
 }
@@ -209,8 +222,8 @@ func (s *SignedMessage) UnencryptedMessage(addr *identity.Address) (*EncryptedMe
 	// Save all of this to an EncryptedMessage
 	encryptionMessage := &EncryptedMessage{
 		Data:           bytes,
-		EncryptionKey:  nil,
-		EncryptionType: nil,
+		EncryptionKey:  []byte{0},
+		EncryptionType: crypto.EncryptionNone,
 		To:             addr,
 	}
 	return encryptionMessage, nil
@@ -266,7 +279,7 @@ func (e *EncryptedMessage) Send() error {
 
 // This function Decrypts an EncryptedMessage into a SignedMessage
 func (e *EncryptedMessage) Decrypt(id *identity.Identity) (*SignedMessage, error) {
-	if e.EncryptionType == nil {
+	if bytes.Equal(e.EncryptionType, crypto.EncryptionNone) {
 		return e.UnencryptedMessage()
 	}
 
@@ -295,7 +308,7 @@ func (e *EncryptedMessage) Decrypt(id *identity.Identity) (*SignedMessage, error
 }
 
 func (e *EncryptedMessage) UnencryptedMessage() (*SignedMessage, error) {
-	if e.EncryptionType != nil {
+	if !bytes.Equal(e.EncryptionType, crypto.EncryptionNone) {
 		return nil, errors.New("Unable to decrypt message without key.")
 	}
 
