@@ -178,6 +178,10 @@ func (s *SignedMessage) Encrypt(addr string, router routing.Router) (*EncryptedM
 
 // Encrypt a signed message for a qualified Address
 func (s *SignedMessage) EncryptWithKey(addr *identity.Address) (*EncryptedMessage, error) {
+	if addr.EncryptionKey == nil {
+		return nil, errors.New("Cannot encrypt without encryption key.")
+	}
+
 	// Create a SignedMessage Wire Object
 	toData := &wire.SignedMessage{
 		Data:        s.Data,
@@ -268,6 +272,10 @@ type EncryptedMessage struct {
 
 // This Function sends an Encrypted Message to a Server via a Router
 func (e *EncryptedMessage) Send() error {
+	if e.To.Location == "" {
+		return errors.New("Cannot send to address without location.")
+	}
+
 	conn, err := ConnectToServer(e.To.Location)
 	if err != nil {
 		return err
