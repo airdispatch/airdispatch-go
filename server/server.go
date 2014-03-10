@@ -157,7 +157,7 @@ func (s *Server) handleTransferMessage(desc []byte, h message.Header, conn net.C
 		return
 	}
 
-	newAddr, err := s.Router.Lookup(txMessage.h.From)
+	newAddr, err := s.Router.Lookup(txMessage.h.From.String())
 	if err != nil {
 		s.handleError("Looking up address to return...", err)
 	}
@@ -186,7 +186,7 @@ func (s *Server) handleTransferMessageList(desc []byte, h message.Header, conn n
 		return
 	}
 
-	newAddr, err := s.Router.Lookup(txMessage.h.From)
+	newAddr, err := s.Router.Lookup(txMessage.h.From.String())
 	if err != nil {
 		s.handleError("Looking up address to return...", err)
 	}
