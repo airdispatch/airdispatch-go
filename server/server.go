@@ -3,6 +3,7 @@ package server
 import (
 	"airdispat.ch/identity"
 	"airdispat.ch/message"
+	"airdispat.ch/routing"
 	"airdispat.ch/wire"
 	"errors"
 	"net"
@@ -33,6 +34,7 @@ type Server struct {
 	LocationName string
 	Key          *identity.Identity
 	Delegate     ServerDelegate
+	Router       routing.Router
 }
 
 // Function that starts the server on a specific port
@@ -154,7 +156,13 @@ func (s *Server) handleTransferMessage(desc []byte, h message.Header, conn net.C
 		// common.CreateErrorMessage("400", "no message for that id and user").SendToConnection(conn, s.Key)
 		return
 	}
-	err = message.SignAndSendToConnection(mail, fromIdentity, txMessage.h.From, conn)
+
+	newAddr, err := s.Router.Lookup(txMessage.h.From)
+	if err != nil {
+		s.handleError("Looking up address to return...", err)
+	}
+
+	err = message.SignAndSendToConnection(mail, fromIdentity, newAddr, conn)
 	if err != nil {
 		s.handleError("Sign and Send Mail", err)
 	}
@@ -177,7 +185,13 @@ func (s *Server) handleTransferMessageList(desc []byte, h message.Header, conn n
 		s.handleError("Loading message from Server", errors.New("Couldn't find message"))
 		return
 	}
-	err = message.SignAndSendToConnection(mail, fromIdentity, txMessage.h.From, conn)
+
+	newAddr, err := s.Router.Lookup(txMessage.h.From)
+	if err != nil {
+		s.handleError("Looking up address to return...", err)
+	}
+
+	err = message.SignAndSendToConnection(mail, fromIdentity, newAddr, conn)
 	if err != nil {
 		s.handleError("Sign and Send Mail List", err)
 	}
