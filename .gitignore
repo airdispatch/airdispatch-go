@@ -11,3 +11,8 @@ test.go
 protocols/
 tracker/
 namecoin/
+
+\#*
+.\#*
+*~
+*.db

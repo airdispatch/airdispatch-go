@@ -156,7 +156,6 @@ func (s *SignedMessage) ReconstructMessage() (data []byte, messageType string, h
 	messageType = unmarshaller.GetType()
 	data = unmarshaller.GetData()
 	header = CreateHeaderFromWire(unmarshaller.GetHeader())
-	header.From = identity.CreateAddressFromBytes(s.Signature[0].SigningKey)
 
 	if header.Timestamp < time.Now().Unix()-600 ||
 		header.Timestamp > time.Now().Unix() {
