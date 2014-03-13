@@ -78,7 +78,7 @@ func GobDecodeKey(buffer io.Reader) (*Identity, error) {
 		SigningKey:    &newECDSAKey,
 		EncryptionKey: &newRSAKey,
 	}
-	newADKey.populateAddress()
+	newADKey.PopulateAddress()
 
 	return newADKey, nil
 }

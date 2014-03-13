@@ -37,7 +37,7 @@ func CreateIdentity() (id *Identity, err error) {
 	if err != nil {
 		return nil, err
 	}
-	key.populateAddress()
+	key.PopulateAddress()
 
 	return key, err
 }
@@ -60,7 +60,7 @@ func (a *Identity) SetLocation(newLocation string) {
 	a.Address.Location = newLocation
 }
 
-func (a *Identity) populateAddress() {
+func (a *Identity) PopulateAddress() {
 	a.Address = &Address{
 		EncryptionKey: &a.EncryptionKey.PublicKey,
 		SigningKey:    &a.SigningKey.PublicKey,
