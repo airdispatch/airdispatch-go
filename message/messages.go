@@ -23,6 +23,25 @@ func CreateMail(from *identity.Address, to *identity.Address) *Mail {
 	}
 }
 
+func CreateMailFromBytes(by []byte, h Header) (*Mail, error) {
+	unmarsh := &wire.Mail{}
+	err := proto.Unmarshal(by, unmarsh)
+	if err != nil {
+		return nil, err
+	}
+
+	c := unmarsh.GetComponents()
+	comp := make([]Component, len(c))
+	for i, v := range c {
+		comp[i] = CreateComponent(v.GetType(), v.GetData())
+	}
+
+	return &Mail{
+		h:          h,
+		Components: comp,
+	}, nil
+}
+
 func (m *Mail) ToBytes() []byte {
 	wireFormat := &wire.Mail{
 		Components: m.Components.ToWire(),
