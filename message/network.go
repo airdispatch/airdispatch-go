@@ -1,8 +1,10 @@
 package message
 
 import (
+	"airdispat.ch/identity"
 	"airdispat.ch/wire"
 	"code.google.com/p/goprotobuf/proto"
+	"errors"
 	"net"
 )
 
@@ -18,6 +20,45 @@ func ConnectToServer(remote string) (net.Conn, error) {
 		return nil, err
 	}
 	return conn, nil
+}
+
+func SendMessageAndReceive(m Message, sender *identity.Identity, addr *identity.Address) ([]byte, string, Header, error) {
+	signed, err := SignMessage(m, sender)
+	if err != nil {
+		return nil, "", Header{}, err
+	}
+
+	enc, err := signed.EncryptWithKey(addr)
+	if err != nil {
+		return nil, "", Header{}, err
+	}
+
+	conn, err := ConnectToServer(addr.Location)
+	if err != nil {
+		return nil, "", Header{}, err
+	}
+	defer conn.Close()
+
+	err = enc.SendMessageToConnection(conn)
+	if err != nil {
+		return nil, "", Header{}, err
+	}
+
+	msg, err := ReadMessageFromConnection(conn)
+	if err != nil {
+		return nil, "", Header{}, err
+	}
+
+	receivedSign, err := msg.Decrypt(sender)
+	if err != nil {
+		return nil, "", Header{}, err
+	}
+
+	if !receivedSign.Verify() {
+		return nil, "", Header{}, errors.New("Unable to Verify Message")
+	}
+
+	return receivedSign.ReconstructMessage()
 }
 
 func ReadMessageFromConnection(conn net.Conn) (*EncryptedMessage, error) {
