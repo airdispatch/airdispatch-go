@@ -130,6 +130,26 @@ type MessageList struct {
 	h       message.Header
 }
 
+func CreateMessageListFromBytes(b []byte, h message.Header) (*MessageList, error) {
+	var unmarsh *wire.MessageList
+	err := proto.Unmarshal(b, unmarsh)
+	if err != nil {
+		return nil, err
+	}
+
+	messageList := unmarsh.GetMessages()
+
+	out := &MessageList{
+		Content: make([]*MessageDescription, len(messageList)),
+		h:       h,
+	}
+
+	for i, v := range messageList {
+		out.Content[i] = CreateMessageDescription(v.GetName(), v.GetLocation(), h.From, h.To)
+	}
+	return out, nil
+}
+
 func (m *MessageList) AddMessageDescription(md *MessageDescription) {
 	if m.Content == nil {
 		m.Content = make([]*MessageDescription, 0)
