@@ -31,9 +31,9 @@ func CreateMailFromBytes(by []byte, h Header) (*Mail, error) {
 	}
 
 	c := unmarsh.GetComponents()
-	comp := make([]Component, len(c))
-	for i, v := range c {
-		comp[i] = CreateComponent(v.GetType(), v.GetData())
+	comp := make(map[string]Component)
+	for _, v := range c {
+		comp[v.GetType()] = CreateComponent(v.GetType(), v.GetData())
 	}
 
 	return &Mail{
@@ -62,39 +62,33 @@ func (m *Mail) Header() Header {
 	return m.h
 }
 
-type ComponentList []Component
+type ComponentList map[string]Component
 
 func (c ComponentList) ToWire() []*wire.Mail_Component {
 	output := make([]*wire.Mail_Component, len(c))
-	for i, v := range c {
+	i := 0
+	for _, v := range c {
 		output[i] = &wire.Mail_Component{
 			Type: &v.Name,
 			Data: v.Data,
 		}
+		i += 1
 	}
 	return output
 }
 
 func (c ComponentList) AddComponent(comp Component) {
-	c = append([]Component(c), comp)
+	c[comp.Name] = comp
 }
 
 func (c ComponentList) HasComponent(name string) bool {
-	for _, v := range c {
-		if v.Name == name {
-			return true
-		}
-	}
-	return false
+	_, ok := c[name]
+	return ok
 }
 
 func (c ComponentList) GetComponent(name string) []byte {
-	for _, v := range c {
-		if v.Name == name {
-			return v.Data
-		}
-	}
-	return nil
+	b, _ := c[name]
+	return b.Data
 }
 
 func (c ComponentList) GetStringComponent(name string) string {
