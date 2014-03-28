@@ -12,12 +12,12 @@ type Mail struct {
 	Components ComponentList
 }
 
-func CreateMail(from *identity.Address, to *identity.Address) *Mail {
+func CreateMail(from *identity.Address, to *identity.Address, ts time.Time) *Mail {
 	return &Mail{
 		h: Header{
 			From:      from,
 			To:        to,
-			Timestamp: time.Now().Unix(),
+			Timestamp: ts.Unix(),
 		},
 		Components: make(ComponentList, 0),
 	}
