@@ -16,6 +16,12 @@ func CreateMessageDescription(name string, location string, from *identity.Addre
 	}
 }
 
+func CreateMessageList(from *identity.Address, to *identity.Address) *MessageList {
+	return &MessageList{
+		h: message.CreateHeader(from, to),
+	}
+}
+
 func CreateTransferMessage(name string, from *identity.Address, to *identity.Address) *TransferMessage {
 	return &TransferMessage{
 		Name: name,
