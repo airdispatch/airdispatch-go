@@ -95,9 +95,31 @@ func (c ComponentList) GetStringComponent(name string) string {
 	return string(c.GetComponent(name))
 }
 
+func (c ComponentList) ToArray() []Component {
+	var out []Component = make([]Component, len(c))
+	var i int = 0
+	for _, v := range c {
+		out[i] = v
+		i++
+	}
+	return out
+}
+
 type Component struct {
 	Name string
 	Data []byte
+}
+
+func (c Component) Key() string {
+	return c.Name
+}
+
+func (c Component) Value() []byte {
+	return c.Data
+}
+
+func (c Component) String() string {
+	return string(c.Data)
 }
 
 func CreateComponent(name string, data []byte) Component {
