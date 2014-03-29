@@ -146,7 +146,14 @@ func (s *SignedMessage) AddSignature(id *identity.Identity) error {
 	return nil
 }
 
+func (s *SignedMessage) ReconstructMessageWithoutTimestamp() (data []byte, messageType string, header Header, err error) {
+	return s.reconstructMessage(false)
+}
 func (s *SignedMessage) ReconstructMessage() (data []byte, messageType string, header Header, err error) {
+	return s.reconstructMessage(true)
+}
+
+func (s *SignedMessage) reconstructMessage(ts bool) (data []byte, messageType string, header Header, err error) {
 	unmarshaller := &wire.Container{}
 	err = proto.Unmarshal(s.Data, unmarshaller)
 	if err != nil {
@@ -157,9 +164,11 @@ func (s *SignedMessage) ReconstructMessage() (data []byte, messageType string, h
 	data = unmarshaller.GetData()
 	header = CreateHeaderFromWire(unmarshaller.GetHeader())
 
-	if header.Timestamp < time.Now().Unix()-600 ||
-		header.Timestamp > time.Now().Unix() {
-		err = errors.New("Unable to verify message timestamp.")
+	if ts {
+		if header.Timestamp < time.Now().Unix()-600 ||
+			header.Timestamp > time.Now().Unix() {
+			err = errors.New("Unable to verify message timestamp.")
+		}
 	}
 
 	return
