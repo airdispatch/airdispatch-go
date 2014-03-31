@@ -23,10 +23,10 @@ func ConnectToServer(remote string) (net.Conn, error) {
 }
 
 func SendMessageAndReceiveWithoutTimestamp(m Message, sedner *identity.Identity, addr *identity.Address) ([]byte, string, Header, error) {
-	return sendMessageAndReceive(m, sneder, addr, false)
+	return sendMessageAndReceive(m, sender, addr, false)
 }
 func SendMessageAndReceive(m Message, sender *identity.Identity, addr *identity.Address) ([]byte, string, Header, error) {
-	return sendMessageAndReceive(m, sneder, addr, true)
+	return sendMessageAndReceive(m, sender, addr, true)
 }
 
 func sendMessageAndReceive(m Message, sender *identity.Identity, addr *identity.Address, ts bool) ([]byte, string, Header, error) {
