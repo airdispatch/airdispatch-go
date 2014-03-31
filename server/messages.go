@@ -137,7 +137,7 @@ type MessageList struct {
 }
 
 func CreateMessageListFromBytes(b []byte, h message.Header) (*MessageList, error) {
-	var unmarsh *wire.MessageList
+	unmarsh := &wire.MessageList{}
 	err := proto.Unmarshal(b, unmarsh)
 	if err != nil {
 		return nil, err
