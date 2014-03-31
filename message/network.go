@@ -22,7 +22,7 @@ func ConnectToServer(remote string) (net.Conn, error) {
 	return conn, nil
 }
 
-func SendMessageAndReceiveWithoutTimestamp(m Message, sedner *identity.Identity, addr *identity.Address) ([]byte, string, Header, error) {
+func SendMessageAndReceiveWithoutTimestamp(m Message, sender *identity.Identity, addr *identity.Address) ([]byte, string, Header, error) {
 	return sendMessageAndReceive(m, sender, addr, false)
 }
 func SendMessageAndReceive(m Message, sender *identity.Identity, addr *identity.Address) ([]byte, string, Header, error) {
