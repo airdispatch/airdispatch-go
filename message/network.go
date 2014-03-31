@@ -22,7 +22,14 @@ func ConnectToServer(remote string) (net.Conn, error) {
 	return conn, nil
 }
 
+func SendMessageAndReceiveWithoutTimestamp(m Message, sedner *identity.Identity, addr *identity.Address) ([]byte, string, Header, error) {
+	return sendMessageAndReceive(m, sneder, addr, false)
+}
 func SendMessageAndReceive(m Message, sender *identity.Identity, addr *identity.Address) ([]byte, string, Header, error) {
+	return sendMessageAndReceive(m, sneder, addr, true)
+}
+
+func sendMessageAndReceive(m Message, sender *identity.Identity, addr *identity.Address, ts bool) ([]byte, string, Header, error) {
 	signed, err := SignMessage(m, sender)
 	if err != nil {
 		return nil, "", Header{}, err
@@ -58,7 +65,11 @@ func SendMessageAndReceive(m Message, sender *identity.Identity, addr *identity.
 		return nil, "", Header{}, errors.New("Unable to Verify Message")
 	}
 
-	return receivedSign.ReconstructMessage()
+	if ts {
+		return receivedSign.ReconstructMessage()
+	} else {
+		return receivedSign.ReconstructMessageWithoutTimestamp()
+	}
 }
 
 func ReadMessageFromConnection(conn net.Conn) (*EncryptedMessage, error) {
