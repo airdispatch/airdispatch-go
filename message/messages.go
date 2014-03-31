@@ -68,8 +68,9 @@ func (c ComponentList) ToWire() []*wire.Mail_Component {
 	output := make([]*wire.Mail_Component, len(c))
 	i := 0
 	for _, v := range c {
+		newName := v.Name
 		output[i] = &wire.Mail_Component{
-			Type: &v.Name,
+			Type: &newName,
 			Data: v.Data,
 		}
 		i += 1
