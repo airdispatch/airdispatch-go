@@ -6,9 +6,7 @@ import (
 	"airdispat.ch/routing"
 	"airdispat.ch/wire"
 	"errors"
-	"fmt"
 	"net"
-	"os"
 	"time"
 )
 
