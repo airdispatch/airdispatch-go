@@ -1,32 +1,74 @@
 package errors
 
 import (
-	"errors"
+	"airdispat.ch/identity"
+	"airdispat.ch/message"
+	"airdispat.ch/wire"
+	"code.google.com/p/goprotobuf/proto"
+	"fmt"
+	"net"
 )
 
 type Error struct {
-	Code        int
+	Code        uint32
 	Description string
+	h           message.Header
 }
 
-// These constants declare different Error Codes
-const (
-	AddressNotFound  int = 4
-	MessageNotFound  int = 4
-	InvalidSignature int = 1
-	NoMessages       int = 2
-	NotAuthorized    int = 4
-)
+func (e *Error) Error() string {
+	return fmt.Sprintf("%d: %s", e.Code, e.Description)
+}
 
-var ADSigningError = errors.New("ADSigningError: Message is not properly signed.")
-var ADUnmarshallingError = errors.New("ADUnmarshallingError: Message could not be unmarshalled.")
-var ADTimeoutError = errors.New("ADTimeoutError: Operation was not able to be completed in the timeout period")
+func (e *Error) Prepare(from *identity.Address) {
+	e.h = message.CreateHeader(from, identity.Public)
+}
 
-var ADUnexpectedMessageTypeError = errors.New("ADUnexpectedMessageTypeError: Received a different type of message than expected.")
+func (e *Error) Type() string {
+	return wire.ErrorCode
+}
 
-var ADTrackerVerificationError = errors.New("ADTrackerVerificationError: Could not verify the tracker is who you should be talking to.")
-var ADTrackerListQueryError = errors.New("ADTrackerListQueryError: The address queried for could not be located in the tracker list provided.")
+func (e *Error) ToBytes() []byte {
+	wireFormat := &wire.Error{
+		Code:        &e.Code,
+		Description: &e.Description,
+	}
+	by, err := proto.Marshal(wireFormat)
+	if err != nil {
+		panic("Unable to marshal error message. What now?")
+	}
+	return by
+}
 
-var ADDecryptionError = errors.New("ADDecryptionError: The payload of the Mail cannot be decrypted because the ADKey was not passed in correctly.")
+func (e *Error) Header() message.Header {
+	if e.h.From == nil {
+		panic("Can't return empty header.")
+	}
+	return e.h
+}
 
-var ADIncorrectParameterError = errors.New("ADIncorrectParameterError: One of the parameters of this function is out of bounds.")
+func CreateErrorFromBytes(by []byte, h message.Header) *Error {
+	unmarsh := &wire.Error{}
+	err := proto.Unmarshal(by, unmarsh)
+	if err != nil {
+		return &Error{10, "Unable to unmarshal Error message.", h}
+	}
+
+	return &Error{
+		Code:        unmarsh.GetCode(),
+		Description: unmarsh.GetDescription(),
+		h:           h,
+	}
+}
+
+func CreateError(code Code, description string, from *identity.Address) *Error {
+	e := &Error{
+		Code:        uint32(code),
+		Description: description,
+	}
+
+	return e
+}
+
+func (e *Error) Send(from *identity.Identity, conn net.Conn) error {
+	return message.SignAndSendToConnection(e, from, identity.Public, conn)
+}

@@ -186,7 +186,9 @@ func (s *SignedMessage) Encrypt(addr string, router routing.Router) (*EncryptedM
 
 // Encrypt a signed message for a qualified Address
 func (s *SignedMessage) EncryptWithKey(addr *identity.Address) (*EncryptedMessage, error) {
-	if addr.EncryptionKey == nil {
+	if addr.IsPublic() {
+		return s.UnencryptedMessage(addr)
+	} else if addr.EncryptionKey == nil {
 		return nil, errors.New("Cannot encrypt without encryption key.")
 	}
 

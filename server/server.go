@@ -1,6 +1,7 @@
 package server
 
 import (
+	adErrors "airdispat.ch/errors"
 	"airdispat.ch/identity"
 	"airdispat.ch/message"
 	"airdispat.ch/routing"
@@ -91,7 +92,9 @@ func (s *Server) handleClient(conn net.Conn) {
 	// Read in the Message
 	newMessage, err := message.ReadMessageFromConnection(conn)
 	if err != nil {
+		// There is nothing we can do if we can't read the message.
 		s.handleError("Read Message From Connection", err)
+		adErrors.CreateError(adErrors.UnexpectedError, "Unable to read message properly.", s.Key.Address).Send(s.Key, conn)
 		return
 	}
 
@@ -100,18 +103,22 @@ func (s *Server) handleClient(conn net.Conn) {
 		decryptor = s.Delegate.IdentityForUser(newMessage.To)
 	}
 	if decryptor == nil {
+		// Unable to decrypt message shouldn't end up being an error.
 		s.handleError("Decrypt Message", errors.New("Unable to find decryption key for message."))
+		adErrors.CreateError(adErrors.AddressNotFound, "Unable to find decryption key for message.", s.Key.Address).Send(s.Key, conn)
 		return
 	}
 
 	signedMessage, err := newMessage.Decrypt(decryptor)
 	if err != nil {
 		s.handleError("Decrypt Message", err)
+		adErrors.CreateError(adErrors.UnexpectedError, "Unable to properly decrypt message.", s.Key.Address).Send(s.Key, conn)
 		return
 	}
 
 	if !signedMessage.Verify() {
 		s.handleError("Verify Signature", errors.New("Unable to Verify Signature on Message"))
+		adErrors.CreateError(adErrors.InvalidSignature, "Signature is invalid.", s.Key.Address).Send(s.Key, conn)
 		return
 	}
 
@@ -119,13 +126,14 @@ func (s *Server) handleClient(conn net.Conn) {
 
 	if err != nil {
 		s.handleError("Verifying Message Structure", err)
+		adErrors.CreateError(adErrors.UnexpectedError, "Unable to verify message structure.", s.Key.Address).Send(s.Key, conn)
 		return
 	}
 
 	// Switch based on the Message Type
 	switch mesType {
 	case wire.MessageDescriptionCode:
-		s.handleMessageDescription(data, h)
+		s.handleMessageDescription(data, h, conn)
 	case wire.TransferMessageCode:
 		s.handleTransferMessage(data, h, conn)
 	case wire.TransferMessageListCode:
@@ -133,9 +141,10 @@ func (s *Server) handleClient(conn net.Conn) {
 	}
 }
 
-func (s *Server) handleMessageDescription(desc []byte, h message.Header) {
+func (s *Server) handleMessageDescription(desc []byte, h message.Header, conn net.Conn) {
 	description, err := CreateMessageDescriptionFromBytes(desc, h)
 	if err != nil {
+		adErrors.CreateError(adErrors.UnexpectedError, "Unable to unpack message description.", s.Key.Address).Send(s.Key, conn)
 		return
 	}
 
@@ -146,31 +155,34 @@ func (s *Server) handleMessageDescription(desc []byte, h message.Header) {
 func (s *Server) handleTransferMessage(desc []byte, h message.Header, conn net.Conn) {
 	txMessage, err := CreateTransferMessageFromBytes(desc, h)
 	if err != nil {
+		adErrors.CreateError(adErrors.UnexpectedError, "Unable to unpack transfer message.", s.Key.Address).Send(s.Key, conn)
 		return
 	}
 	fromIdentity := s.Delegate.IdentityForUser(txMessage.h.To)
 	if fromIdentity == nil {
 		s.handleError("Loading Identity for User.", errors.New("User doesn't live here."))
+		adErrors.CreateError(adErrors.AddressNotFound, "You cannot download messages for users that do not reside on this server.", s.Key.Address).Send(s.Key, conn)
 		return
 	}
 
 	mail := s.Delegate.RetrieveMessageForUser(txMessage.Name, txMessage.h.To, txMessage.h.From)
 	if mail == nil {
 		s.handleError("Loading message from Server", errors.New("Couldn't find message"))
-		// If there is no message stored with that ID, then send back an error
-		// common.CreateErrorMessage("400", "no message for that id and user").SendToConnection(conn, s.Key)
+		adErrors.CreateError(adErrors.MessageNotFound, "That message doesn't exist.", s.Key.Address).Send(s.Key, conn)
 		return
 	}
 
 	newAddr, err := s.Router.Lookup(txMessage.h.From.String())
 	if err != nil {
 		s.handleError("Looking up address to return...", err)
+		adErrors.CreateError(adErrors.UnexpectedError, "Couldn't locate user to return message to.", s.Key.Address).Send(s.Key, conn)
 		return
 	}
 
 	err = message.SignAndSendToConnection(mail, fromIdentity, newAddr, conn)
 	if err != nil {
 		s.handleError("Sign and Send Mail", err)
+		adErrors.CreateError(adErrors.InternalError, "Unable to pack return message.", s.Key.Address).Send(s.Key, conn)
 		return
 	}
 }
@@ -178,30 +190,35 @@ func (s *Server) handleTransferMessage(desc []byte, h message.Header, conn net.C
 func (s *Server) handleTransferMessageList(desc []byte, h message.Header, conn net.Conn) {
 	txMessage, err := CreateTransferMessageListFromBytes(desc, h)
 	if err != nil {
+		adErrors.CreateError(adErrors.UnexpectedError, "Unable to unpack transfer message list.", s.Key.Address).Send(s.Key, conn)
 		return
 	}
 
 	fromIdentity := s.Delegate.IdentityForUser(txMessage.h.To)
 	if fromIdentity == nil {
 		s.handleError("Loading Identity for User.", errors.New("User doesn't live here."))
+		adErrors.CreateError(adErrors.AddressNotFound, "Couldn't find a user by that address.", s.Key.Address).Send(s.Key, conn)
 		return
 	}
 
 	mail := s.Delegate.RetrieveMessageListForUser(txMessage.Since, txMessage.h.To, txMessage.h.From)
 	if mail == nil {
 		s.handleError("Loading message from Server", errors.New("Couldn't find message"))
+		adErrors.CreateError(adErrors.MessageNotFound, "Couldn't find any messages for that user.", s.Key.Address).Send(s.Key, conn)
 		return
 	}
 
 	newAddr, err := s.Router.Lookup(txMessage.h.From.String())
 	if err != nil {
 		s.handleError("Looking up address to return...", err)
+		adErrors.CreateError(adErrors.UnexpectedError, "Couldn't find return address for user.", s.Key.Address).Send(s.Key, conn)
 		return
 	}
 
 	err = message.SignAndSendToConnection(mail, fromIdentity, newAddr, conn)
 	if err != nil {
 		s.handleError("Sign and Send Mail List", err)
+		adErrors.CreateError(adErrors.InternalError, "Couldn't pack return mail list.", s.Key.Address).Send(s.Key, conn)
 		return
 	}
 }
