@@ -16,7 +16,7 @@ type Error struct {
 }
 
 func (e *Error) Error() string {
-	return fmt.Sprintf("%d: %s", e.Code, e.Description)
+	return fmt.Sprintf("ADError %d: %s", e.Code, e.Description)
 }
 
 func (e *Error) Prepare(from *identity.Address) {
@@ -65,6 +65,8 @@ func CreateError(code Code, description string, from *identity.Address) *Error {
 		Code:        uint32(code),
 		Description: description,
 	}
+
+	e.Prepare(from)
 
 	return e
 }

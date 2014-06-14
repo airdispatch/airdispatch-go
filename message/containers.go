@@ -112,7 +112,7 @@ func (h Header) ToWire() *wire.Header {
 
 	// Public Messages are Allowed
 	toAddr := []byte{0}
-	if h.To != nil {
+	if h.To != nil && !h.To.IsPublic() {
 		toAddr = h.To.Fingerprint
 	}
 
