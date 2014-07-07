@@ -100,11 +100,13 @@ func (s *Server) handleClient(conn net.Conn) {
 		signedMessage, err := newMessage.Decrypt(s.Key)
 		if err != nil {
 			s.handleError("Decrypt Message", err)
+			adErrors.CreateError(adErrors.UnexpectedError, "Unable to decrypt message.", s.Key.Address).Send(s.Key, conn)
 			return
 		}
 
 		if !signedMessage.Verify() {
 			s.handleError("Verify Signature", errors.New("Unable to Verify Signature on Message"))
+			adErrors.CreateError(adErrors.InvalidSignature, "Message contains invalid signature.", s.Key.Address).Send(s.Key, conn)
 			return
 		}
 
@@ -112,6 +114,7 @@ func (s *Server) handleClient(conn net.Conn) {
 
 		if err != nil {
 			s.handleError("Verifying Message Structure", err)
+			adErrors.CreateError(adErrors.UnexpectedError, "Unable to unpack transfer message.", s.Key.Address).Send(s.Key, conn)
 			return
 		}
 
@@ -177,6 +180,7 @@ func (s *Server) handleTransferMessageList(desc []byte, h message.Header, conn n
 	err = message.SignAndSendToConnection(ml, s.Key, txMessage.h.From, conn)
 	if err != nil {
 		s.handleError("Sending message list to connection.", err)
+		adErrors.CreateError(adErrors.InternalError, "Unable to pack return message.", s.Key.Address).Send(s.Key, conn)
 		return
 	}
 
