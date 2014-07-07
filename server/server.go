@@ -1,6 +1,7 @@
 package server
 
 import (
+	adErrors "airdispat.ch/errors"
 	"airdispat.ch/identity"
 	"airdispat.ch/message"
 	"airdispat.ch/routing"
@@ -89,7 +90,9 @@ func (s *Server) handleClient(conn net.Conn) {
 	// Read in the Message
 	newMessage, err := message.ReadMessageFromConnection(conn)
 	if err != nil {
+		// There is nothing we can do if we can't read the message.
 		s.handleError("Read Message From Connection", err)
+		adErrors.CreateError(adErrors.UnexpectedError, "Unable to read message properly.", s.Key.Address).Send(s.Key, conn)
 		return
 	}
 
@@ -133,20 +136,21 @@ func (s *Server) handleMessageDescription(desc *message.EncryptedMessage) {
 func (s *Server) handleTransferMessage(desc []byte, h message.Header, conn net.Conn) {
 	txMessage, err := CreateTransferMessageFromBytes(desc, h)
 	if err != nil {
+		adErrors.CreateError(adErrors.UnexpectedError, "Unable to unpack transfer message.", s.Key.Address).Send(s.Key, conn)
 		return
 	}
 
 	mail := s.Delegate.RetrieveMessageForUser(txMessage.Name, txMessage.h.To, txMessage.h.From)
 	if mail == nil {
 		s.handleError("Loading message from Server", errors.New("Couldn't find message"))
-		// If there is no message stored with that ID, then send back an error
-		// common.CreateErrorMessage("400", "no message for that id and user").SendToConnection(conn, s.Key)
+		adErrors.CreateError(adErrors.MessageNotFound, "That message doesn't exist.", s.Key.Address).Send(s.Key, conn)
 		return
 	}
 
 	err = mail.SendMessageToConnection(conn)
 	if err != nil {
 		s.handleError("Sign and Send Mail", err)
+		adErrors.CreateError(adErrors.InternalError, "Unable to pack return message.", s.Key.Address).Send(s.Key, conn)
 		return
 	}
 }
@@ -154,12 +158,14 @@ func (s *Server) handleTransferMessage(desc []byte, h message.Header, conn net.C
 func (s *Server) handleTransferMessageList(desc []byte, h message.Header, conn net.Conn) {
 	txMessage, err := CreateTransferMessageListFromBytes(desc, h)
 	if err != nil {
+		adErrors.CreateError(adErrors.UnexpectedError, "Unable to unpack transfer message list.", s.Key.Address).Send(s.Key, conn)
 		return
 	}
 
 	mail := s.Delegate.RetrieveMessageListForUser(txMessage.Since, txMessage.h.To, txMessage.h.From)
 	if mail == nil {
 		s.handleError("Loading message from Server", errors.New("Couldn't find message"))
+		adErrors.CreateError(adErrors.MessageNotFound, "Couldn't find any messages for that user.", s.Key.Address).Send(s.Key, conn)
 		return
 	}
 

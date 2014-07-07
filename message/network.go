@@ -88,9 +88,14 @@ func ReadMessageFromConnection(conn net.Conn) (*EncryptedMessage, error) {
 
 func (e *EncryptedMessage) SendMessageToConnection(conn net.Conn) error {
 	// The first step to sending the message is marshalling it to bytes.
+	toAddr := []byte{0}
+	if e.To != nil && !e.To.IsPublic() {
+		toAddr = e.To.Fingerprint
+	}
+
 	toData := &wire.EncryptedMessage{
 		Data:    e.Data,
-		ToAddr:  e.To.Fingerprint,
+		ToAddr:  toAddr,
 		Key:     e.EncryptionKey,
 		EncFunc: e.EncryptionType,
 	}
