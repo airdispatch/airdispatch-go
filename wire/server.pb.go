@@ -78,19 +78,19 @@ func (m *MessageDescription) GetNonce() uint64 {
 }
 
 type MessageList struct {
-	Messages         []*MessageDescription `protobuf:"bytes,1,rep,name=messages" json:"messages,omitempty"`
-	XXX_unrecognized []byte                `json:"-"`
+	Length           *uint64 `protobuf:"varint,1,req,name=length" json:"length,omitempty"`
+	XXX_unrecognized []byte  `json:"-"`
 }
 
 func (m *MessageList) Reset()         { *m = MessageList{} }
 func (m *MessageList) String() string { return proto.CompactTextString(m) }
 func (*MessageList) ProtoMessage()    {}
 
-func (m *MessageList) GetMessages() []*MessageDescription {
-	if m != nil {
-		return m.Messages
+func (m *MessageList) GetLength() uint64 {
+	if m != nil && m.Length != nil {
+		return *m.Length
 	}
-	return nil
+	return 0
 }
 
 func init() {

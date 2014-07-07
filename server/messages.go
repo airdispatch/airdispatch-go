@@ -132,8 +132,8 @@ func (m *TransferMessage) Header() message.Header {
 
 // --- Multi-Messages ---
 type MessageList struct {
-	Content []*MessageDescription
-	h       message.Header
+	Length uint64
+	h      message.Header
 }
 
 func CreateMessageListFromBytes(b []byte, h message.Header) (*MessageList, error) {
@@ -143,34 +143,16 @@ func CreateMessageListFromBytes(b []byte, h message.Header) (*MessageList, error
 		return nil, err
 	}
 
-	messageList := unmarsh.GetMessages()
-
 	out := &MessageList{
-		Content: make([]*MessageDescription, len(messageList)),
+		Length: unmarsh.GetLength(),
 		h:       h,
-	}
-
-	for i, v := range messageList {
-		out.Content[i] = CreateMessageDescription(v.GetName(), v.GetLocation(), h.From, h.To)
 	}
 	return out, nil
 }
 
-func (m *MessageList) AddMessageDescription(md *MessageDescription) {
-	if m.Content == nil {
-		m.Content = make([]*MessageDescription, 0)
-	}
-	m.Content = append(m.Content, md)
-}
-
 func (m *MessageList) ToBytes() []byte {
-	wired := make([]*wire.MessageDescription, len(m.Content))
-	for i, v := range m.Content {
-		wired[i] = v.toWire()
-	}
-
 	toData := &wire.MessageList{
-		Messages: wired,
+		Length: &m.Length,
 	}
 	by, err := proto.Marshal(toData)
 	if err != nil {

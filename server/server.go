@@ -22,12 +22,10 @@ type ServerDelegate interface {
 	HandleError(err *ServerError)
 	LogMessage(toLog ...string)
 
-	SaveMessageDescription(*MessageDescription)
+	SaveMessageDescription(desc *message.EncryptedMessage)
 
-	IdentityForUser(addr *identity.Address) *identity.Identity
-
-	RetrieveMessageForUser(id string, author *identity.Address, forAddr *identity.Address) (message *message.Mail)
-	RetrieveMessageListForUser(since uint64, author *identity.Address, forAddr *identity.Address) (messages *MessageList)
+	RetrieveMessageForUser(id string, author *identity.Address, forAddr *identity.Address) *message.EncryptedMessage
+	RetrieveMessageListForUser(since uint64, author *identity.Address, forAddr *identity.Address) []*message.EncryptedMessage
 }
 
 // The server structure tahat holds all of the necessary instance variables
@@ -95,62 +93,46 @@ func (s *Server) handleClient(conn net.Conn) {
 		return
 	}
 
-	decryptor := s.Key
-	if newMessage.To.String() != s.Key.Address.String() {
-		decryptor = s.Delegate.IdentityForUser(newMessage.To)
-	}
-	if decryptor == nil {
-		s.handleError("Decrypt Message", errors.New("Unable to find decryption key for message."))
-		return
-	}
+	if newMessage.To.String() == s.Key.Address.String() || newMessage.To.IsPublic() {
+		signedMessage, err := newMessage.Decrypt(s.Key)
+		if err != nil {
+			s.handleError("Decrypt Message", err)
+			return
+		}
 
-	signedMessage, err := newMessage.Decrypt(decryptor)
-	if err != nil {
-		s.handleError("Decrypt Message", err)
-		return
-	}
+		if !signedMessage.Verify() {
+			s.handleError("Verify Signature", errors.New("Unable to Verify Signature on Message"))
+			return
+		}
 
-	if !signedMessage.Verify() {
-		s.handleError("Verify Signature", errors.New("Unable to Verify Signature on Message"))
-		return
-	}
+		data, mesType, h, err := signedMessage.ReconstructMessage()
 
-	data, mesType, h, err := signedMessage.ReconstructMessage()
+		if err != nil {
+			s.handleError("Verifying Message Structure", err)
+			return
+		}
 
-	if err != nil {
-		s.handleError("Verifying Message Structure", err)
-		return
-	}
-
-	// Switch based on the Message Type
-	switch mesType {
-	case wire.MessageDescriptionCode:
-		s.handleMessageDescription(data, h)
-	case wire.TransferMessageCode:
-		s.handleTransferMessage(data, h, conn)
-	case wire.TransferMessageListCode:
-		s.handleTransferMessageList(data, h, conn)
+		// Switch based on the Message Type
+		switch mesType {
+		case wire.TransferMessageCode:
+			s.handleTransferMessage(data, h, conn)
+		case wire.TransferMessageListCode:
+			s.handleTransferMessageList(data, h, conn)
+		}
+	} else {
+		s.handleMessageDescription(newMessage)
 	}
 }
 
-func (s *Server) handleMessageDescription(desc []byte, h message.Header) {
-	description, err := CreateMessageDescriptionFromBytes(desc, h)
-	if err != nil {
-		return
-	}
-
-	s.Delegate.SaveMessageDescription(description)
+// Send the Message to the Delegate
+func (s *Server) handleMessageDescription(desc *message.EncryptedMessage) {
+	s.Delegate.SaveMessageDescription(desc)
 }
 
 // Function that Handles a DataRetrieval Message
 func (s *Server) handleTransferMessage(desc []byte, h message.Header, conn net.Conn) {
 	txMessage, err := CreateTransferMessageFromBytes(desc, h)
 	if err != nil {
-		return
-	}
-	fromIdentity := s.Delegate.IdentityForUser(txMessage.h.To)
-	if fromIdentity == nil {
-		s.handleError("Loading Identity for User.", errors.New("User doesn't live here."))
 		return
 	}
 
@@ -162,13 +144,7 @@ func (s *Server) handleTransferMessage(desc []byte, h message.Header, conn net.C
 		return
 	}
 
-	newAddr, err := s.Router.Lookup(txMessage.h.From.String())
-	if err != nil {
-		s.handleError("Looking up address to return...", err)
-		return
-	}
-
-	err = message.SignAndSendToConnection(mail, fromIdentity, newAddr, conn)
+	err = mail.SendMessageToConnection(conn)
 	if err != nil {
 		s.handleError("Sign and Send Mail", err)
 		return
@@ -181,27 +157,27 @@ func (s *Server) handleTransferMessageList(desc []byte, h message.Header, conn n
 		return
 	}
 
-	fromIdentity := s.Delegate.IdentityForUser(txMessage.h.To)
-	if fromIdentity == nil {
-		s.handleError("Loading Identity for User.", errors.New("User doesn't live here."))
-		return
-	}
-
 	mail := s.Delegate.RetrieveMessageListForUser(txMessage.Since, txMessage.h.To, txMessage.h.From)
 	if mail == nil {
 		s.handleError("Loading message from Server", errors.New("Couldn't find message"))
 		return
 	}
 
-	newAddr, err := s.Router.Lookup(txMessage.h.From.String())
+	ml := &MessageList{
+		Length: uint64(len(mail)),
+		h: message.CreateHeader(s.Key.Address, txMessage.h.From),
+	}
+
+	err = message.SignAndSendToConnection(ml, s.Key, txMessage.h.From, conn)
 	if err != nil {
-		s.handleError("Looking up address to return...", err)
+		s.handleError("Sending message list to connection.", err)
 		return
 	}
 
-	err = message.SignAndSendToConnection(mail, fromIdentity, newAddr, conn)
-	if err != nil {
-		s.handleError("Sign and Send Mail List", err)
-		return
+	for _, v := range mail {
+		err := v.SendMessageToConnection(conn)
+		if err != nil {
+				s.handleError("Sending public message to connection.", err)
+		}
 	}
 }
