@@ -3,6 +3,7 @@ package server
 import (
 	"airdispat.ch/identity"
 	"airdispat.ch/message"
+	"airdispat.ch/routing"
 	"airdispat.ch/wire"
 	"errors"
 	"fmt"
@@ -38,13 +39,17 @@ func TestSendMessage(t *testing.T) {
 	}
 	server.SetLocation("localhost:9092")
 
+	fmt.Println("Sender", sender.Address.String())
+	fmt.Println("Receiver", receiver.Address.String())
+	fmt.Println("Server", server.Address.String())
+
 	testRouter := &StaticRouter{
 		Keys: []*identity.Identity{sender, receiver},
 	}
 
 	testDelegate := &TestSendMessageDelegate{
-		t:     t,
-		Users: []*identity.Identity{receiver},
+		t:          t,
+		Decryption: receiver,
 	}
 
 	theServer := Server{
@@ -77,8 +82,8 @@ func TestSendMessage(t *testing.T) {
 
 type TestSendMessageDelegate struct {
 	BasicServer
-	t     *testing.T
-	Users []*identity.Identity
+	t          *testing.T
+	Decryption *identity.Identity
 }
 
 func (t TestSendMessageDelegate) HandleError(err *ServerError) {
@@ -86,31 +91,46 @@ func (t TestSendMessageDelegate) HandleError(err *ServerError) {
 	t.t.Error(err)
 	panic(err)
 }
-func (t TestSendMessageDelegate) SaveMessageDescription(m *MessageDescription) {
+func (t TestSendMessageDelegate) SaveMessageDescription(m *message.EncryptedMessage) {
 	gotSaveDescription = true
 
+	message, err := m.Decrypt(t.Decryption)
+	if err != nil {
+		t.t.Error(err.Error())
+	}
+
+	if !message.Verify() {
+		t.t.Error("Unable to verify message description.")
+	}
+
+	data, typ, h, err := message.ReconstructMessage()
+	if err != nil {
+		t.t.Error(err.Error())
+	}
+
+	if typ != wire.MessageDescriptionCode {
+		t.t.Error("Wrong type of message sent.")
+	}
+
+	msg, err := CreateMessageDescriptionFromBytes(data, h)
+	if err != nil {
+		t.t.Error(err.Error())
+	}
+
 	t.t.Log("Received Message Description")
-	if m.Name != "testMessage" {
+	if msg.Name != "testMessage" {
 		t.t.Error("Name was incorrect in Message Description")
 	}
-	if m.Location != "localhost:9090" {
+	if msg.Location != "localhost:9090" {
 		t.t.Error("Location was incorrect in Message Description")
 	}
 }
-func (t TestSendMessageDelegate) IdentityForUser(addr *identity.Address) *identity.Identity {
-	for _, x := range t.Users {
-		if x.Address.String() == addr.String() {
-			return x
-		}
-	}
-	return nil
-}
-func (t TestSendMessageDelegate) RetrieveMessageForUser(id string, author *identity.Address, forAddr *identity.Address) (message *message.Mail) {
+func (t TestSendMessageDelegate) RetrieveMessageForUser(id string, author *identity.Address, forAddr *identity.Address) (message *message.EncryptedMessage) {
 	t.t.Error("Wrong function.")
 	return nil
 
 }
-func (t TestSendMessageDelegate) RetrieveMessageListForUser(since uint64, author *identity.Address, forAddr *identity.Address) (messages *MessageList) {
+func (t TestSendMessageDelegate) RetrieveMessageListForUser(since uint64, author *identity.Address, forAddr *identity.Address) (messages []*message.EncryptedMessage) {
 	t.t.Error("Wrong function.")
 	return nil
 }
@@ -153,8 +173,9 @@ func TestTransferMessage(t *testing.T) {
 	}
 
 	testDelegate := &TestTransferMessageDelegate{
-		t:     t,
-		Users: []*identity.Identity{receiver},
+		t:      t,
+		Signer: receiver,
+		Router: testRouter,
 	}
 
 	theServer := Server{
@@ -178,7 +199,7 @@ func TestTransferMessage(t *testing.T) {
 		return
 	}
 
-	enc, err := signed.EncryptWithKey(receiver.Address)
+	enc, err := signed.EncryptWithKey(server.Address)
 	if err != nil {
 		t.Error(err)
 		return
@@ -237,8 +258,9 @@ func TestTransferMessage(t *testing.T) {
 
 type TestTransferMessageDelegate struct {
 	BasicServer
-	t     *testing.T
-	Users []*identity.Identity
+	t      *testing.T
+	Signer *identity.Identity
+	Router routing.Router
 }
 
 func (t TestTransferMessageDelegate) HandleError(err *ServerError) {
@@ -246,31 +268,39 @@ func (t TestTransferMessageDelegate) HandleError(err *ServerError) {
 	t.t.Error(err)
 	panic(err)
 }
-func (t TestTransferMessageDelegate) SaveMessageDescription(m *MessageDescription) {
+func (t TestTransferMessageDelegate) SaveMessageDescription(m *message.EncryptedMessage) {
 	t.t.Error("Wrong function.")
 	panic(nil)
 }
-func (t TestTransferMessageDelegate) IdentityForUser(addr *identity.Address) *identity.Identity {
-	for _, x := range t.Users {
-		if x.Address.String() == addr.String() {
-			return x
-		}
-	}
-	return nil
-}
-func (t TestTransferMessageDelegate) RetrieveMessageForUser(id string, author *identity.Address, forAddr *identity.Address) *message.Mail {
+func (t TestTransferMessageDelegate) RetrieveMessageForUser(id string, author *identity.Address, forAddr *identity.Address) *message.EncryptedMessage {
 	t.t.Log("Successfully recevied transfer message.")
 	if id != "testMessage" {
 		t.t.Error("Cannot retrieve message that isn't tested.")
 	}
-	mail := message.CreateMail(author, forAddr)
-	mail.Components = []message.Component{
-		message.Component{"test", []byte("hello world")},
-	}
+	mail := message.CreateMail(author, forAddr, time.Now())
+	cmps := make(message.ComponentList)
+	cmps.AddComponent(
+		message.Component{
+			Name: "test",
+			Data: []byte("hello world"),
+		},
+	)
+	mail.Components = cmps
 	receivedTranfer = true
-	return mail
+
+	signed, err := message.SignMessage(mail, t.Signer)
+	if err != nil {
+		t.t.Error(err.Error())
+	}
+
+	enc, err := signed.Encrypt(forAddr.String(), t.Router)
+	if err != nil {
+		t.t.Error(err.Error())
+	}
+
+	return enc
 }
-func (t TestTransferMessageDelegate) RetrieveMessageListForUser(since uint64, author *identity.Address, forAddr *identity.Address) (messages *MessageList) {
+func (t TestTransferMessageDelegate) RetrieveMessageListForUser(since uint64, author *identity.Address, forAddr *identity.Address) (messages []*message.EncryptedMessage) {
 	t.t.Error("Wrong function.")
 	return nil
 }
@@ -293,7 +323,7 @@ func (t *StaticRouter) Lookup(addr string) (*identity.Address, error) {
 	return nil, errors.New("Unable to find address.")
 }
 
-func (t *StaticRouter) Register(*identity.Identity) error {
+func (t *StaticRouter) Register(*identity.Identity, string) error {
 	return nil
 }
 
