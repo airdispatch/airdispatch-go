@@ -34,6 +34,7 @@ type Server struct {
 	LocationName string
 	Key          *identity.Identity
 	Delegate     ServerDelegate
+	Handlers     []Handler
 	Router       routing.Router
 }
 
@@ -125,6 +126,19 @@ func (s *Server) handleClient(conn net.Conn) {
 		case wire.TransferMessageListCode:
 			s.handleTransferMessageList(data, h, conn)
 		}
+
+		// Attempt Sub Handlers for Extra Message Types
+		for _, v := range s.Handlers {
+			if v.HandlesType(mesType) {
+				response, err := v.HandleMessage(mesType, data, h)
+				if err != nil {
+					s.handleError("Sub-handler", err)
+				}
+
+				message.SignAndSendToConnection(response, s.Key, h.From, conn)
+			}
+		}
+		adErrors.CreateError(adErrors.UnexpectedError, "Unable to handle message type.", s.Key.Address).Send(s.Key, conn)
 	} else {
 		s.handleMessageDescription(newMessage)
 	}
@@ -174,7 +188,7 @@ func (s *Server) handleTransferMessageList(desc []byte, h message.Header, conn n
 
 	ml := &MessageList{
 		Length: uint64(len(mail)),
-		h: message.CreateHeader(s.Key.Address, txMessage.h.From),
+		h:      message.CreateHeader(s.Key.Address, txMessage.h.From),
 	}
 
 	err = message.SignAndSendToConnection(ml, s.Key, txMessage.h.From, conn)
@@ -187,7 +201,7 @@ func (s *Server) handleTransferMessageList(desc []byte, h message.Header, conn n
 	for _, v := range mail {
 		err := v.SendMessageToConnection(conn)
 		if err != nil {
-				s.handleError("Sending public message to connection.", err)
+			s.handleError("Sending public message to connection.", err)
 		}
 	}
 }
