@@ -27,11 +27,11 @@ func getServerLocation() string {
 // Postoffice Stores Many User's Mailboxes
 type PostOffice map[string]*Mailbox
 
-func (p PostOffice) StoreOutgoingMessageForUser(user string, m *message.Mail) ServerMail {
+func (p PostOffice) StoreOutgoingMessageForUser(user string, m *message.EncryptedMessage) ServerMail {
 	box, ok := p[user]
 	if !ok {
 		box = &Mailbox{
-			Incoming: make([]*server.MessageDescription, 0),
+			Incoming: make([]*message.EncryptedMessage, 0),
 			Outgoing: make(map[string]ServerMail),
 		}
 	}
@@ -47,14 +47,14 @@ func (p PostOffice) StoreOutgoingMessageForUser(user string, m *message.Mail) Se
 }
 
 type Mailbox struct {
-	Incoming []*server.MessageDescription
+	Incoming []*message.EncryptedMessage
 	Outgoing map[string]ServerMail
 	Public   []ServerMail
 	Identity *identity.Identity
 }
 
 type ServerMail struct {
-	*message.Mail
+	Mail *message.EncryptedMessage
 	Name     string
 	SentTime time.Time
 }
@@ -126,9 +126,9 @@ type myServer struct {
 
 // Function that Handles an Alert of a Message
 // INCOMING
-func (myServer) SaveMessageDescription(alert *server.MessageDescription) {
+func (myServer) SaveMessageDescription(desc *message.EncryptedMessage) {
 	// Get the recipient address of the message
-	toAddr := alert.Header().To
+	toAddr := desc.To
 
 	// Attempt to Get the Mailbox of the User
 	v, ok := mailboxes[toAddr.String()]
@@ -136,38 +136,17 @@ func (myServer) SaveMessageDescription(alert *server.MessageDescription) {
 		// TODO: Catch if the user is registered with the server or not
 		// If it cannot, make a mailbox
 		v = &Mailbox{
-			Incoming: make([]*server.MessageDescription, 0),
+			Incoming: make([]*message.EncryptedMessage, 0),
 			Outgoing: make(map[string]ServerMail),
 		}
 	}
 
 	// Store the Record in the User's Mailbox
-	v.Incoming = append(v.Incoming, alert)
+	v.Incoming = append(v.Incoming, desc)
 	mailboxes[toAddr.String()] = v
 }
 
-func (myServer) IdentityForUser(addr *identity.Address) *identity.Identity {
-	o, ok := mailboxes[addr.String()]
-	if !ok {
-		id, err := identity.LoadKeyFromFile("keys2.pk")
-		mailboxes[id.Address.String()] = &Mailbox{
-			Incoming: make([]*server.MessageDescription, 0),
-			Outgoing: make(map[string]ServerMail),
-			Identity: id,
-		}
-		if err != nil {
-			return nil
-		}
-		return id
-	} else {
-		if o.Identity == nil {
-			o.Identity = serverKey
-		}
-	}
-	return o.Identity
-}
-
-func (myServer) RetrieveMessageForUser(name string, author *identity.Address, forAddr *identity.Address) *message.Mail {
+func (myServer) RetrieveMessageForUser(name string, author *identity.Address, forAddr *identity.Address) *message.EncryptedMessage {
 	box, ok := mailboxes[author.String()]
 	if !ok {
 		return nil
@@ -181,10 +160,10 @@ func (myServer) RetrieveMessageForUser(name string, author *identity.Address, fo
 	return mail.Mail
 }
 
-func (m myServer) RetrieveMessageListForUser(since uint64, author *identity.Address, forAddr *identity.Address) *server.MessageList {
+func (m myServer) RetrieveMessageListForUser(since uint64, author *identity.Address, forAddr *identity.Address) []*message.EncryptedMessage {
 	// Get the `TimeSince` field
 	timeSince := time.Unix(int64(since), 0)
-	output := &server.MessageList{}
+	output := make([]*message.EncryptedMessage, 0)
 
 	// Get the public notices box for that address
 	box, ok := mailboxes[author.String()]
@@ -197,7 +176,7 @@ func (m myServer) RetrieveMessageListForUser(since uint64, author *identity.Addr
 	for _, v := range box.Public {
 		// Append the notice to the output if it was sent after the 'TimeSince'
 		if v.SentTime.After(timeSince) {
-			output.AddMessageDescription(server.CreateMessageDescription(v.Name, *me, author, forAddr))
+			output = append(output, v.Mail)
 		}
 	}
 	return output
