@@ -135,7 +135,9 @@ func (s *Server) handleClient(conn net.Conn) {
 					s.handleError("Sub-handler", err)
 				}
 
-				message.SignAndSendToConnection(response, s.Key, h.From, conn)
+				for _, v := range response {
+					message.SignAndSendToConnection(v, s.Key, h.From, conn)
+				}
 			}
 		}
 		adErrors.CreateError(adErrors.UnexpectedError, "Unable to handle message type.", s.Key.Address).Send(s.Key, conn)
