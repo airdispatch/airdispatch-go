@@ -87,6 +87,16 @@ func ReadMessageFromConnection(conn net.Conn) (*EncryptedMessage, error) {
 }
 
 func (e *EncryptedMessage) SendMessageToConnection(conn net.Conn) error {
+	bytes, err := e.ToBytes()
+	if err != nil {
+		return err
+	}
+
+	conn.Write(wire.PrefixBytes(bytes))
+	return nil
+}
+
+func (e *EncryptedMessage) ToBytes() ([]byte, error) {
 	// The first step to sending the message is marshalling it to bytes.
 	toAddr := []byte{0}
 	if e.To != nil && !e.To.IsPublic() {
@@ -99,11 +109,5 @@ func (e *EncryptedMessage) SendMessageToConnection(conn net.Conn) error {
 		Key:     e.EncryptionKey,
 		EncFunc: e.EncryptionType,
 	}
-	bytes, err := proto.Marshal(toData)
-	if err != nil {
-		return err
-	}
-
-	conn.Write(wire.PrefixBytes(bytes))
-	return nil
+	return proto.Marshal(toData)
 }
