@@ -54,10 +54,6 @@ func (s *Server) StartServer(port string) error {
 		return err
 	}
 
-	if s.Start != nil {
-		s.Start <- true
-	}
-
 	s.serverLoop(listener)
 	return nil
 }
@@ -92,6 +88,10 @@ func (s *Server) serverLoop(listener *net.TCPListener) {
 			connections <- conn
 		}
 	}()
+
+	if s.Start != nil {
+		s.Start <- true
+	}
 
 	for {
 		select {
