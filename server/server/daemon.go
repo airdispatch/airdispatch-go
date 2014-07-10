@@ -54,7 +54,7 @@ type Mailbox struct {
 }
 
 type ServerMail struct {
-	Mail *message.EncryptedMessage
+	Mail     *message.EncryptedMessage
 	Name     string
 	SentTime time.Time
 }
@@ -113,7 +113,7 @@ func main() {
 }
 
 func StartServer(theServer server.Server, handler *myServer) {
-	err := theServer.StartServer(*port)
+	err := theServer.StartServer(*port, nil)
 	if err != nil {
 		handler.HandleError(&server.ServerError{"Saving Mailserver Key", err})
 	}

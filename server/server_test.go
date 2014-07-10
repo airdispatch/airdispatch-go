@@ -12,11 +12,9 @@ import (
 )
 
 // Test 1: Sending Message
-var gotSaveDescription bool
 
 func TestSendMessage(t *testing.T) {
 	fmt.Println("--- Starting Send Message Test")
-	gotSaveDescription = false
 
 	sender, err := identity.CreateIdentity()
 	if err != nil {
@@ -47,9 +45,14 @@ func TestSendMessage(t *testing.T) {
 		Keys: []*identity.Identity{sender, receiver},
 	}
 
+	var (
+		started = make(chan bool)
+		errors  = make(chan error)
+	)
+
 	testDelegate := &TestSendMessageDelegate{
-		t:          t,
 		Decryption: receiver,
+		Errors:     errors,
 	}
 
 	theServer := Server{
@@ -58,12 +61,12 @@ func TestSendMessage(t *testing.T) {
 		Delegate:     testDelegate,
 		Router:       testRouter,
 	}
+
 	go func() {
-		theServer.StartServer("9091")
+		theServer.StartServer("9091", started)
 	}()
 
-	time.Sleep(1 * time.Second)
-	t.Log("Sending Test Description")
+	<-started
 
 	msgDescription := CreateMessageDescription("testMessage", "localhost:9090", sender.Address, receiver.Address)
 	err = message.SignAndSend(msgDescription, sender, receiver.Address)
@@ -72,66 +75,69 @@ func TestSendMessage(t *testing.T) {
 		return
 	}
 
-	time.Sleep(1 * time.Second)
-
-	if !gotSaveDescription {
-		t.Error("Unable to receive Message Description.")
+	err = <-errors
+	if err != nil {
+		t.Error(err)
 	}
 
 }
 
 type TestSendMessageDelegate struct {
 	BasicServer
-	t          *testing.T
+	Errors     chan error
 	Decryption *identity.Identity
 }
 
 func (t TestSendMessageDelegate) HandleError(err *ServerError) {
-	fmt.Println(err.Error, err.Location)
-	t.t.Error(err)
-	panic(err)
+	t.Errors <- errors.New(fmt.Sprintf("%s at %s", err.Error, err.Location))
 }
-func (t TestSendMessageDelegate) SaveMessageDescription(m *message.EncryptedMessage) {
-	gotSaveDescription = true
 
+func (t TestSendMessageDelegate) SaveMessageDescription(m *message.EncryptedMessage) {
 	message, err := m.Decrypt(t.Decryption)
 	if err != nil {
-		t.t.Error(err.Error())
+		t.Errors <- err
+		return
 	}
 
 	if !message.Verify() {
-		t.t.Error("Unable to verify message description.")
+		t.Errors <- errors.New("Unable to verify message description.")
+		return
 	}
 
 	data, typ, h, err := message.ReconstructMessage()
 	if err != nil {
-		t.t.Error(err.Error())
+		t.Errors <- err
+		return
 	}
 
 	if typ != wire.MessageDescriptionCode {
-		t.t.Error("Wrong type of message sent.")
+		t.Errors <- errors.New("Wrong type of message sent.")
+		return
 	}
 
 	msg, err := CreateMessageDescriptionFromBytes(data, h)
 	if err != nil {
-		t.t.Error(err.Error())
+		t.Errors <- err
+		return
 	}
 
-	t.t.Log("Received Message Description")
 	if msg.Name != "testMessage" {
-		t.t.Error("Name was incorrect in Message Description")
+		t.Errors <- errors.New("Name was incorrect in Message Description")
+		return
 	}
 	if msg.Location != "localhost:9090" {
-		t.t.Error("Location was incorrect in Message Description")
+		t.Errors <- errors.New("Location was incorrect in Message Description")
+		return
 	}
+	t.Errors <- nil
 }
 func (t TestSendMessageDelegate) RetrieveMessageForUser(id string, author *identity.Address, forAddr *identity.Address) (message *message.EncryptedMessage) {
-	t.t.Error("Wrong function.")
+	t.Errors <- errors.New("Wrong Function")
 	return nil
 
 }
 func (t TestSendMessageDelegate) RetrieveMessageListForUser(since uint64, author *identity.Address, forAddr *identity.Address) (messages []*message.EncryptedMessage) {
-	t.t.Error("Wrong function.")
+	t.Errors <- errors.New("Wrong Function")
 	return nil
 }
 
@@ -185,7 +191,7 @@ func TestTransferMessage(t *testing.T) {
 		Router:       testRouter,
 	}
 	go func() {
-		theServer.StartServer("9093")
+		theServer.StartServer("9093", nil)
 	}()
 
 	time.Sleep(1 * time.Second)

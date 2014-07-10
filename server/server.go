@@ -39,7 +39,7 @@ type Server struct {
 }
 
 // Function that starts the server on a specific port
-func (s *Server) StartServer(port string) error {
+func (s *Server) StartServer(port string, started chan bool) error {
 	// Resolve the Address of the Server
 	service := ":" + port
 	tcpAddr, _ := net.ResolveTCPAddr("tcp4", service)
@@ -49,6 +49,10 @@ func (s *Server) StartServer(port string) error {
 	listener, err := net.ListenTCP("tcp", tcpAddr)
 	if err != nil {
 		return err
+	}
+
+	if started != nil {
+		started <- true
 	}
 
 	s.serverLoop(listener)
