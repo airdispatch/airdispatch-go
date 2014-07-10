@@ -113,7 +113,7 @@ func main() {
 }
 
 func StartServer(theServer server.Server, handler *myServer) {
-	err := theServer.StartServer(*port, nil)
+	err := theServer.StartServer(*port)
 	if err != nil {
 		handler.HandleError(&server.ServerError{"Saving Mailserver Key", err})
 	}

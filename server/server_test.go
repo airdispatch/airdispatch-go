@@ -11,11 +11,13 @@ import (
 	"time"
 )
 
-// Test 1: Sending Message
+type Scenario struct {
+	Sender   *identity.Identity
+	Receiver *identity.Identity
+	Server   *identity.Identity
+}
 
-func TestSendMessage(t *testing.T) {
-	fmt.Println("--- Starting Send Message Test")
-
+func Setup(t *testing.T, delegate ServerDelegate) (started, quit chan bool, scene Scenario) {
 	sender, err := identity.CreateIdentity()
 	if err != nil {
 		t.Error(err)
@@ -37,6 +39,8 @@ func TestSendMessage(t *testing.T) {
 	}
 	server.SetLocation("localhost:9092")
 
+	scene = Scenario{sender, receiver, server}
+
 	fmt.Println("Sender", sender.Address.String())
 	fmt.Println("Receiver", receiver.Address.String())
 	fmt.Println("Server", server.Address.String())
@@ -45,31 +49,43 @@ func TestSendMessage(t *testing.T) {
 		Keys: []*identity.Identity{sender, receiver},
 	}
 
-	var (
-		started = make(chan bool)
-		errors  = make(chan error)
-	)
-
-	testDelegate := &TestSendMessageDelegate{
-		Decryption: receiver,
-		Errors:     errors,
-	}
+	started = make(chan bool)
+	quit = make(chan bool)
 
 	theServer := Server{
 		LocationName: "localhost:9091",
 		Key:          server,
-		Delegate:     testDelegate,
+		Delegate:     delegate,
 		Router:       testRouter,
+		Start:        started,
+		Quit:         quit,
 	}
 
 	go func() {
-		theServer.StartServer("9091", started)
+		theServer.StartServer("9091")
 	}()
+
+	return
+}
+
+// Test 1: Sending Message
+
+func TestSendMessage(t *testing.T) {
+	fmt.Println("--- Starting Send Message Test")
+
+	errors := make(chan error)
+	testDelegate := &TestSendMessageDelegate{
+		Errors: errors,
+	}
+
+	started, quit, scene := Setup(t, testDelegate)
+
+	testDelegate.Decryption = scene.Receiver
 
 	<-started
 
-	msgDescription := CreateMessageDescription("testMessage", "localhost:9090", sender.Address, receiver.Address)
-	err = message.SignAndSend(msgDescription, sender, receiver.Address)
+	msgDescription := CreateMessageDescription("testMessage", "localhost:9090", scene.Sender.Address, scene.Receiver.Address)
+	err := message.SignAndSend(msgDescription, scene.Sender, scene.Receiver.Address)
 	if err != nil {
 		t.Error(err)
 		return
@@ -80,6 +96,7 @@ func TestSendMessage(t *testing.T) {
 		t.Error(err)
 	}
 
+	quit <- true
 }
 
 type TestSendMessageDelegate struct {
@@ -191,7 +208,7 @@ func TestTransferMessage(t *testing.T) {
 		Router:       testRouter,
 	}
 	go func() {
-		theServer.StartServer("9093", nil)
+		theServer.StartServer("9093")
 	}()
 
 	time.Sleep(1 * time.Second)

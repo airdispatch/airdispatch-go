@@ -36,10 +36,13 @@ type Server struct {
 	Delegate     ServerDelegate
 	Handlers     []Handler
 	Router       routing.Router
+	// Control Channels
+	Start chan bool
+	Quit  chan bool
 }
 
 // Function that starts the server on a specific port
-func (s *Server) StartServer(port string, started chan bool) error {
+func (s *Server) StartServer(port string) error {
 	// Resolve the Address of the Server
 	service := ":" + port
 	tcpAddr, _ := net.ResolveTCPAddr("tcp4", service)
@@ -51,8 +54,8 @@ func (s *Server) StartServer(port string, started chan bool) error {
 		return err
 	}
 
-	if started != nil {
-		started <- true
+	if s.Start != nil {
+		s.Start <- true
 	}
 
 	s.serverLoop(listener)
@@ -69,17 +72,38 @@ func (s *Server) handleError(location string, error error) {
 
 // The loop that continues while waiting on clients to connect
 func (s *Server) serverLoop(listener *net.TCPListener) {
-	// Loop forever, waiting for connections
-	for {
-		// Accept a Connection
-		conn, err := listener.Accept()
-		if err != nil {
-			s.handleError("Server Loop (Accepting New Client)", err)
-			continue
-		}
+	connections := make(chan net.Conn)
 
-		// Concurrently handle the connection
-		go s.handleClient(conn)
+	// Loop forever, waiting for connections
+	go func() {
+		for {
+			// Accept a Connection
+			conn, err := listener.Accept()
+			if err != nil {
+				// Shutdown if the Error is Quit-Related
+				select {
+				case <-s.Quit:
+					return
+				default:
+					s.handleError("Server Loop (Accepting New Client)", err)
+					continue
+				}
+			}
+			connections <- conn
+		}
+	}()
+
+	for {
+		select {
+		case conn := <-connections:
+			// Concurrently handle the connection
+			go s.handleClient(conn)
+		case <-s.Quit:
+			// Close the listener
+			close(s.Quit)
+			listener.Close()
+			return
+		}
 	}
 }
 
