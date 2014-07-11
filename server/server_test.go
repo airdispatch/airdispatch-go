@@ -4,6 +4,7 @@ import (
 	"airdispat.ch/identity"
 	"airdispat.ch/message"
 	"airdispat.ch/routing"
+	adTest "airdispat.ch/testing"
 	"airdispat.ch/wire"
 	"errors"
 	"fmt"
@@ -11,53 +12,21 @@ import (
 	"time"
 )
 
-type Scenario struct {
-	Sender   *identity.Identity
-	Receiver *identity.Identity
-	Server   *identity.Identity
-	Router   routing.Router
-}
-
-func testingSetup(t *testing.T, delegate ServerDelegate) (started, quit chan bool, scene Scenario) {
-	sender, err := identity.CreateIdentity()
+func testingSetup(t *testing.T, delegate ServerDelegate) (started chan bool, quit chan bool, scene adTest.Scenario) {
+	scene, err := adTest.CreateScenario()
 	if err != nil {
-		t.Error(err)
+		t.Error(err.Error())
 		return
 	}
-	sender.SetLocation("localhost:9090")
-
-	receiver, err := identity.CreateIdentity()
-	if err != nil {
-		t.Error(err)
-		return
-	}
-	receiver.SetLocation("localhost:9091")
-
-	server, err := identity.CreateIdentity()
-	if err != nil {
-		t.Error(err)
-		return
-	}
-	server.SetLocation("localhost:9091")
-
-	fmt.Println("Sender", sender.Address.String())
-	fmt.Println("Receiver", receiver.Address.String())
-	fmt.Println("Server", server.Address.String())
-
-	testRouter := &StaticRouter{
-		Keys: []*identity.Identity{sender, receiver},
-	}
-
-	scene = Scenario{sender, receiver, server, testRouter}
 
 	started = make(chan bool)
 	quit = make(chan bool)
 
 	theServer := Server{
 		LocationName: "localhost:9091",
-		Key:          server,
+		Key:          scene.Server,
 		Delegate:     delegate,
-		Router:       testRouter,
+		Router:       scene.Router,
 		Start:        started,
 		Quit:         quit,
 	}
@@ -248,26 +217,4 @@ func (t TestTransferMessageDelegate) RetrieveMessageListForUser(since uint64, au
 
 func TestPublicMessage(t *testing.T) {
 
-}
-
-// Define a blank router that we can use for testing purposes.
-type StaticRouter struct {
-	Keys []*identity.Identity
-}
-
-func (t *StaticRouter) Lookup(addr string) (*identity.Address, error) {
-	for _, x := range t.Keys {
-		if x.Address.String() == addr {
-			return x.Address, nil
-		}
-	}
-	return nil, errors.New("Unable to find address.")
-}
-
-func (t *StaticRouter) Register(*identity.Identity, string) error {
-	return nil
-}
-
-func (t *StaticRouter) LookupAlias(alias string) (*identity.Address, error) {
-	return nil, nil
 }
