@@ -54,7 +54,7 @@ type Mailbox struct {
 }
 
 type ServerMail struct {
-	Mail *message.EncryptedMessage
+	Mail     *message.EncryptedMessage
 	Name     string
 	SentTime time.Time
 }
