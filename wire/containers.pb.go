@@ -17,6 +17,8 @@ type Header struct {
 	FromAddr         []byte  `protobuf:"bytes,1,req,name=from_addr" json:"from_addr,omitempty"`
 	ToAddr           []byte  `protobuf:"bytes,2,req,name=to_addr" json:"to_addr,omitempty"`
 	Timestamp        *uint64 `protobuf:"varint,3,req,name=timestamp" json:"timestamp,omitempty"`
+	Alias            *string `protobuf:"bytes,4,opt,name=alias" json:"alias,omitempty"`
+	EncryptionKey    []byte  `protobuf:"bytes,5,opt,name=encryption_key" json:"encryption_key,omitempty"`
 	XXX_unrecognized []byte  `json:"-"`
 }
 
@@ -43,6 +45,20 @@ func (m *Header) GetTimestamp() uint64 {
 		return *m.Timestamp
 	}
 	return 0
+}
+
+func (m *Header) GetAlias() string {
+	if m != nil && m.Alias != nil {
+		return *m.Alias
+	}
+	return ""
+}
+
+func (m *Header) GetEncryptionKey() []byte {
+	if m != nil {
+		return m.EncryptionKey
+	}
+	return nil
 }
 
 type SignedMessage struct {

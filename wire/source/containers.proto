@@ -5,6 +5,9 @@ message Header {
 	required bytes  from_addr = 1; // From Address Fingerprint
 	required bytes  to_addr   = 2; // To Address Fingerprint
 	required uint64 timestamp = 3;
+
+	optional string alias = 4;
+	optional bytes encryption_key = 5;
 }
 
 // SignedMessage Contains a signed chunk of data, and that message signature
@@ -20,7 +23,7 @@ message Signature {
 	optional bytes     signing_key  = 3;
 }
 
-// EncryptedMessage Contains an encrypted chunk of data, and the keys used to 
+// EncryptedMessage Contains an encrypted chunk of data, and the keys used to
 // generate the encrypted data
 message EncryptedMessage {
 	required bytes data     = 1; // The data bytes are generally from a signed message.

@@ -89,6 +89,9 @@ type Header struct {
 	From      *identity.Address
 	To        *identity.Address
 	Timestamp int64
+	// Location Options
+	EncryptionKey []byte
+	Alias         string
 }
 
 func CreateHeader(from *identity.Address, to *identity.Address) Header {
@@ -99,12 +102,28 @@ func CreateHeader(from *identity.Address, to *identity.Address) Header {
 	}
 }
 
-func CreateHeaderFromWire(w *wire.Header) Header {
-	return Header{
-		From:      identity.CreateAddressFromBytes(w.GetFromAddr()),
-		To:        identity.CreateAddressFromBytes(w.GetToAddr()),
-		Timestamp: int64(w.GetTimestamp()),
+func CreateHeaderFromWire(w *wire.Header) (Header, error) {
+	from := identity.CreateAddressFromBytes(w.GetFromAddr())
+
+	if len(w.GetEncryptionKey()) != 0 {
+		var err error
+		from.EncryptionKey, err = crypto.BytesToRSA(w.GetEncryptionKey())
+		if err != nil {
+			return Header{}, err
+		}
 	}
+
+	if w.GetAlias() != "" {
+		from.Alias = w.GetAlias()
+	}
+
+	return Header{
+		From:          from,
+		To:            identity.CreateAddressFromBytes(w.GetToAddr()),
+		Timestamp:     int64(w.GetTimestamp()),
+		EncryptionKey: w.GetEncryptionKey(),
+		Alias:         w.GetAlias(),
+	}, nil
 }
 
 func (h Header) ToWire() *wire.Header {
@@ -117,9 +136,11 @@ func (h Header) ToWire() *wire.Header {
 	}
 
 	return &wire.Header{
-		FromAddr:  h.From.Fingerprint,
-		ToAddr:    toAddr,
-		Timestamp: &time,
+		FromAddr:      h.From.Fingerprint,
+		ToAddr:        toAddr,
+		Timestamp:     &time,
+		EncryptionKey: h.EncryptionKey,
+		Alias:         &h.Alias,
 	}
 }
 
@@ -162,7 +183,10 @@ func (s *SignedMessage) reconstructMessage(ts bool) (data []byte, messageType st
 
 	messageType = unmarshaller.GetType()
 	data = unmarshaller.GetData()
-	header = CreateHeaderFromWire(unmarshaller.GetHeader())
+	header, err = CreateHeaderFromWire(unmarshaller.GetHeader())
+	if err != nil {
+		return
+	}
 
 	if ts {
 		if header.Timestamp < time.Now().Unix()-600 ||

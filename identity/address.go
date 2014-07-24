@@ -19,6 +19,9 @@ type Address struct {
 	// The signingKey of the user
 	SigningKey *ecdsa.PublicKey
 
+	// Optional Alias of the Address
+	Alias string
+
 	public bool
 	cached bool
 }
@@ -47,6 +50,10 @@ func (a *Address) IsPublic() bool {
 
 func (a *Address) HasLocation() bool {
 	return a.cached
+}
+
+func (a *Address) CanSend() bool {
+	return a.EncryptionKey != nil
 }
 
 func (a *Address) EqualsBytes(addr []byte) bool {
