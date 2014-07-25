@@ -7,7 +7,7 @@ import (
 	"net"
 )
 
-func CheckConnectionForError(conn net.Conn) *Error {
+func CheckConnectionForError(conn net.Conn) error {
 	m, err := message.ReadMessageFromConnection(conn)
 	if err == io.EOF {
 		return nil
