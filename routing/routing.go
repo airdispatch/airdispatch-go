@@ -11,7 +11,7 @@ import (
 // objects.
 type Router interface {
 	// Register function registers an identity with a router.
-	Register(id *identity.Identity, alias string, redirects map[string]*Redirect) error
+	Register(id *identity.Identity, alias string, redirects map[string]Redirect) error
 	// Lookup function checks an address and returns an identity object.
 	// Name is a type of lookup, either 'TX' for transfers, 'MAIL' for sending
 	// mail 'ALE' for sending alerts, or '*' for default.
