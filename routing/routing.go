@@ -14,7 +14,7 @@ type Router interface {
 	Register(id *identity.Identity, alias string, redirects map[string]Redirect) error
 	// Lookup function checks an address and returns an identity object.
 	// Name is a type of lookup, either 'TX' for transfers, 'MAIL' for sending
-	// mail 'ALE' for sending alerts, or '*' for default.
+	// mail 'ALE' for sending alerts, or '_' for default.
 	Lookup(addr string, name LookupType) (*identity.Address, error)
 	// Lookup function checks an alias and returns an identity object.
 	LookupAlias(alias string, name LookupType) (*identity.Address, error)
@@ -29,7 +29,7 @@ const (
 	LookupTypeTX      LookupType = "TX"
 	LookupTypeMAIL    LookupType = "MAIL"
 	LookupTypeALERT   LookupType = "ALE"
-	LookupTypeDEFAULT LookupType = "*"
+	LookupTypeDEFAULT LookupType = "_"
 )
 
 // Redirect is a type of record on a Registration that alerts the client to send

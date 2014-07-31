@@ -1,16 +1,17 @@
 package message
 
 import (
-	"airdispat.ch/crypto"
-	"airdispat.ch/identity"
-	"airdispat.ch/routing"
-	"airdispat.ch/wire"
 	"bytes"
-	"code.google.com/p/goprotobuf/proto"
 	"errors"
 	"math/big"
 	"net"
 	"time"
+
+	"airdispat.ch/crypto"
+	"airdispat.ch/identity"
+	"airdispat.ch/routing"
+	"airdispat.ch/wire"
+	"code.google.com/p/goprotobuf/proto"
 )
 
 type Message interface {
@@ -200,7 +201,7 @@ func (s *SignedMessage) reconstructMessage(ts bool) (data []byte, messageType st
 
 // Encrypt a signed message for an Address Fingerprint (String)
 func (s *SignedMessage) Encrypt(addr string, router routing.Router) (*EncryptedMessage, error) {
-	fullAddress, err := router.Lookup(addr)
+	fullAddress, err := router.Lookup(addr, routing.LookupTypeDEFAULT)
 	if err != nil {
 		return nil, err
 	}
