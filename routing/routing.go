@@ -1,4 +1,4 @@
-// The Routing package provides abstractions for routers on the
+// Package routing provides abstractions for routers on the
 // AirDispatch network (translating addresses to server locations).
 package routing
 
@@ -11,9 +11,31 @@ import (
 // objects.
 type Router interface {
 	// Register function registers an identity with a router.
-	Register(id *identity.Identity, alias string) error
+	Register(id *identity.Identity, alias string, redirects map[string]*Redirect) error
 	// Lookup function checks an address and returns an identity object.
-	Lookup(addr string) (*identity.Address, error)
+	// Name is a type of lookup, either 'TX' for transfers, 'MAIL' for sending
+	// mail 'ALE' for sending alerts, or '*' for default.
+	Lookup(addr string, name LookupType) (*identity.Address, error)
 	// Lookup function checks an alias and returns an identity object.
-	LookupAlias(alias string) (*identity.Address, error)
+	LookupAlias(alias string, name LookupType) (*identity.Address, error)
+}
+
+// LookupType wraps a string that determines which redirects are followed in the
+// routing layer.
+type LookupType string
+
+// Different constants for the lookup types.
+const (
+	LookupTypeTX      LookupType = "TX"
+	LookupTypeMAIL    LookupType = "MAIL"
+	LookupTypeALERT   LookupType = "ALE"
+	LookupTypeDEFAULT LookupType = "*"
+)
+
+// Redirect is a type of record on a Registration that alerts the client to send
+// messages of a certain type to a different location.
+type Redirect struct {
+	Type        LookupType
+	Fingerprint string
+	Alias       string
 }
