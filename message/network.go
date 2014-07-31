@@ -1,11 +1,11 @@
 package message
 
 import (
+	"net"
+
 	"airdispat.ch/identity"
 	"airdispat.ch/wire"
 	"code.google.com/p/goprotobuf/proto"
-	"errors"
-	"net"
 )
 
 func ConnectToServer(remote string) (net.Conn, error) {
@@ -56,20 +56,7 @@ func sendMessageAndReceive(m Message, sender *identity.Identity, addr *identity.
 		return nil, "", Header{}, err
 	}
 
-	receivedSign, err := msg.Decrypt(sender)
-	if err != nil {
-		return nil, "", Header{}, err
-	}
-
-	if !receivedSign.Verify() {
-		return nil, "", Header{}, errors.New("Unable to Verify Message")
-	}
-
-	if ts {
-		return receivedSign.ReconstructMessage()
-	} else {
-		return receivedSign.ReconstructMessageWithoutTimestamp()
-	}
+	return msg.Reconstruct(sender, ts)
 }
 
 func ReadMessageFromConnection(conn net.Conn) (*EncryptedMessage, error) {

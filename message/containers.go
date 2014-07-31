@@ -373,6 +373,22 @@ func (e *EncryptedMessage) UnencryptedMessage() (*SignedMessage, error) {
 	return sm, nil
 }
 
+func (msg *EncryptedMessage) Reconstruct(sender *identity.Identity, ts bool) ([]byte, string, Header, error) {
+	receivedSign, err := msg.Decrypt(sender)
+	if err != nil {
+		return nil, "", Header{}, err
+	}
+
+	if !receivedSign.Verify() {
+		return nil, "", Header{}, errors.New("Unable to Verify Message")
+	}
+
+	if ts {
+		return receivedSign.ReconstructMessage()
+	}
+	return receivedSign.ReconstructMessageWithoutTimestamp()
+}
+
 func CreateEncryptedMessageFromBytes(theBytes []byte) (*EncryptedMessage, error) {
 	downloadedMessage := &wire.EncryptedMessage{}
 	err := proto.Unmarshal(theBytes, downloadedMessage)
