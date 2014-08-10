@@ -2,13 +2,15 @@ package wire;
 
 // A request to Transfer a message from a server.
 message TransferMessage {
-	required string name = 1;
+  required string author = 1;
+	required string name   = 2;
 }
 
 // A request to Transfer a list of messages from
 // a server.
 message TransferMessageList {
-	required uint64 last_updated = 1;
+	required string author       = 1;
+	required uint64 last_updated = 2;
 }
 
 // A Description of a message, to be used as an

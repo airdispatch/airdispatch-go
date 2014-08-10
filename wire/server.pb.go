@@ -14,13 +14,21 @@ var _ = &json.SyntaxError{}
 var _ = math.Inf
 
 type TransferMessage struct {
-	Name             *string `protobuf:"bytes,1,req,name=name" json:"name,omitempty"`
+	Author           *string `protobuf:"bytes,1,req,name=author" json:"author,omitempty"`
+	Name             *string `protobuf:"bytes,2,req,name=name" json:"name,omitempty"`
 	XXX_unrecognized []byte  `json:"-"`
 }
 
 func (m *TransferMessage) Reset()         { *m = TransferMessage{} }
 func (m *TransferMessage) String() string { return proto.CompactTextString(m) }
 func (*TransferMessage) ProtoMessage()    {}
+
+func (m *TransferMessage) GetAuthor() string {
+	if m != nil && m.Author != nil {
+		return *m.Author
+	}
+	return ""
+}
 
 func (m *TransferMessage) GetName() string {
 	if m != nil && m.Name != nil {
@@ -30,13 +38,21 @@ func (m *TransferMessage) GetName() string {
 }
 
 type TransferMessageList struct {
-	LastUpdated      *uint64 `protobuf:"varint,1,req,name=last_updated" json:"last_updated,omitempty"`
+	Author           *string `protobuf:"bytes,1,req,name=author" json:"author,omitempty"`
+	LastUpdated      *uint64 `protobuf:"varint,2,req,name=last_updated" json:"last_updated,omitempty"`
 	XXX_unrecognized []byte  `json:"-"`
 }
 
 func (m *TransferMessageList) Reset()         { *m = TransferMessageList{} }
 func (m *TransferMessageList) String() string { return proto.CompactTextString(m) }
 func (*TransferMessageList) ProtoMessage()    {}
+
+func (m *TransferMessageList) GetAuthor() string {
+	if m != nil && m.Author != nil {
+		return *m.Author
+	}
+	return ""
+}
 
 func (m *TransferMessageList) GetLastUpdated() uint64 {
 	if m != nil && m.LastUpdated != nil {
