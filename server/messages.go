@@ -1,12 +1,20 @@
 package server
 
 import (
+	"time"
+
+	"airdispat.ch/crypto"
 	"airdispat.ch/identity"
 	"airdispat.ch/message"
 	"airdispat.ch/wire"
 	"code.google.com/p/goprotobuf/proto"
-	"time"
 )
+
+func createHeader(from *identity.Address, to *identity.Address) message.Header {
+	header := message.CreateHeader(from, to)
+	header.EncryptionKey = crypto.RSAToBytes(from.EncryptionKey)
+	return header
+}
 
 func CreateMessageDescription(name string, location string, from *identity.Address, to *identity.Address) *MessageDescription {
 	return &MessageDescription{
@@ -22,17 +30,19 @@ func CreateMessageList(from *identity.Address, to *identity.Address) *MessageLis
 	}
 }
 
-func CreateTransferMessage(name string, from *identity.Address, to *identity.Address) *TransferMessage {
+func CreateTransferMessage(name string, from *identity.Address, to *identity.Address, author *identity.Address) *TransferMessage {
 	return &TransferMessage{
-		Name: name,
-		h:    message.CreateHeader(from, to),
+		Name:   name,
+		Author: author,
+		h:      createHeader(from, to),
 	}
 }
 
-func CreateTransferMessageList(since uint64, from *identity.Address, to *identity.Address) *TransferMessageList {
+func CreateTransferMessageList(since uint64, from *identity.Address, to *identity.Address, author *identity.Address) *TransferMessageList {
 	return &TransferMessageList{
-		Since: since,
-		h:     message.CreateHeader(from, to),
+		Author: author,
+		Since:  since,
+		h:      createHeader(from, to),
 	}
 }
 
@@ -94,8 +104,9 @@ func (m *MessageDescription) GenerateTransferRequest() *TransferMessage {
 }
 
 type TransferMessage struct {
-	Name string
-	h    message.Header
+	Name   string
+	Author *identity.Address
+	h      message.Header
 }
 
 func CreateTransferMessageFromBytes(by []byte, h message.Header) (*TransferMessage, error) {
@@ -106,14 +117,17 @@ func CreateTransferMessageFromBytes(by []byte, h message.Header) (*TransferMessa
 	}
 
 	return &TransferMessage{
-		Name: fromData.GetName(),
-		h:    h,
+		Author: identity.CreateAddressFromString(fromData.GetAuthor()),
+		Name:   fromData.GetName(),
+		h:      h,
 	}, nil
 }
 
 func (m *TransferMessage) ToBytes() []byte {
+	author := m.Author.String()
 	toData := &wire.TransferMessage{
-		Name: &m.Name,
+		Name:   &m.Name,
+		Author: &author,
 	}
 	by, err := proto.Marshal(toData)
 	if err != nil {
@@ -145,7 +159,7 @@ func CreateMessageListFromBytes(b []byte, h message.Header) (*MessageList, error
 
 	out := &MessageList{
 		Length: unmarsh.GetLength(),
-		h:       h,
+		h:      h,
 	}
 	return out, nil
 }
@@ -170,8 +184,9 @@ func (m *MessageList) Header() message.Header {
 }
 
 type TransferMessageList struct {
-	Since uint64
-	h     message.Header
+	Author *identity.Address
+	Since  uint64
+	h      message.Header
 }
 
 func CreateTransferMessageListFromBytes(by []byte, h message.Header) (*TransferMessageList, error) {
@@ -182,13 +197,16 @@ func CreateTransferMessageListFromBytes(by []byte, h message.Header) (*TransferM
 	}
 
 	return &TransferMessageList{
-		Since: fromData.GetLastUpdated(),
-		h:     h,
+		Author: identity.CreateAddressFromString(fromData.GetAuthor()),
+		Since:  fromData.GetLastUpdated(),
+		h:      h,
 	}, nil
 }
 
 func (m *TransferMessageList) ToBytes() []byte {
+	author := m.Author.String()
 	toData := &wire.TransferMessageList{
+		Author:      &author,
 		LastUpdated: &m.Since,
 	}
 	by, err := proto.Marshal(toData)
