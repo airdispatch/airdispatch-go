@@ -1,10 +1,11 @@
 package message
 
 import (
+	"time"
+
 	"airdispat.ch/identity"
 	"airdispat.ch/wire"
 	"code.google.com/p/goprotobuf/proto"
-	"time"
 )
 
 type Mail struct {
@@ -18,6 +19,7 @@ func CreateMail(from *identity.Address, to *identity.Address, ts time.Time) *Mai
 			From:      from,
 			To:        to,
 			Timestamp: ts.Unix(),
+			Alias:     from.Alias,
 		},
 		Components: make(ComponentList, 0),
 	}
