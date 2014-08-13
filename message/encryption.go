@@ -209,5 +209,7 @@ func (e *EncryptedMessage) ToBytes() ([]byte, error) {
 		i++
 	}
 
+	toData.Header = hdrs
+
 	return proto.Marshal(toData)
 }

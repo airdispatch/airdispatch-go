@@ -227,7 +227,7 @@ func (s *Server) handleTransferMessage(desc []byte, h message.Header, conn net.C
 
 	mail := s.Delegate.RetrieveMessageForUser(txMessage.Name, txMessage.Author, txMessage.h.From)
 	if mail == nil {
-		s.handleError("Loading message from Server", errors.New("Couldn't find message"))
+		s.handleError("Loading message from Server", errors.New("Couldn't find message named"+txMessage.Name))
 		adErrors.CreateError(adErrors.MessageNotFound, "That message doesn't exist.", s.Key.Address).Send(s.Key, conn)
 		return
 	}
