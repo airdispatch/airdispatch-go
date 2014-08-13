@@ -5,9 +5,10 @@ import (
 
 	"airdispat.ch/identity"
 	"airdispat.ch/wire"
-	"code.google.com/p/goprotobuf/proto"
 )
 
+// ConnectToServer is a convenience method that attempts to dial a tcp connection
+// to a server specified by a string.
 func ConnectToServer(remote string) (net.Conn, error) {
 	address, err := net.ResolveTCPAddr("tcp", remote)
 	if err != nil {
@@ -22,10 +23,18 @@ func ConnectToServer(remote string) (net.Conn, error) {
 	return conn, nil
 }
 
-func SendMessageAndReceiveWithoutTimestamp(m Message, sender *identity.Identity, addr *identity.Address) ([]byte, string, Header, error) {
+// SendMessageAndReceive does exactly what you think:
+//
+// - Signs, Encrypts, and sends a message to a connection
+// - Receives, Decrypts, Verifies, and Reconstructs a message from a connection
+// (without timestamp support)
+func SendMessageAndReceive(m Message, sender *identity.Identity, addr *identity.Address) ([]byte, string, Header, error) {
 	return sendMessageAndReceive(m, sender, addr, false)
 }
-func SendMessageAndReceive(m Message, sender *identity.Identity, addr *identity.Address) ([]byte, string, Header, error) {
+
+// SendMessageAndReceiveWithTimestamp does exactly the same as SendMessageAndReceive
+// but includes timestamp support.
+func SendMessageAndReceiveWithTimestamp(m Message, sender *identity.Identity, addr *identity.Address) ([]byte, string, Header, error) {
 	return sendMessageAndReceive(m, sender, addr, true)
 }
 
@@ -59,6 +68,8 @@ func sendMessageAndReceive(m Message, sender *identity.Identity, addr *identity.
 	return msg.Reconstruct(sender, ts)
 }
 
+// ReadMessageFromConnection will return a read EncryptedMessage off a specified
+// net.Conn.
 func ReadMessageFromConnection(conn net.Conn) (*EncryptedMessage, error) {
 	totalBytes, err := wire.ReadBytes(conn)
 	if err != nil {
@@ -73,6 +84,7 @@ func ReadMessageFromConnection(conn net.Conn) (*EncryptedMessage, error) {
 	return theMessage, nil
 }
 
+// SendMessageToConnection will send an encryptedMessage to a connection.
 func (e *EncryptedMessage) SendMessageToConnection(conn net.Conn) error {
 	bytes, err := e.ToBytes()
 	if err != nil {
@@ -81,20 +93,4 @@ func (e *EncryptedMessage) SendMessageToConnection(conn net.Conn) error {
 
 	conn.Write(wire.PrefixBytes(bytes))
 	return nil
-}
-
-func (e *EncryptedMessage) ToBytes() ([]byte, error) {
-	// The first step to sending the message is marshalling it to bytes.
-	toAddr := []byte{0}
-	if e.To != nil && !e.To.IsPublic() {
-		toAddr = e.To.Fingerprint
-	}
-
-	toData := &wire.EncryptedMessage{
-		Data:    e.Data,
-		ToAddr:  toAddr,
-		Key:     e.EncryptionKey,
-		EncFunc: e.EncryptionType,
-	}
-	return proto.Marshal(toData)
 }

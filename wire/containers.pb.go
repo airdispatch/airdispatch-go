@@ -126,11 +126,9 @@ func (m *Signature) GetSigningKey() []byte {
 }
 
 type EncryptedMessage struct {
-	Data             []byte `protobuf:"bytes,1,req,name=data" json:"data,omitempty"`
-	ToAddr           []byte `protobuf:"bytes,2,req,name=to_addr" json:"to_addr,omitempty"`
-	Key              []byte `protobuf:"bytes,3,req,name=key" json:"key,omitempty"`
-	EncFunc          []byte `protobuf:"bytes,4,opt,name=enc_func" json:"enc_func,omitempty"`
-	XXX_unrecognized []byte `json:"-"`
+	Data             []byte             `protobuf:"bytes,1,req,name=data" json:"data,omitempty"`
+	Header           []*EncryptedHeader `protobuf:"bytes,2,rep,name=header" json:"header,omitempty"`
+	XXX_unrecognized []byte             `json:"-"`
 }
 
 func (m *EncryptedMessage) Reset()         { *m = EncryptedMessage{} }
@@ -144,23 +142,41 @@ func (m *EncryptedMessage) GetData() []byte {
 	return nil
 }
 
-func (m *EncryptedMessage) GetToAddr() []byte {
+func (m *EncryptedMessage) GetHeader() []*EncryptedHeader {
+	if m != nil {
+		return m.Header
+	}
+	return nil
+}
+
+type EncryptedHeader struct {
+	ToAddr           []byte `protobuf:"bytes,1,req,name=to_addr" json:"to_addr,omitempty"`
+	Key              []byte `protobuf:"bytes,2,req,name=key" json:"key,omitempty"`
+	EncFun           []byte `protobuf:"bytes,3,opt,name=enc_fun" json:"enc_fun,omitempty"`
+	XXX_unrecognized []byte `json:"-"`
+}
+
+func (m *EncryptedHeader) Reset()         { *m = EncryptedHeader{} }
+func (m *EncryptedHeader) String() string { return proto.CompactTextString(m) }
+func (*EncryptedHeader) ProtoMessage()    {}
+
+func (m *EncryptedHeader) GetToAddr() []byte {
 	if m != nil {
 		return m.ToAddr
 	}
 	return nil
 }
 
-func (m *EncryptedMessage) GetKey() []byte {
+func (m *EncryptedHeader) GetKey() []byte {
 	if m != nil {
 		return m.Key
 	}
 	return nil
 }
 
-func (m *EncryptedMessage) GetEncFunc() []byte {
+func (m *EncryptedHeader) GetEncFun() []byte {
 	if m != nil {
-		return m.EncFunc
+		return m.EncFun
 	}
 	return nil
 }

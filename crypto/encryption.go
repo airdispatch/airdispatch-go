@@ -13,23 +13,32 @@ import (
 
 var AESKeySize int = 256
 
-func HybridEncryption(rsaKey *rsa.PublicKey, plaintext []byte) (aesKey []byte, ciphertext []byte, error error) {
-	aesKey, err := generateRandomAESKey(AESKeySize)
+type AESKey []byte
+type EncryptedAESKey []byte
+
+func EncryptAESKey(a AESKey, b *rsa.PublicKey) (EncryptedAESKey, error) {
+	encryptedKey, err := rsa.EncryptOAEP(sha256.New(), Random, b, a, nil)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
+	}
+	return EncryptedAESKey(encryptedKey), nil
+}
+
+func EncryptDataWithRandomAESKey(plaintext []byte) (aesCipher []byte, unencryptedKey AESKey, err error) {
+	var tempKey []byte
+
+	tempKey, err = generateRandomAESKey(AESKeySize)
+	if err != nil {
+		return
+	}
+	unencryptedKey = AESKey(tempKey)
+
+	aesCipher, err = encryptAES(plaintext, tempKey)
+	if err != nil {
+		return
 	}
 
-	encryptedKey, err := rsa.EncryptOAEP(sha256.New(), Random, rsaKey, aesKey, nil)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	aesCipher, err := encryptAES(plaintext, aesKey)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return encryptedKey, aesCipher, nil
+	return
 }
 
 func HybridDecryption(rsaKey *rsa.PrivateKey, encryptedAesKey []byte, ciphertext []byte) (plaintext []byte, error error) {

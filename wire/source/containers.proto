@@ -18,19 +18,22 @@ message SignedMessage {
 	optional bytes     signing_func = 3; // Future proof messages...
 }
 message Signature {
-	required bytes r = 1;
-	required bytes s = 2;
-	optional bytes     signing_key  = 3;
+	required bytes r            = 1;
+	required bytes s            = 2;
+	optional bytes signing_key  = 3;
 }
 
 // EncryptedMessage Contains an encrypted chunk of data, and the keys used to
 // generate the encrypted data
 message EncryptedMessage {
-	required bytes data     = 1; // The data bytes are generally from a signed message.
-	required bytes to_addr  = 2; // To Address is required for Federated Servers to Distinguish which decryption key to use.
-	required bytes key      = 3;
+	required bytes data             = 1; // The data bytes are generally from a signed message.
+	repeated EncryptedHeader header = 2;
+}
 
-	optional bytes enc_func = 4;
+message EncryptedHeader {
+	required bytes to_addr = 1;
+	required bytes key     = 2;
+	optional bytes enc_fun = 3;
 }
 
 // Container has data from a message, and the standard AirDispatch

@@ -90,7 +90,7 @@ func (t TestSendMessageDelegate) SaveMessageDescription(m *message.EncryptedMess
 		return
 	}
 
-	data, typ, h, err := message.ReconstructMessage()
+	data, typ, h, err := message.ReconstructMessageWithTimestamp()
 	if err != nil {
 		t.Errors <- err
 		return
@@ -147,7 +147,7 @@ func TestTransferMessage(t *testing.T) {
 
 	msgDescription := CreateTransferMessage("testMessage", scene.Sender.Address, scene.Server.Address)
 
-	_, typ, _, err := message.SendMessageAndReceive(msgDescription, scene.Sender, scene.Server.Address)
+	_, typ, _, err := message.SendMessageAndReceiveWithTimestamp(msgDescription, scene.Sender, scene.Server.Address)
 
 	// Check the Errors Channel Before Assuming Anything Else
 	if err = <-errors; err != nil {

@@ -22,7 +22,7 @@ func CheckConnectionForError(conn net.Conn) error {
 		return nil
 	}
 
-	d, mType, h, err := sin.ReconstructMessageWithoutTimestamp()
+	d, mType, h, err := sin.ReconstructMessage()
 	if err != nil {
 		return nil
 	}

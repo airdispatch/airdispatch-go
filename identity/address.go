@@ -1,10 +1,11 @@
 package identity
 
 import (
-	"airdispat.ch/crypto"
 	"crypto/ecdsa"
 	"crypto/rsa"
 	"encoding/hex"
+
+	"airdispat.ch/crypto"
 )
 
 // The address structure provides abstractions on

@@ -127,7 +127,8 @@ func (s *Server) handleClient(conn net.Conn) {
 		return
 	}
 
-	if newMessage.To.String() == s.Key.Address.String() || newMessage.To.IsPublic() {
+	_, ok := newMessage.Header[s.Key.Address.String()]
+	if ok {
 		signedMessage, err := newMessage.Decrypt(s.Key)
 		if err != nil {
 			s.handleError("Decrypt Message", err)
@@ -141,7 +142,7 @@ func (s *Server) handleClient(conn net.Conn) {
 			return
 		}
 
-		data, mesType, h, err := signedMessage.ReconstructMessage()
+		data, mesType, h, err := signedMessage.ReconstructMessageWithTimestamp()
 
 		if err != nil {
 			s.handleError("Verifying Message Structure", err)
