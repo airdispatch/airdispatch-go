@@ -10,8 +10,8 @@ import (
 	"code.google.com/p/goprotobuf/proto"
 )
 
-func createHeader(from *identity.Address, to *identity.Address) message.Header {
-	header := message.CreateHeader(from, to)
+func createHeader(from *identity.Address, to ...*identity.Address) message.Header {
+	header := message.CreateHeader(from, to...)
 	header.EncryptionKey = crypto.RSAToBytes(from.EncryptionKey)
 	return header
 }
@@ -93,13 +93,12 @@ func (m *MessageDescription) Header() message.Header {
 }
 
 func (m *MessageDescription) GenerateTransferRequest() *TransferMessage {
+	hdr := createHeader(m.h.From, m.h.To...)
+	hdr.Timestamp = time.Now().Unix()
+
 	return &TransferMessage{
 		Name: m.Name,
-		h: message.Header{
-			From:      m.h.To,
-			To:        m.h.From,
-			Timestamp: time.Now().Unix(),
-		},
+		h:    hdr,
 	}
 }
 

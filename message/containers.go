@@ -55,7 +55,7 @@ func SignAndSendToConnection(m Message, from *identity.Identity, to *identity.Ad
 // Each public field is an object that is important to be protected.
 type Header struct {
 	From      *identity.Address
-	To        *identity.Address
+	To        []*identity.Address
 	Timestamp int64
 	// Location Options
 	EncryptionKey []byte
@@ -63,11 +63,12 @@ type Header struct {
 }
 
 // CreateHeader will return a basic header for a from address and a to address.
-func CreateHeader(from *identity.Address, to *identity.Address) Header {
+func CreateHeader(from *identity.Address, to ...*identity.Address) Header {
 	return Header{
 		From:      from,
 		To:        to,
 		Timestamp: time.Now().Unix(),
+		Alias:     from.Alias,
 	}
 }
 
@@ -87,9 +88,14 @@ func createHeaderFromWire(w *wire.Header) (Header, error) {
 		from.Alias = w.GetAlias()
 	}
 
+	toAddrs := make([]*identity.Address, len(w.GetToAddr()))
+	for i, v := range w.GetToAddr() {
+		toAddrs[i] = identity.CreateAddressFromBytes(v)
+	}
+
 	return Header{
 		From:          from,
-		To:            identity.CreateAddressFromBytes(w.GetToAddr()),
+		To:            toAddrs,
 		Timestamp:     int64(w.GetTimestamp()),
 		EncryptionKey: w.GetEncryptionKey(),
 		Alias:         w.GetAlias(),
@@ -100,15 +106,14 @@ func createHeaderFromWire(w *wire.Header) (Header, error) {
 func (h Header) toWire() *wire.Header {
 	time := uint64(h.Timestamp)
 
-	// Public Messages are Allowed
-	toAddr := []byte{0}
-	if h.To != nil && !h.To.IsPublic() {
-		toAddr = h.To.Fingerprint
+	toAddrs := make([][]byte, len(h.To))
+	for i, v := range h.To {
+		toAddrs[i] = v.Fingerprint
 	}
 
 	return &wire.Header{
 		FromAddr:      h.From.Fingerprint,
-		ToAddr:        toAddr,
+		ToAddr:        toAddrs,
 		Timestamp:     &time,
 		EncryptionKey: h.EncryptionKey,
 		Alias:         &h.Alias,

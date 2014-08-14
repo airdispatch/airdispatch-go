@@ -3,7 +3,7 @@ package wire;
 // This message Header is required for all AirDispatch Messages for Authenticity
 message Header {
 	required bytes  from_addr = 1; // From Address Fingerprint
-	required bytes  to_addr   = 2; // To Address Fingerprint
+	repeated bytes  to_addr   = 2; // To Address Fingerprint
 	required uint64 timestamp = 3;
 
 	optional string alias = 4;
