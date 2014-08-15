@@ -2,6 +2,7 @@ package message
 
 import (
 	"errors"
+	"fmt"
 	"math/big"
 	"time"
 
@@ -125,8 +126,8 @@ func (s *SignedMessage) reconstructMessage(ts bool) (data []byte, messageType st
 
 	if ts {
 		if header.Timestamp < time.Now().Unix()-600 ||
-			header.Timestamp > time.Now().Unix() {
-			err = errors.New("Unable to verify message timestamp.")
+			header.Timestamp > time.Now().Unix()+600 {
+			fmt.Errorf("Couldn't verify timestamp. Now: %d, Got: %d", time.Now().Unix(), header.Timestamp)
 		}
 	}
 
