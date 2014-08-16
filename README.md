@@ -1,7 +1,7 @@
 airdispatch
 ============
 
-[![Build Status](https://drone.io/github.com/huntaub/airdispatch-protocol/status.png)](https://drone.io/github.com/huntaub/airdispatch-protocol/latest)
+[![GoDoc](https://godoc.org/airdispat.ch?status.svg)](https://godoc.org/airdispat.ch)
 
 Airdispatch is a new protocol that allows developers to create distributed networked applications without worrying about the backend.
 
@@ -9,16 +9,10 @@ Airdispatch is provided under the [MIT License](https://github.com/huntaub/airdi
 
 ### Installing Airdispatch
 
-This repository is now go-gettable. Simply import the code `airdispat.ch/airdispatch` or `airdispat.ch/common` and go will find it automatically.
-
-##### Old Instructions
-  1. `git clone` this repository
-  2. Rename the created folder to `airdispat.ch`
-  3. Drop that folder in your `$GOPATH/src`
-  4. `go get ./...`
-  5. There is no step 5.
+    go get airdispat.ch/message
 
 ### A Quick Overview
+
 Airdispatch provides three key components when working with distributed networks:
 
   1. **Addressing** - Airdispatch creates 'serverless' addresses. That is that actual addresses do not contain the server location where that addresses messages should be sent. Instead, we have included a 'tracker layer' that translates addresses into locations. This allows the user to transistion servers without having to change addresses.
@@ -32,16 +26,6 @@ Some other benefits include:
   - Privacy - without access to a network's tracking layer, that network will be essentially isolated from the public airdispatch network, providing for private messaging networks
   - Extensibility - because the protocol is built off of proven technologies (like protocol buffers) it is trivial to add extensions
 
-### Information on the Provided Client
-This is used to test trackers and mailservers. You can interact with both sets of servers in every facet described in the protocol.
-We will provide documentation on how to use the Client [here](https://github.com/huntaub/airdispatch-protocol/wiki/CLI-Documentation).
-
-We have provided a sample mail server and tracker than you can use to test the protocol with the CLI:
-  - Server: `mailserver.airdispat.ch:2048`
-  - Tracker: `mailserver.airdispat.ch:1024`
-
 ### More Information
-For more detailed information, we ask you to visit the wiki or read the original protocol definition.
 
-### Conclusion
-We understand that the protocol has a way to go, and we do not believe that it is the final word on distributed communications. However, we hope to open the door to more conversations about federated data in a world where networks are becoming (unfortunately) increasingly centralized.
+For more detailed information about the protocol, please visit our [website](http://airdispat.ch). The wiki has outdated information.
