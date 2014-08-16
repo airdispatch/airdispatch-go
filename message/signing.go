@@ -125,9 +125,10 @@ func (s *SignedMessage) reconstructMessage(ts bool) (data []byte, messageType st
 	}
 
 	if ts {
-		if header.Timestamp < time.Now().Unix()-600 ||
-			header.Timestamp > time.Now().Unix()+600 {
-			fmt.Errorf("Couldn't verify timestamp. Now: %d, Got: %d", time.Now().Unix(), header.Timestamp)
+		now := time.Now().Unix()
+		if header.Timestamp < now-600 ||
+			header.Timestamp > now+600 {
+			fmt.Errorf("Couldn't verify timestamp. Now: %d, Got: %d", now, header.Timestamp)
 		}
 	}
 
