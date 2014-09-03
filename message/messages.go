@@ -15,17 +15,19 @@ import (
 // interpreted as a UTF-8 string.
 type Mail struct {
 	h          Header
+	Name       string
 	Components ComponentList
 }
 
 // CreateMail will return a new Mail object with the correct header, ready for
 // adding components.
-func CreateMail(from *identity.Address, ts time.Time, to ...*identity.Address) *Mail {
+func CreateMail(from *identity.Address, ts time.Time, name string, to ...*identity.Address) *Mail {
 	header := CreateHeader(from, to...)
 	header.Timestamp = ts.Unix()
 
 	return &Mail{
 		h:          header,
+		Name:       name,
 		Components: make(ComponentList, 0),
 	}
 }
@@ -47,6 +49,7 @@ func CreateMailFromBytes(by []byte, h Header) (*Mail, error) {
 
 	return &Mail{
 		h:          h,
+		Name:       unmarsh.GetName(),
 		Components: comp,
 	}, nil
 }
@@ -55,6 +58,7 @@ func CreateMailFromBytes(by []byte, h Header) (*Mail, error) {
 func (m *Mail) ToBytes() []byte {
 	wireFormat := &wire.Mail{
 		Components: m.Components.toWire(),
+		Name:       &m.Name,
 	}
 	by, err := proto.Marshal(wireFormat)
 	if err != nil {

@@ -1,6 +1,6 @@
 package wire;
 
-// The Data message is related to arbitrary files that can 
+// The Data message is related to arbitrary files that can
 // be shared (as attachments).
 message Data {
 	required bytes  hash   = 1;
@@ -9,7 +9,7 @@ message Data {
 }
 
 
-// Contains AirDispatch Mail Messages - the basic unit of 
+// Contains AirDispatch Mail Messages - the basic unit of
 // user-to-user messaging in AirDispatch.
 message Mail {
 	message Component {
@@ -17,6 +17,7 @@ message Mail {
 		required bytes  data = 2;
 	}
 	repeated Component components = 1;
+	optional string    name       = 2;
 }
 
 // The Error is returned whenever a server request results

@@ -47,6 +47,7 @@ func (m *Data) GetName() string {
 
 type Mail struct {
 	Components       []*Mail_Component `protobuf:"bytes,1,rep,name=components" json:"components,omitempty"`
+	Name             *string           `protobuf:"bytes,2,opt,name=name" json:"name,omitempty"`
 	XXX_unrecognized []byte            `json:"-"`
 }
 
@@ -59,6 +60,13 @@ func (m *Mail) GetComponents() []*Mail_Component {
 		return m.Components
 	}
 	return nil
+}
+
+func (m *Mail) GetName() string {
+	if m != nil && m.Name != nil {
+		return *m.Name
+	}
+	return ""
 }
 
 type Mail_Component struct {
