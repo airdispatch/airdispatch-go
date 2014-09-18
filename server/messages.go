@@ -105,6 +105,7 @@ func (m *MessageDescription) GenerateTransferRequest() *TransferMessage {
 type TransferMessage struct {
 	Name   string
 	Author *identity.Address
+	Data   bool
 	h      message.Header
 }
 
@@ -118,6 +119,7 @@ func CreateTransferMessageFromBytes(by []byte, h message.Header) (*TransferMessa
 	return &TransferMessage{
 		Author: identity.CreateAddressFromString(fromData.GetAuthor()),
 		Name:   fromData.GetName(),
+		Data:   fromData.GetData(),
 		h:      h,
 	}, nil
 }
@@ -127,6 +129,7 @@ func (m *TransferMessage) ToBytes() []byte {
 	toData := &wire.TransferMessage{
 		Name:   &m.Name,
 		Author: &author,
+		Data:   &m.Data,
 	}
 	by, err := proto.Marshal(toData)
 	if err != nil {

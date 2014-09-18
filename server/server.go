@@ -3,6 +3,7 @@ package server
 import (
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"time"
 
@@ -27,6 +28,7 @@ type ServerDelegate interface {
 
 	SaveMessageDescription(desc *message.EncryptedMessage)
 
+	RetrieveDataForUser(id string, author *identity.Address, forAddr *identity.Address) (*message.EncryptedMessage, io.ReadCloser)
 	RetrieveMessageForUser(id string, author *identity.Address, forAddr *identity.Address) *message.EncryptedMessage
 	RetrieveMessageListForUser(since uint64, author *identity.Address, forAddr *identity.Address) []*message.EncryptedMessage
 }
@@ -225,11 +227,18 @@ func (s *Server) handleTransferMessage(desc []byte, h message.Header, conn net.C
 		return
 	}
 
-	mail := s.Delegate.RetrieveMessageForUser(txMessage.Name, txMessage.Author, txMessage.h.From)
-	if mail == nil {
-		s.handleError("Loading message from Server", errors.New("Couldn't find message named"+txMessage.Name))
-		adErrors.CreateError(adErrors.MessageNotFound, "That message doesn't exist.", s.Key.Address).Send(s.Key, conn)
-		return
+	var mail *message.EncryptedMessage
+	var reader io.ReadCloser
+
+	if txMessage.Data {
+		mail, reader = s.Delegate.RetrieveDataForUser(txMessage.Name, txMessage.Author, txMessage.h.From)
+	} else {
+		mail = s.Delegate.RetrieveMessageForUser(txMessage.Name, txMessage.Author, txMessage.h.From)
+		if mail == nil {
+			s.handleError("Loading message from Server", errors.New("Couldn't find message named"+txMessage.Name))
+			adErrors.CreateError(adErrors.MessageNotFound, "That message doesn't exist.", s.Key.Address).Send(s.Key, conn)
+			return
+		}
 	}
 
 	err = mail.SendMessageToConnection(conn)
@@ -237,6 +246,11 @@ func (s *Server) handleTransferMessage(desc []byte, h message.Header, conn net.C
 		s.handleError("Sign and Send Mail", err)
 		adErrors.CreateError(adErrors.InternalError, "Unable to pack return message.", s.Key.Address).Send(s.Key, conn)
 		return
+	}
+
+	if txMessage.Data {
+		io.Copy(conn, reader)
+		reader.Close()
 	}
 }
 
