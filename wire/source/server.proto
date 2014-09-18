@@ -4,6 +4,7 @@ package wire;
 message TransferMessage {
   required string author = 1;
 	required string name   = 2;
+  optional bool   data   = 3;
 }
 
 // A request to Transfer a list of messages from

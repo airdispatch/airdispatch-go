@@ -16,6 +16,7 @@ var _ = math.Inf
 type TransferMessage struct {
 	Author           *string `protobuf:"bytes,1,req,name=author" json:"author,omitempty"`
 	Name             *string `protobuf:"bytes,2,req,name=name" json:"name,omitempty"`
+	Data             *bool   `protobuf:"varint,3,opt,name=data" json:"data,omitempty"`
 	XXX_unrecognized []byte  `json:"-"`
 }
 
@@ -35,6 +36,13 @@ func (m *TransferMessage) GetName() string {
 		return *m.Name
 	}
 	return ""
+}
+
+func (m *TransferMessage) GetData() bool {
+	if m != nil && m.Data != nil {
+		return *m.Data
+	}
+	return false
 }
 
 type TransferMessageList struct {

@@ -5,7 +5,9 @@ package wire;
 message Data {
 	required bytes  hash   = 1;
 	required uint64 length = 2;
-	optional string name   = 3;
+	required bytes  key    = 3;
+	required string type   = 4;
+	optional string name   = 5;
 }
 
 

@@ -16,7 +16,9 @@ var _ = math.Inf
 type Data struct {
 	Hash             []byte  `protobuf:"bytes,1,req,name=hash" json:"hash,omitempty"`
 	Length           *uint64 `protobuf:"varint,2,req,name=length" json:"length,omitempty"`
-	Name             *string `protobuf:"bytes,3,opt,name=name" json:"name,omitempty"`
+	Key              []byte  `protobuf:"bytes,3,req,name=key" json:"key,omitempty"`
+	Type             *string `protobuf:"bytes,4,req,name=type" json:"type,omitempty"`
+	Name             *string `protobuf:"bytes,5,opt,name=name" json:"name,omitempty"`
 	XXX_unrecognized []byte  `json:"-"`
 }
 
@@ -36,6 +38,20 @@ func (m *Data) GetLength() uint64 {
 		return *m.Length
 	}
 	return 0
+}
+
+func (m *Data) GetKey() []byte {
+	if m != nil {
+		return m.Key
+	}
+	return nil
+}
+
+func (m *Data) GetType() string {
+	if m != nil && m.Type != nil {
+		return *m.Type
+	}
+	return ""
 }
 
 func (m *Data) GetName() string {
