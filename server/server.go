@@ -189,7 +189,7 @@ func (s *Server) handleClient(conn net.Conn) {
 		// Attempt Sub Handlers for Extra Message Types
 		for _, v := range s.Handlers {
 			if v.HandlesType(mesType) {
-				response, err := v.HandleMessage(mesType, data, h)
+				response, err := v.HandleMessage(mesType, data, h, conn)
 				if err != nil {
 					s.handleError("Sub-handler", err)
 				}
