@@ -1,9 +1,10 @@
 package testing
 
 import (
+	"fmt"
+
 	"airdispat.ch/identity"
 	"airdispat.ch/routing"
-	"fmt"
 )
 
 type Scenario struct {
