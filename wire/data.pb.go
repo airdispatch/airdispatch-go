@@ -19,6 +19,7 @@ type Data struct {
 	Key              []byte  `protobuf:"bytes,3,req,name=key" json:"key,omitempty"`
 	Type             *string `protobuf:"bytes,4,req,name=type" json:"type,omitempty"`
 	Name             *string `protobuf:"bytes,5,opt,name=name" json:"name,omitempty"`
+	File             *string `protobuf:"bytes,6,opt,name=file" json:"file,omitempty"`
 	XXX_unrecognized []byte  `json:"-"`
 }
 
@@ -57,6 +58,13 @@ func (m *Data) GetType() string {
 func (m *Data) GetName() string {
 	if m != nil && m.Name != nil {
 		return *m.Name
+	}
+	return ""
+}
+
+func (m *Data) GetFile() string {
+	if m != nil && m.File != nil {
+		return *m.File
 	}
 	return ""
 }

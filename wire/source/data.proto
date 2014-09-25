@@ -8,6 +8,7 @@ message Data {
 	required bytes  key    = 3;
 	required string type   = 4;
 	optional string name   = 5;
+	optional string file   = 6;
 }
 
 

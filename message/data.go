@@ -15,12 +15,13 @@ import (
 
 // DataMessage allows transfer of arbitrarily large bytestreams.
 type DataMessage struct {
-	h      Header
-	Hash   []byte
-	Length uint64
-	Key    []byte
-	Type   string
-	Name   string
+	h        Header
+	Hash     []byte
+	Length   uint64
+	Key      []byte
+	Type     string
+	Name     string
+	Filename string
 	// Decryption Helpers
 	verificationHash hash.Hash
 }
@@ -35,12 +36,13 @@ func CreateDataMessageFromBytes(by []byte, h Header) (*DataMessage, error) {
 	}
 
 	return &DataMessage{
-		h:      h,
-		Hash:   unmarsh.GetHash(),
-		Length: unmarsh.GetLength(),
-		Key:    unmarsh.GetKey(),
-		Type:   unmarsh.GetType(),
-		Name:   unmarsh.GetName(),
+		h:        h,
+		Hash:     unmarsh.GetHash(),
+		Length:   unmarsh.GetLength(),
+		Key:      unmarsh.GetKey(),
+		Type:     unmarsh.GetType(),
+		Name:     unmarsh.GetName(),
+		Filename: unmarsh.GetFile(),
 	}, nil
 }
 
