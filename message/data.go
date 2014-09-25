@@ -44,6 +44,10 @@ func CreateDataMessageFromBytes(by []byte, h Header) (*DataMessage, error) {
 	}, nil
 }
 
+func (m *DataMessage) TrueLength() uint64 {
+	return m.Length - aes.BlockSize
+}
+
 // ToBytes will marshal a mail message to its component bytes.
 func (m *DataMessage) ToBytes() []byte {
 	wireFormat := &wire.Data{
