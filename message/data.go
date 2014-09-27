@@ -7,6 +7,7 @@ import (
 
 	"crypto/aes"
 	"crypto/cipher"
+	"crypto/rand"
 	"crypto/sha256"
 
 	"airdispat.ch/wire"
@@ -19,11 +20,58 @@ type DataMessage struct {
 	Hash     []byte
 	Length   uint64
 	Key      []byte
-	Type     string
+	DataType string
 	Name     string
 	Filename string
 	// Decryption Helpers
 	verificationHash hash.Hash
+}
+
+type dataReader struct {
+	io.Reader
+	io.Closer
+}
+
+func CreateDataMessage(hash []byte, length uint64, typ, name, filename string, r io.ReadCloser, h Header) (*DataMessage, io.ReadCloser, error) {
+	key := make([]byte, 32)
+	_, err := rand.Read(key)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	length += uint64(aes.BlockSize)
+	d := &DataMessage{
+		Hash:     hash,
+		Length:   length,
+		DataType: typ,
+		Name:     name,
+		Key:      key,
+		Filename: filename,
+		h:        h,
+	}
+
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	iv := make([]byte, aes.BlockSize)
+	if _, err := io.ReadFull(rand.Reader, iv); err != nil {
+		return nil, nil, err
+	}
+
+	ivReader := bytes.NewBuffer(iv)
+
+	stream := cipher.NewCFBEncrypter(block, iv)
+
+	return d, dataReader{
+		Reader: io.MultiReader(ivReader,
+			cipher.StreamReader{
+				S: stream,
+				R: r,
+			}),
+		Closer: r,
+	}, nil
 }
 
 // CreateMailFromBytes will unmarshall a mail message given its bytes and
@@ -40,7 +88,7 @@ func CreateDataMessageFromBytes(by []byte, h Header) (*DataMessage, error) {
 		Hash:     unmarsh.GetHash(),
 		Length:   unmarsh.GetLength(),
 		Key:      unmarsh.GetKey(),
-		Type:     unmarsh.GetType(),
+		DataType: unmarsh.GetType(),
 		Name:     unmarsh.GetName(),
 		Filename: unmarsh.GetFile(),
 	}, nil
@@ -54,7 +102,7 @@ func (m *DataMessage) TrueLength() uint64 {
 func (m *DataMessage) ToBytes() []byte {
 	wireFormat := &wire.Data{
 		Name:   &m.Name,
-		Type:   &m.Type,
+		Type:   &m.DataType,
 		Hash:   m.Hash,
 		Key:    m.Key,
 		Length: &m.Length,
@@ -65,6 +113,14 @@ func (m *DataMessage) ToBytes() []byte {
 	}
 
 	return by
+}
+
+func (m *DataMessage) Header() Header {
+	return m.h
+}
+
+func (m *DataMessage) Type() string {
+	return wire.DataCode
 }
 
 func (m *DataMessage) DecryptReader(r io.Reader) (io.Reader, error) {
