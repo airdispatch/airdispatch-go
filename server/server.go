@@ -190,12 +190,16 @@ func (s *Server) handleClient(conn net.Conn) {
 		for _, v := range s.Handlers {
 			if v.HandlesType(mesType) {
 				response, err := v.HandleMessage(mesType, data, h, conn)
+
 				if err != nil {
 					s.handleError("Sub-handler", err)
+					adErrors.CreateError(adErrors.UnexpectedError, "Error from handler.", s.Key.Address).Send(s.Key, conn)
+					return
 				}
 
 				if len(response) == 0 {
 					adErrors.CreateError(adErrors.UnexpectedError, "No response from handler.", s.Key.Address).Send(s.Key, conn)
+					return
 				}
 
 				for _, v := range response {
