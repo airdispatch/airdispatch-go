@@ -1,8 +1,10 @@
 package identity
 
 import (
+	"bytes"
 	"crypto/ecdsa"
 	"crypto/rsa"
+	"encoding/gob"
 	"encoding/hex"
 
 	"airdispat.ch/crypto"
@@ -74,4 +76,54 @@ func CreateAddressFromString(addr string) *Address {
 		return nil
 	}
 	return CreateAddressFromBytes(by)
+}
+
+// Encoding for Addresses for easy serialization.
+
+type encodedAddress struct {
+	Encryption []byte
+	Signing    []byte
+	Location   string
+	Alias      string
+}
+
+func (a *Address) Encode() ([]byte, error) {
+	rsa := crypto.RSAToBytes(a.EncryptionKey)
+	ecdsa := crypto.KeyToBytes(a.SigningKey)
+
+	b := &bytes.Buffer{}
+	if err := gob.NewEncoder(b).Encode(&encodedAddress{
+		Encryption: rsa,
+		Signing:    ecdsa,
+		Location:   a.Location,
+		Alias:      a.Alias,
+	}); err != nil {
+		return nil, err
+	}
+
+	return b.Bytes(), nil
+}
+
+func DecodeAddress(b []byte) (*Address, error) {
+	output := &encodedAddress{}
+	if err := gob.NewDecoder(bytes.NewBuffer(b)).Decode(output); err != nil {
+		return nil, err
+	}
+
+	rsa, err := crypto.BytesToRSA(output.Encryption)
+	if err != nil {
+		return nil, err
+	}
+
+	ecdsa, err := crypto.BytesToKey(output.Signing)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Address{
+		EncryptionKey: rsa,
+		SigningKey:    ecdsa,
+		Location:      output.Location,
+		Alias:         output.Alias,
+	}, nil
 }
