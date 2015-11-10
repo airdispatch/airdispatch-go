@@ -120,10 +120,13 @@ func DecodeAddress(b []byte) (*Address, error) {
 		return nil, err
 	}
 
-	return &Address{
+	a := &Address{
 		EncryptionKey: rsa,
 		SigningKey:    ecdsa,
 		Location:      output.Location,
 		Alias:         output.Alias,
-	}, nil
+	}
+	a.generateFingerprint()
+
+	return a, nil
 }
